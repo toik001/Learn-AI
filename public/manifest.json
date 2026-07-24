@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-24T07:47:15.767Z",
+  "generatedAt": "2026-07-24T08:50:52.517Z",
   "documentCount": 8,
   "documents": [
     {
@@ -56,7 +56,7 @@
       "title": "GitLab Pages 极简部署与项目结构",
       "category": "项目维护",
       "date": "2026-07-24",
-      "sections": 8
+      "sections": 14
     }
   ]
 }
