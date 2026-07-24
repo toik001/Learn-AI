@@ -22,9 +22,9 @@
       <p>这里汇集 Codex、Agent 工作流、AI-DLC 与工程实践资料。所有内容直接维护为 HTML，可离线阅读。</p>
     </div>
     <div class="hero-stats" aria-label="知识库统计">
-      <div><strong>7</strong><span>篇文档</span></div>
-      <div><strong>436</strong><span>个章节</span></div>
-      <div><strong>91k</strong><span>约字符</span></div>
+      <div><strong>8</strong><span>篇文档</span></div>
+      <div><strong>479</strong><span>个章节</span></div>
+      <div><strong>103k</strong><span>约字符</span></div>
     </div>
   </section>
   <section class="library-tools" aria-label="文档搜索">
@@ -33,7 +33,7 @@
       <input type="search" placeholder="搜索标题、主题或章节…" data-library-search autofocus>
       <kbd>/</kbd>
     </label>
-    <p class="search-status" aria-live="polite">显示全部 7 篇文档</p>
+    <p class="search-status" aria-live="polite">显示全部 8 篇文档</p>
   </section>
   <div class="no-results" hidden>
     <h2>没有找到匹配文档</h2>
@@ -45,7 +45,7 @@
       <span class="eyebrow">COLLECTION</span>
       <h2>Codex 与 AI 工程</h2>
     </div>
-    <span class="section-count">6 篇</span>
+    <span class="section-count">7 篇</span>
   </div>
   <div class="document-grid">
     <article class="document-card" data-search-text="ai 开发工作流选型与小团队沉淀指南 除 aidlc 与 superpowers 外，还有哪些较完整的 ai 开发工作流，以及 2 人小团队是否值得沉淀自己的工作流 notes/codex/2026-07-24-ai开发工作流选型与小团队沉淀指南.html 核心结论 直接回答 一、先区分四类“工作流” 1. 生命周期外循环 2. 规格与变更管理层 3. 实现内循环 4. 自治执行循环 四层关系 二、候选工作流总览 “覆盖”不等于“质量” 三、bmad method：最像 aidlc 的替代方案 优点 缺点 适合当前团队的使用方式 四、gsd：更适合“一人负责一个长期项目” 优点 缺点 适合当前团队的使用方式 五、github spec kit：较强的规格驱动 harness 优点 缺点 适合当前团队的使用方式 六、openspec：当前 2 人团队最值得试用的规格层 优点 缺点 为什么它适合当前团队 七、kiro specs：产品内体验完整，但不宜为流程而换平台 优点 缺点 当前团队建议 八、ralph loop：是一种执行模式，不是完整工作流 优点 缺点 当前团队建议 九、当前团队到底要不要“自己沉淀工作流” 要，但要先明确“沉淀”的含义 推荐的沉淀阶梯 level 1：团队交付协议 level 2：模板与确定性脚本 level 3：仓库级 codex skill level 4：plugin、复杂编排或组织平台 十、最推荐的 2 人团队工作流 总体结构 模式 a：快速变更 模式 b：标准变更 模式 c：高风险变更 十一、两个人如何分工，而不制造评审瓶颈 每个项目两个角色 建议的三个人类检查点 检查点 1：规格或设计 检查点 2：walking skeleton 检查点 3：发布 不要求所有 pr 都同步评审 十二、java 全栈 harness 的最低标准 java 后端重点 前端重点 ai 功能重点 十三、避免框架互相打架 单一指挥者原则 推荐组合 多框架共存时的真相源 十四、30 天落地计划 第 1 周：建立基线 第 2 周：在真实变更中试用 第 3 周：提炼团队协议 第 4 周：复盘并决定是否封装 skill 十五、用什么指标判断工作流有效 建议的复盘问题 十六、何时升级到更重的工作流 十七、最终选型建议 当前团队的首选 备选 不推荐 十八、下一步学习与实践建议 参考资料 codex 官方资料 工作流官方资料">
@@ -111,6 +111,19 @@
           <div class="card-footer">
             <span>42 个章节</span>
             <span>约 29 分钟</span>
+            <span class="read-more">阅读 →</span>
+          </div>
+        </article><article class="document-card" data-search-text="superpowers 大型 java 微服务 monorepo 使用指南 面向单人维护 10+ java 微服务 monorepo 的 superpowers 详细使用手册，覆盖分层 agents.md、harness、ci、技能调用、跨服务功能、bugfix、数据库迁移和探索实例。 notes/codex/2026-07-24-superpowers大型java微服务monorepo使用指南.html 核心结论 适用边界 安装与确认 superpowers 1. codex cli 安装 2. superpowers 插件安装 3. 安装验证 推荐的 monorepo 结构 分层 agents.md 根级 agents.md 示例 服务级 agents.md 示例 superpowers 技能地图 四级工作模式 通用提示词模板 探索模板 标准功能模板 计划执行模板 bugfix 模板 实例一：跨服务 bugfix 阶段一：收集边界证据 阶段二：回归测试 阶段三：验证 实例二：标准跨服务功能 阶段一：设计 阶段二：设计结果应包含 阶段三：实施计划 阶段四：任务执行 阶段五：完成验证 实例三：共享数据库迁移 阶段一：先调查依赖 阶段二：三阶段迁移 阶段三：人工 gate 实例四：新功能探索 harness 与验证分层 验证脚本约定 gitlab ci 示例 日常使用节奏 开始任务 任务进行中 准备完成 从 aidlc 切换后的使用约定 常见错误 完成定义 参考资料">
+          <a class="card-link" href="notes/codex/2026-07-24-Superpowers大型Java微服务Monorepo使用指南.html" aria-label="阅读 Superpowers 大型 Java 微服务 Monorepo 使用指南"></a>
+          <div class="card-topline">
+            <span class="category-pill">Codex 与 AI 工程</span>
+            <time>2026-07-24</time>
+          </div>
+          <h3>Superpowers 大型 Java 微服务 Monorepo 使用指南</h3>
+          <p>面向单人维护 10+ Java 微服务 Monorepo 的 Superpowers 详细使用手册，覆盖分层 AGENTS.md、Harness、CI、技能调用、跨服务功能、Bugfix、数据库迁移和探索实例。</p>
+          <div class="card-footer">
+            <span>43 个章节</span>
+            <span>约 25 分钟</span>
             <span class="read-more">阅读 →</span>
           </div>
         </article><article class="document-card" data-search-text="superpowers 详细介绍：codex 的技能化软件开发方法 superpowers 不是一个更强的模型，也不是单纯的提示词合集。它是一套安装到编码智能体中的“可组合 skills + 强制开发流程”，目标是让智能体遵守一套可复现的软件工程方法： 项目将自己定义为“面向编码智能体的完整软件开发方法论”。官方插件描述覆盖规划、tdd、调试、并行执行、代码审查和分 notes/codex/2026-07-24-superpowers详细介绍.html 核心结论 一、superpowers 解决什么问题 二、它与 skill、plugin、harness 的关系 1. skill 2. plugin 3. harness 三、四项核心哲学 四、完整基础工作流 阶段 1：brainstorming 阶段 2：using git worktrees 阶段 3：writing plans 阶段 4：执行计划 阶段 5：tdd 阶段 6：code review 阶段 7：finish branch 五、主要 skills 详解 1. using-superpowers 2. brainstorming 3. using-git-worktrees 4. writing-plans 5. test-driven-development 6. subagent-driven-development 7. executing-plans 8. systematic-debugging phase 1：root cause investigation phase 2：pattern analysis phase 3：hypothesis and testing phase 4：implementation 9. requesting-code-review 10. verification-before-completion 11. finishing-a-development-branch 六、codex 中的安装和启用 codex app codex cli 启用多智能体支持 安装后的验证方式 七、一个 java 全栈实际示例 1. brainstorming 输出 2. writing plans 输出 3. tdd 示例 4. systematic debugging 示例 5. verification 示例 八、superpowers 与 vibe coding、harness、loop 的关系 九、优势、成本和局限 优势 成本 局限 十、推荐的使用策略 1. 不要一开始启用所有复杂性 2. 用 agents.md 提供项目事实 3. 把测试命令做稳定 4. 控制子智能体任务边界 5. 保留人工闸门 十一、常用提示词 新功能 bug 修复 执行已有设计 跳过原型阶段的严格流程 十二、排查 superpowers 未生效 现象：agent 直接编码，没有 brainstorming 现象：没有使用子智能体 现象：流程太重 现象：计划和代码不一致 十三、隐私与安全注意事项 易错点与局限 下一步学习建议 参考资料">

@@ -1,0 +1,793 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="面向单人维护 10+ Java 微服务 Monorepo 的 Superpowers 详细使用手册，覆盖分层 AGENTS.md、Harness、CI、技能调用、跨服务功能、Bugfix、数据库迁移和探索实例。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="Codex 与 AI 工程">
+  <meta name="study-date" content="2026-07-24">
+  <title>Superpowers 大型 Java 微服务 Monorepo 使用指南｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a href="../../index.html">全部文档</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <label class="sidebar-search">
+      <span class="sr-only">筛选文档</span>
+      <input type="search" placeholder="筛选文档…" data-sidebar-search>
+    </label>
+    <nav class="doc-nav" aria-label="文档列表">
+      <a class="doc-nav-item" href="2026-07-24-AI开发工作流选型与小团队沉淀指南.html"><span>AI 开发工作流选型与小团队沉淀指南</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC详细介绍.html"><span>AIDLC 详细介绍：从 AI 辅助编码到可审计的软件交付生命周期</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC与Superpowers差异分析.html"><span>AIDLC 与 Superpowers 差异分析：生命周期治理与工程 Inner Loop</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-Codex全栈开发最佳实践.html"><span>Codex 全栈开发最佳实践：Vibe Coding、Harness 与 Loop</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-OpenSpec-Superpowers-CI-Codex-CLI实战教程.html"><span>OpenSpec + Superpowers + CI：Codex CLI 全栈实战教程</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item is-active" href="2026-07-24-Superpowers大型Java微服务Monorepo使用指南.html"><span>Superpowers 大型 Java 微服务 Monorepo 使用指南</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-Superpowers详细介绍.html"><span>Superpowers 详细介绍：Codex 的技能化软件开发方法</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="../project/2026-07-24-GitLab-Pages极简部署与项目结构.html"><span>GitLab Pages 极简部署与项目结构</span><small>项目维护</small></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta">
+      <a href="../../index.html">知识库首页</a>
+      <span>·</span>
+      <span>Codex 与 AI 工程</span>
+      <span>·</span>
+      <time>2026-07-24</time>
+    </div>
+    <article class="markdown-body">
+      <h1 id="superpowers-大型-java-微服务-monorepo-使用指南"><a class="heading-anchor" href="#superpowers-大型-java-微服务-monorepo-使用指南" aria-label="链接到本节">#</a>Superpowers 大型 Java 微服务 Monorepo 使用指南</h1>
+      <blockquote>
+        <p>整理日期：2026-07-24<br>项目画像：一人长期维护、10+ 微服务、Monorepo、代码量 10 万行以上；普通功能平均涉及 2～3 个服务；同时存在 HTTP、消息与共享数据库，并已有接口或消息契约。<br>本文目标：不引入 OpenSpec 或 Spec Kit，以 Superpowers 作为唯一开发编排器，建立足够可靠的项目 Harness。</p>
+      </blockquote>
+
+      <h2 id="核心结论"><a class="heading-anchor" href="#核心结论" aria-label="链接到本节">#</a>核心结论</h2>
+      <p>这个项目可以由 <strong>Superpowers + 分层 AGENTS.md + 契约 + 自动化测试 + CI + 轻量设计记录</strong> 支撑。Superpowers 负责需求澄清、设计、计划、TDD、调试、评审和完成验证；长期系统事实仍由代码、服务边界、契约、数据库迁移、架构决策和 CI 承担。</p>
+      <p>不要把 Superpowers 理解成一个安装后自动解决所有工程问题的插件。它是一套实现纪律，必须运行在清晰的 Harness 之中：</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">用户目标
+   │
+   ├─ 模糊需求 → Brainstorming → 设计确认
+   ├─ 已知 Bug → Systematic Debugging → 根因确认
+   │
+   ▼
+Implementation Plan
+   │
+   ▼
+逐任务 RED → GREEN → REFACTOR
+   │
+   ├─ 规格符合性评审
+   ├─ 代码质量评审
+   └─ 完成前验证
+   │
+   ▼
+契约检查 + 受影响服务测试 + CI
+   │
+   ▼
+人工合并与发布判断</code></pre>
+      </div>
+
+      <h2 id="适用边界"><a class="heading-anchor" href="#适用边界" aria-label="链接到本节">#</a>适用边界</h2>
+      <table>
+        <thead>
+          <tr><th>当前条件</th><th>产生的影响</th><th>工作流要求</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>单人维护</td><td>协作冲突较少，但长期记忆和自我复核压力大</td><td>设计必须落盘，关键判断不能只留在聊天里</td></tr>
+          <tr><td>Monorepo</td><td>一次变更可以统一搜索、分支、评审和验证</td><td>使用一份跨服务设计和一份任务计划</td></tr>
+          <tr><td>10+ 微服务</td><td>上下文无法长期靠记忆维持</td><td>根级规则只放全局事实，服务规则下沉</td></tr>
+          <tr><td>功能平均涉及 2～3 服务</td><td>跨服务范围可控</td><td>按契约和依赖顺序拆任务</td></tr>
+          <tr><td>HTTP、消息和共享数据库并存</td><td>存在显式契约和隐式数据耦合</td><td>重点约束数据所有权、幂等、版本兼容和发布顺序</td></tr>
+          <tr><td>已有契约</td><td>接口结构和兼容性已有机器真相</td><td>Superpowers 设计引用契约，不复制一套平行定义</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="安装与确认-superpowers"><a class="heading-anchor" href="#安装与确认-superpowers" aria-label="链接到本节">#</a>安装与确认 Superpowers</h2>
+      <h3 id="codex-cli-安装"><a class="heading-anchor" href="#codex-cli-安装" aria-label="链接到本节">#</a>1. Codex CLI 安装</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-bash"># macOS / Linux 官方安装器
+curl -fsSL https://chatgpt.com/codex/install.sh | sh
+
+# 或 npm
+npm install -g @openai/codex
+
+# 检查
+codex --version
+codex doctor
+codex login</code></pre>
+      </div>
+
+      <h3 id="superpowers-插件安装"><a class="heading-anchor" href="#superpowers-插件安装" aria-label="链接到本节">#</a>2. Superpowers 插件安装</h3>
+      <p>在 Codex 中输入 <code>/plugins</code>，搜索 <code>superpowers</code>，选择安装；或者使用当前官方 curated marketplace 的插件 ID：</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-bash">codex plugin add superpowers@openai-curated
+codex plugin list</code></pre>
+      </div>
+      <p>安装后启动新会话。Superpowers 在 Codex 中提供的是技能，不是 <code>/brainstorming</code> 之类的斜杠命令。Codex 官方支持通过 <code>/skills</code> 浏览，或在提示词中输入 <code>$</code> 显式选择技能；也可以自然语言要求“使用 Superpowers 的 systematic-debugging 技能”。<a href="https://learn.chatgpt.com/docs/build-skills#how-codex-uses-skills" target="_blank" rel="noopener noreferrer">Codex Skills</a></p>
+
+      <h3 id="安装验证"><a class="heading-anchor" href="#安装验证" aria-label="链接到本节">#</a>3. 安装验证</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">/skills
+
+确认能看到 Superpowers 的技能后输入：
+
+请只列出当前可用的 Superpowers 技能及各自触发场景，
+不要读取项目代码，不要修改文件。</code></pre>
+      </div>
+      <p>若安装后当前会话没有刷新，退出并重新启动 Codex。Superpowers 官方当前将 Codex CLI 安装入口放在官方插件市场。<a href="https://github.com/obra/superpowers#codex-cli" target="_blank" rel="noopener noreferrer">Superpowers Codex CLI</a></p>
+
+      <h2 id="推荐的-monorepo-结构"><a class="heading-anchor" href="#推荐的-monorepo-结构" aria-label="链接到本节">#</a>推荐的 Monorepo 结构</h2>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">project/
+├── AGENTS.md
+├── pom.xml
+├── mvnw
+├── services/
+│   ├── gateway/
+│   │   └── AGENTS.md
+│   ├── auth-service/
+│   │   └── AGENTS.md
+│   ├── order-service/
+│   │   └── AGENTS.md
+│   ├── inventory-service/
+│   │   └── AGENTS.md
+│   ├── payment-service/
+│   │   └── AGENTS.md
+│   └── notification-service/
+│       └── AGENTS.md
+├── frontend/
+│   └── AGENTS.md
+├── contracts/
+│   ├── openapi/
+│   ├── asyncapi/
+│   └── schemas/
+├── integration-tests/
+├── docs/
+│   ├── architecture/
+│   ├── decisions/
+│   ├── service-catalog/
+│   └── plans/
+├── scripts/
+│   ├── verify-service.sh
+│   ├── verify-affected.sh
+│   ├── verify-contracts.sh
+│   └── verify-all.sh
+└── .gitlab-ci.yml</code></pre>
+      </div>
+      <p><code>docs/plans/</code> 保存 Superpowers 产生的设计和实施计划。设计文件回答“为什么、做什么、跨服务怎样协作”，实施计划回答“按什么顺序改哪些文件并怎样验证”。不要再额外维护一套相同内容的任务系统。</p>
+
+      <h2 id="分层-agents-md"><a class="heading-anchor" href="#分层-agents-md" aria-label="链接到本节">#</a>分层 AGENTS.md</h2>
+      <p>Codex 从仓库根目录向当前工作目录逐层加载 <code>AGENTS.md</code>，越靠近当前目录的规则越晚加载，因此可以覆盖根级规则。官方默认合并上限为 32 KiB，10+ 服务的所有细节不应集中在根文件。<a href="https://learn.chatgpt.com/docs/agent-configuration/agents-md" target="_blank" rel="noopener noreferrer">Codex AGENTS.md</a></p>
+
+      <h3 id="根级-agents-md-示例"><a class="heading-anchor" href="#根级-agents-md-示例" aria-label="链接到本节">#</a>根级 AGENTS.md 示例</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>markdown</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-markdown"># Repository Instructions
+
+## Stack
+- Java 21, Spring Boot, Maven Wrapper.
+- TypeScript frontend; respect the committed lockfile.
+- This repository contains all services and cross-service tests.
+
+## Development workflow
+- Superpowers is the only development orchestrator.
+- New or changed behavior starts with brainstorming and design approval.
+- Bugs start with systematic debugging; no fixes before root cause.
+- Implementation follows an approved plan and test-driven development.
+- Do not claim completion without fresh verification evidence.
+
+## Architecture
+- Every table and event has one owning service.
+- Do not write tables owned by another service.
+- Prefer declared APIs or events over direct database coupling.
+- Public API and event changes require compatibility tests.
+- Cross-service changes must describe call flow, data ownership,
+  idempotency, rollout order and rollback.
+
+## Change levels
+- Small local change: debugging/TDD → verification → CI.
+- Standard cross-service change: brainstorming → saved design →
+  implementation plan → TDD → review → CI.
+- High-risk change: add migration, compatibility, rollout and rollback gates.
+
+## Verification
+- One service: ./scripts/verify-service.sh &lt;service&gt;
+- Affected services: ./scripts/verify-affected.sh
+- Contracts: ./scripts/verify-contracts.sh
+- Full repository: ./scripts/verify-all.sh
+
+## Safety
+- Never commit secrets or production data.
+- Do not silently change authentication, authorization, money,
+  public contracts, schemas or destructive operations.
+- Preserve unrelated user changes.
+
+## Code Review Rules
+- Check service ownership and forbidden cross-service database writes.
+- Check HTTP timeout/retry behavior and event idempotency.
+- Check backward compatibility and mixed-version deployment.
+- Check migrations, observability and rollback evidence.</code></pre>
+      </div>
+
+      <h3 id="服务级-agents-md-示例"><a class="heading-anchor" href="#服务级-agents-md-示例" aria-label="链接到本节">#</a>服务级 AGENTS.md 示例</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>markdown</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-markdown"># Order Service
+
+## Ownership
+- Owns order lifecycle, order status and order tables.
+- Does not directly update inventory or payment tables.
+- Publishes OrderCreated, OrderCancelled and OrderCompleted.
+- Consumes PaymentConfirmed and PaymentExpired.
+
+## Implementation rules
+- State transitions go through OrderStateMachine.
+- Event publication uses the transactional outbox.
+- Consumers must be idempotent by event id.
+- Public errors follow the repository problem-details contract.
+
+## Testing
+- Pure state transitions: unit tests.
+- Persistence and concurrency: Testcontainers integration tests.
+- Event payloads: schema and consumer contract tests.
+- Verify: ./mvnw -pl services/order-service -am verify</code></pre>
+      </div>
+
+      <h2 id="superpowers-技能地图"><a class="heading-anchor" href="#superpowers-技能地图" aria-label="链接到本节">#</a>Superpowers 技能地图</h2>
+      <table>
+        <thead>
+          <tr><th>技能</th><th>何时使用</th><th>在本项目中的输出</th><th>停止条件</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>brainstorming</code></td><td>新增功能、行为变化、架构选择</td><td>目标、非目标、跨服务设计、风险与验收</td><td>人确认设计</td></tr>
+          <tr><td><code>using-git-worktrees</code></td><td>需要隔离长期或并行工作</td><td>独立工作树、干净基线</td><td>基线测试通过</td></tr>
+          <tr><td><code>writing-plans</code></td><td>设计已批准</td><td>精确文件、任务、测试和验证顺序</td><td>计划可逐项执行</td></tr>
+          <tr><td><code>test-driven-development</code></td><td>功能、Bugfix、行为重构</td><td>RED、GREEN、REFACTOR 证据</td><td>当前行为和相关回归通过</td></tr>
+          <tr><td><code>systematic-debugging</code></td><td>Bug、测试失败、性能或集成异常</td><td>复现、边界证据、根因、单一假设</td><td>根因已证实</td></tr>
+          <tr><td><code>executing-plans</code></td><td>单人按批次执行已审计划</td><td>分批实现与检查点</td><td>当前批次验证完成</td></tr>
+          <tr><td><code>subagent-driven-development</code></td><td>任务足够独立且需要更强审查</td><td>逐任务实现、规格审查、质量审查</td><td>任务通过两级审查</td></tr>
+          <tr><td><code>requesting-code-review</code></td><td>任务或整个变更完成</td><td>按严重度排序的发现</td><td>重要问题处理完</td></tr>
+          <tr><td><code>verification-before-completion</code></td><td>准备声称完成、提交或合并</td><td>最新命令、退出码、报告</td><td>所有必需证据为真</td></tr>
+          <tr><td><code>finishing-a-development-branch</code></td><td>分支收尾</td><td>合并、PR、保留或清理选择</td><td>人决定下一步</td></tr>
+        </tbody>
+      </table>
+      <p>Superpowers 官方基础流程依次强调 brainstorming、工作树、计划、执行、TDD、代码评审和分支收尾；systematic-debugging 另行规定“没有根因调查就不能修复”。<a href="https://github.com/obra/superpowers#the-basic-workflow" target="_blank" rel="noopener noreferrer">Basic Workflow</a> · <a href="https://github.com/obra/superpowers/blob/main/skills/systematic-debugging/SKILL.md" target="_blank" rel="noopener noreferrer">Systematic Debugging</a></p>
+
+      <h2 id="四级工作模式"><a class="heading-anchor" href="#四级工作模式" aria-label="链接到本节">#</a>四级工作模式</h2>
+      <table>
+        <thead>
+          <tr><th>级别</th><th>典型任务</th><th>必用能力</th><th>落盘要求</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>L0 探索</td><td>方向不清、技术选型、可行性研究</td><td>brainstorming</td><td>只有形成长期决定时保存</td></tr>
+          <tr><td>L1 局部变更</td><td>单服务 Bug、小重构、小型技术调整</td><td>debugging 或 TDD、verification</td><td>通常由测试和 Git 记录</td></tr>
+          <tr><td>L2 标准功能</td><td>涉及 2～3 个服务的普通功能</td><td>brainstorming、plan、TDD、review、verification</td><td>必须保存设计和计划</td></tr>
+          <tr><td>L3 高风险变更</td><td>权限、金额、共享表、状态机、迁移、分阶段发布</td><td>L2 全部 + 明确人工 Gate</td><td>设计、迁移、兼容、发布和回滚记录</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="通用提示词模板"><a class="heading-anchor" href="#通用提示词模板" aria-label="链接到本节">#</a>通用提示词模板</h2>
+      <h3 id="探索模板"><a class="heading-anchor" href="#探索模板" aria-label="链接到本节">#</a>探索模板</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">使用 Superpowers 的 brainstorming 技能探索这个问题。
+
+先读取根级和相关服务的 AGENTS.md、服务目录、契约和现有代码。
+本轮只做调查和方案比较：
+- 不修改生产代码；
+- 不创建实施计划；
+- 不扩大到无关服务；
+- 标出事实、假设和未知项；
+- 比较至少两种可行方案；
+- 给出推荐、反对理由、验证实验和 go/no-go 条件。</code></pre>
+      </div>
+
+      <h3 id="标准功能模板"><a class="heading-anchor" href="#标准功能模板" aria-label="链接到本节">#</a>标准功能模板</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">使用 Superpowers 的 brainstorming 技能设计这个功能。
+
+已知涉及 &lt;service-a&gt;、&lt;service-b&gt; 和 &lt;service-c&gt;。
+设计必须包含：
+1. 目标、非目标和用户可观察行为；
+2. 当前调用链和目标调用链；
+3. HTTP、事件和数据库所有权；
+4. 幂等、并发、失败和补偿；
+5. 新旧版本兼容；
+6. 测试层次；
+7. 监控、发布顺序和回滚。
+
+设计确认前不写代码。确认后将设计保存到 docs/plans/，
+再使用 writing-plans 生成唯一实施计划。</code></pre>
+      </div>
+
+      <h3 id="计划执行模板"><a class="heading-anchor" href="#计划执行模板" aria-label="链接到本节">#</a>计划执行模板</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">按照已批准的 implementation plan 执行。
+
+规则：
+- plan 是唯一任务清单；
+- 一次只处理一个可验证行为；
+- 使用 test-driven-development；
+- 必须展示旧代码上的失败测试；
+- 只做让当前测试通过的最小实现；
+- 每个任务后运行最小相关验证；
+- 公共契约变化立即运行兼容检查；
+- 实现与设计不一致时停止并修订设计；
+- 不顺手重构无关代码；
+- 完成后执行规格符合性和代码质量评审。</code></pre>
+      </div>
+
+      <h3 id="bugfix-模板"><a class="heading-anchor" href="#bugfix-模板" aria-label="链接到本节">#</a>Bugfix 模板</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">使用 Superpowers 的 systematic-debugging 技能调查这个问题。
+
+要求：
+- 先稳定复现；
+- 沿 HTTP、消息和数据库边界收集证据；
+- 找到错误数据最初产生的位置；
+- 写出一个单一、可证伪的根因假设；
+- 根因确认前不修改生产代码；
+- 确认后写失败的回归测试；
+- 只实施一个根因修复；
+- 运行当前服务、受影响服务和跨服务验证；
+- 使用 verification-before-completion 后才能声称修复。</code></pre>
+      </div>
+
+      <h2 id="实例一-跨服务-bugfix"><a class="heading-anchor" href="#实例一-跨服务-bugfix" aria-label="链接到本节">#</a>实例一：跨服务 Bugfix</h2>
+      <p><strong>问题：</strong>支付服务显示扣款成功，但少量订单仍停留在 <code>PENDING_PAYMENT</code>。涉及 payment-service、消息系统和 order-service。</p>
+
+      <h3 id="bugfix-阶段一收集边界证据"><a class="heading-anchor" href="#bugfix-阶段一收集边界证据" aria-label="链接到本节">#</a>阶段一：收集边界证据</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">使用 systematic-debugging 调查：
+“支付已成功，但订单偶发未更新”。
+
+按边界收集同一个 paymentId/orderId 的证据：
+1. payment-service 数据库事务结果；
+2. outbox 记录；
+3. broker 中的消息发布结果；
+4. order-service 消费日志；
+5. inbox/幂等记录；
+6. OrderStateMachine 转换结果。
+
+先给出证据表和故障边界，不要提出修复。</code></pre>
+      </div>
+      <p>期望输出不是“可能是消息丢了”，而是类似：</p>
+      <table>
+        <thead>
+          <tr><th>边界</th><th>输入</th><th>输出</th><th>结论</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>支付事务</td><td>支付回调</td><td>PAYMENT_SUCCESS</td><td>正常</td></tr>
+          <tr><td>Outbox</td><td>支付事务</td><td>缺少对应事件</td><td>首次异常点</td></tr>
+          <tr><td>Broker</td><td>Outbox</td><td>无消息</td><td>下游症状</td></tr>
+          <tr><td>订单消费者</td><td>Broker</td><td>未消费</td><td>下游症状</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="bugfix-阶段二回归测试"><a class="heading-anchor" href="#bugfix-阶段二回归测试" aria-label="链接到本节">#</a>阶段二：回归测试</h3>
+      <p>确认根因是“支付状态更新和 outbox 写入不在同一事务”后，要求：</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">使用 test-driven-development：
+先增加 Testcontainers 集成测试，证明在事件持久化失败时，
+支付状态不能单独提交。
+
+必须先在旧实现上运行并展示失败；
+然后把状态更新与 outbox 写入放入同一事务；
+不重构无关支付代码。</code></pre>
+      </div>
+
+      <h3 id="bugfix-阶段三验证"><a class="heading-anchor" href="#bugfix-阶段三验证" aria-label="链接到本节">#</a>阶段三：验证</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-bash">./scripts/verify-service.sh payment-service
+./scripts/verify-contracts.sh
+./scripts/verify-affected.sh
+codex review --base main</code></pre>
+      </div>
+      <p>验证还应注入一次 outbox 写失败，确认支付事务回滚；随后恢复故障，确认重试只生成一条有效事件。</p>
+
+      <h2 id="实例二-标准跨服务功能"><a class="heading-anchor" href="#实例二-标准跨服务功能" aria-label="链接到本节">#</a>实例二：标准跨服务功能</h2>
+      <p><strong>功能：</strong>支付超时后自动取消订单并释放库存，涉及 payment-service、order-service 和 inventory-service。</p>
+
+      <h3 id="功能-设计提示词"><a class="heading-anchor" href="#功能-设计提示词" aria-label="链接到本节">#</a>阶段一：设计</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">使用 brainstorming 设计“支付超时自动取消订单”。
+
+现状：
+- payment-service 管理支付状态；
+- order-service 拥有订单状态机；
+- inventory-service 拥有库存预占；
+- 服务通过事件通信；
+- 功能开关控制上线。
+
+设计必须回答：
+- 谁判断支付超时；
+- PaymentExpired 的 schema；
+- order-service 如何保证状态转换幂等；
+- 已发货、已支付、手工取消等竞态怎样处理；
+- OrderCancelled 如何触发库存释放；
+- 消息乱序、重复和积压怎样处理；
+- 新旧消费者如何兼容；
+- 发布和回滚顺序是什么。
+
+设计确认前不修改文件。</code></pre>
+      </div>
+
+      <h3 id="功能-设计结果"><a class="heading-anchor" href="#功能-设计结果" aria-label="链接到本节">#</a>阶段二：设计结果应包含</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">PaymentExpired v1
+  paymentId
+  orderId
+  expiredAt
+  eventId
+  schemaVersion
+
+payment-service
+  定时扫描 → 原子更新支付状态和写入 outbox
+
+order-service
+  幂等消费 → 检查当前状态 → 状态机取消 → 写入 OrderCancelled outbox
+
+inventory-service
+  幂等消费 OrderCancelled → 释放预占 → 记录处理结果
+
+发布顺序
+  1. 先发布兼容的新消费者
+  2. 再发布 payment-service 生产者但关闭开关
+  3. 观察指标
+  4. 小流量打开
+  5. 全量
+
+回滚
+  关闭生产者开关；消费者保持兼容，不回滚已完成的合法取消。</code></pre>
+      </div>
+
+      <h3 id="功能-实施计划"><a class="heading-anchor" href="#功能-实施计划" aria-label="链接到本节">#</a>阶段三：实施计划</h3>
+      <p>使用 writing-plans 后，计划应按依赖顺序，而不是随意按服务顺序：</p>
+      <ol>
+        <li>定义并验证 <code>PaymentExpired</code> 契约。</li>
+        <li>先实现 order-service 消费者和状态机测试。</li>
+        <li>实现 inventory-service 对 <code>OrderCancelled</code> 的幂等处理。</li>
+        <li>实现 payment-service 超时扫描和 outbox。</li>
+        <li>增加跨服务组合测试。</li>
+        <li>增加功能开关、指标、告警和运行手册。</li>
+        <li>验证混合版本部署和回滚。</li>
+      </ol>
+
+      <h3 id="功能-任务执行"><a class="heading-anchor" href="#功能-任务执行" aria-label="链接到本节">#</a>阶段四：任务执行</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">执行计划中的“order-service 消费 PaymentExpired”任务。
+
+使用 test-driven-development：
+1. 先写 PENDING_PAYMENT → CANCELLED 的失败测试；
+2. 增加 PAID、SHIPPED 状态拒绝取消的测试；
+3. 增加重复 eventId 的幂等测试；
+4. 在旧代码上展示失败；
+5. 写最小实现；
+6. 运行 order-service；
+7. 运行事件契约检查；
+8. 更新计划中的当前任务；
+9. 停止，不继续下一个服务。</code></pre>
+      </div>
+
+      <h3 id="功能-完成验证"><a class="heading-anchor" href="#功能-完成验证" aria-label="链接到本节">#</a>阶段五：完成验证</h3>
+      <ul>
+        <li>重复和乱序消息不会造成重复取消或重复释放库存。</li>
+        <li>订单已支付时，晚到的 <code>PaymentExpired</code> 不会覆盖合法状态。</li>
+        <li>消费者先上线、生产者后上线时可兼容。</li>
+        <li>关闭开关后不再产生新超时事件。</li>
+        <li>指标可观察扫描量、事件量、取消成功、状态冲突、消费失败和积压。</li>
+        <li>跨服务测试验证最终订单和库存状态。</li>
+      </ul>
+
+      <h2 id="实例三-共享数据库迁移"><a class="heading-anchor" href="#实例三-共享数据库迁移" aria-label="链接到本节">#</a>实例三：共享数据库迁移</h2>
+      <p><strong>场景：</strong>order-service 和 reporting-service 都读取 <code>orders</code> 表，需要把 <code>cancel_reason</code> 从自由文本演进为结构化代码，同时保持混合版本兼容。这属于 L3 高风险变更。</p>
+
+      <h3 id="迁移-先调查依赖"><a class="heading-anchor" href="#迁移-先调查依赖" aria-label="链接到本节">#</a>阶段一：先调查依赖</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">使用 brainstorming 设计 cancel_reason 的兼容迁移。
+
+开始前搜索：
+- 所有 SQL、JPA Entity、MyBatis Mapper；
+- 报表、ETL 和数据导出；
+- 直接数据库读取者；
+- API 和事件中的 cancelReason；
+- 历史数据分布；
+- 索引和约束。
+
+给出 expand → migrate → contract 三阶段方案。
+设计确认前不生成 migration，不修改实体。</code></pre>
+      </div>
+
+      <h3 id="迁移-三阶段"><a class="heading-anchor" href="#迁移-三阶段" aria-label="链接到本节">#</a>阶段二：三阶段迁移</h3>
+      <table>
+        <thead>
+          <tr><th>阶段</th><th>数据库</th><th>应用</th><th>验证</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Expand</td><td>新增 nullable <code>cancel_reason_code</code></td><td>新版本双写，读取优先新列并回退旧列</td><td>旧应用仍能运行</td></tr>
+          <tr><td>Migrate</td><td>批量回填并记录不可映射值</td><td>监控新旧列一致性</td><td>回填可重入、可暂停</td></tr>
+          <tr><td>Contract</td><td>增加约束，后续删除旧列</td><td>所有读取者已切换</td><td>依赖扫描为零后执行</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="迁移-人工-gate"><a class="heading-anchor" href="#迁移-人工-gate" aria-label="链接到本节">#</a>阶段三：人工 Gate</h3>
+      <p>Superpowers 不能替代生产迁移判断，应在以下位置停下来：</p>
+      <ol>
+        <li>新增列前确认锁表、磁盘和备份策略。</li>
+        <li>回填前确认批量大小、限速、重试和监控。</li>
+        <li>停止双写前确认所有服务和报表已切换。</li>
+        <li>删除旧列前确认完整依赖扫描和回滚窗口。</li>
+      </ol>
+
+      <h2 id="实例四-新功能探索"><a class="heading-anchor" href="#实例四-新功能探索" aria-label="链接到本节">#</a>实例四：新功能探索</h2>
+      <p><strong>场景：</strong>计划增加统一通知编排，但不确定应该扩展 notification-service，还是建立新的 workflow-service。</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">使用 brainstorming 探索统一通知编排。
+
+读取现有调用和事件，但不写生产代码。
+比较：
+1. 扩展 notification-service；
+2. 建立 workflow-service；
+3. 让各领域服务继续自行编排。
+
+评价维度：
+- 领域所有权；
+- 服务耦合；
+- 状态和重试；
+- 幂等与补偿；
+- 可观测性；
+- 运维成本；
+- 未来功能范围；
+- 迁移路径。
+
+最后输出：
+- 当前事实；
+- 三种方案；
+- 推荐及反对理由；
+- 仍需验证的假设；
+- 最小 spike；
+- go/no-go 条件。
+
+本轮结束后停止，不生成 implementation plan。</code></pre>
+      </div>
+      <p>如果需要 spike，应在独立分支或工作树中完成，并提前规定时间盒、测试数据和退出条件。实验代码默认不进入生产实现。</p>
+
+      <h2 id="harness-与验证分层"><a class="heading-anchor" href="#harness-与验证分层" aria-label="链接到本节">#</a>Harness 与验证分层</h2>
+      <p>对于 10+ 服务，不能让 Codex 每完成一个小任务都运行全仓库测试，也不能只跑当前单元测试。推荐五层反馈：</p>
+      <table>
+        <thead>
+          <tr><th>层级</th><th>内容</th><th>目标时间</th><th>使用时机</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>V1</td><td>单个测试类或包</td><td>秒级</td><td>TDD 每轮</td></tr>
+          <tr><td>V2</td><td>当前服务 verify</td><td>分钟级</td><td>任务完成</td></tr>
+          <tr><td>V3</td><td>公共契约兼容</td><td>分钟级</td><td>API、消息变化</td></tr>
+          <tr><td>V4</td><td>受影响服务组合测试</td><td>数分钟</td><td>跨服务任务或功能完成</td></tr>
+          <tr><td>V5</td><td>全仓库、端到端、安全和制品</td><td>较长</td><td>提交、MR、发布</td></tr>
+        </tbody>
+      </table>
+
+      <h3 id="验证脚本约定"><a class="heading-anchor" href="#验证脚本约定" aria-label="链接到本节">#</a>验证脚本约定</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-bash"># 当前服务
+./scripts/verify-service.sh order-service
+
+# 根据 Git diff、Maven 模块依赖和契约消费者计算范围
+./scripts/verify-affected.sh origin/main
+
+# OpenAPI、事件 Schema 和消费者契约
+./scripts/verify-contracts.sh
+
+# 合并前完整检查
+./scripts/verify-all.sh</code></pre>
+      </div>
+      <p>脚本必须由人和 CI 使用同一入口。不要让 AGENTS.md 写一套命令、Codex 猜一套命令、GitLab 再运行第三套命令。</p>
+
+      <h2 id="gitlab-ci-示例"><a class="heading-anchor" href="#gitlab-ci-示例" aria-label="链接到本节">#</a>GitLab CI 示例</h2>
+      <div class="code-block">
+        <div class="code-toolbar"><span>yaml</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-yaml">stages:
+  - validate
+  - test
+  - integration
+  - package
+
+contracts:
+  stage: validate
+  image: maven:3.9-eclipse-temurin-21
+  script:
+    - ./scripts/verify-contracts.sh
+
+unit-and-module-tests:
+  stage: test
+  image: maven:3.9-eclipse-temurin-21
+  script:
+    - ./mvnw -B -ntp verify
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - "**/target/surefire-reports/TEST-*.xml"
+        - "**/target/failsafe-reports/TEST-*.xml"
+
+affected-services:
+  stage: integration
+  image: maven:3.9-eclipse-temurin-21
+  services:
+    - docker:dind
+  script:
+    - ./scripts/verify-affected.sh "${CI_MERGE_REQUEST_DIFF_BASE_SHA:-origin/main}"
+
+package:
+  stage: package
+  image: maven:3.9-eclipse-temurin-21
+  script:
+    - ./mvnw -B -ntp -DskipTests package
+  artifacts:
+    paths:
+      - "**/target/*.jar"
+  needs:
+    - contracts
+    - unit-and-module-tests
+    - affected-services</code></pre>
+      </div>
+      <p>示例需要按 Runner 的 Docker 能力调整。共享数据库迁移还应增加“旧版本 Schema → 新版本 Schema”的升级测试；消息系统应增加重复、乱序和消费者混合版本测试。</p>
+
+      <h2 id="日常使用节奏"><a class="heading-anchor" href="#日常使用节奏" aria-label="链接到本节">#</a>日常使用节奏</h2>
+      <h3 id="开始任务"><a class="heading-anchor" href="#开始任务" aria-label="链接到本节">#</a>开始任务</h3>
+      <ol>
+        <li>同步主分支并检查工作区。</li>
+        <li>运行相关服务基线测试。</li>
+        <li>判断 L0、L1、L2 或 L3。</li>
+        <li>让 Codex 读取根级和相关服务 AGENTS.md。</li>
+        <li>L2/L3 先 brainstorming；L1 Bug 先 systematic-debugging。</li>
+      </ol>
+
+      <h3 id="任务进行中"><a class="heading-anchor" href="#任务进行中" aria-label="链接到本节">#</a>任务进行中</h3>
+      <ol>
+        <li>一次只推进一个可验证行为。</li>
+        <li>先运行 RED，再做最小 GREEN。</li>
+        <li>契约变化立即运行 V3。</li>
+        <li>跨服务边界变化立即检查所有权和发布顺序。</li>
+        <li>计划错误时先修订设计和计划，不要让代码静默漂移。</li>
+      </ol>
+
+      <h3 id="准备完成"><a class="heading-anchor" href="#准备完成" aria-label="链接到本节">#</a>准备完成</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-bash">git diff --check
+./scripts/verify-affected.sh origin/main
+./scripts/verify-contracts.sh
+codex review --base main
+./scripts/verify-all.sh</code></pre>
+      </div>
+      <p>只有最新命令的实际输出可以作为完成证据。此前运行过、理论上应该通过、Codex 认为没有问题，都不算完成。</p>
+
+      <h2 id="从-aidlc-切换后的使用约定"><a class="heading-anchor" href="#从-aidlc-切换后的使用约定" aria-label="链接到本节">#</a>从 AIDLC 切换后的使用约定</h2>
+      <p>切换后只保留一套活动编排：</p>
+      <table>
+        <thead>
+          <tr><th>AIDLC 原能力</th><th>现在由什么承担</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Ideation / Inception</td><td>brainstorming + 保存设计</td></tr>
+          <tr><td>Unit of Work / Bolt</td><td>implementation plan 中的小任务</td></tr>
+          <tr><td>Walking Skeleton</td><td>计划中的第一条端到端切片</td></tr>
+          <tr><td>Construction</td><td>TDD + executing-plans 或 subagent-driven-development</td></tr>
+          <tr><td>Reviewer</td><td>规格符合性评审 + 代码质量评审</td></tr>
+          <tr><td>Phase Gate</td><td>设计、第一条切片、合并/发布三个 Gate</td></tr>
+          <tr><td>State / Audit</td><td>设计、计划、Git、MR、CI 和发布记录</td></tr>
+          <tr><td>Operation</td><td>CI/CD、指标、告警、Runbook 和人工发布判断</td></tr>
+          <tr><td>Learning Loop</td><td>把重复纠正写入 AGENTS.md、测试、脚本或 CI</td></tr>
+        </tbody>
+      </table>
+      <p>AIDLC 历史产物保持只读，不再更新其 Intent、Stage 和 Audit 状态。新任务不得同时启动 AIDLC 和完整 Superpowers 工作流，避免两份设计、两份任务状态和重复 Reviewer。</p>
+
+      <h2 id="常见错误"><a class="heading-anchor" href="#常见错误" aria-label="链接到本节">#</a>常见错误</h2>
+      <table>
+        <thead>
+          <tr><th>错误</th><th>后果</th><th>修正</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>一开始就让 Codex 修改三个服务</td><td>未经确认的架构假设被放大</td><td>先 brainstorming，审完设计再写计划</td></tr>
+          <tr><td>设计只留在聊天记录</td><td>新会话和未来自己无法恢复原因</td><td>L2/L3 设计保存到仓库</td></tr>
+          <tr><td>所有服务规则都塞进根 AGENTS.md</td><td>上下文拥挤、规则互相干扰</td><td>根级写全局事实，服务级写局部细节</td></tr>
+          <tr><td>只跑当前服务单测</td><td>契约和跨服务回归遗漏</td><td>按 V1～V5 分层验证</td></tr>
+          <tr><td>HTTP 防重代替服务端幂等</td><td>重试和消息重复仍会破坏状态</td><td>在数据所有者侧实现幂等约束</td></tr>
+          <tr><td>直接修改其他服务拥有的共享表</td><td>隐藏耦合继续扩大</td><td>通过所有者 API/事件或显式迁移计划</td></tr>
+          <tr><td>TDD 只补成功路径</td><td>并发、乱序和失败模式未验证</td><td>从用户可观察行为和分布式失败写测试</td></tr>
+          <tr><td>测试失败时连续尝试多个修复</td><td>无法证明哪个假设正确</td><td>回到 systematic-debugging 的单一假设</td></tr>
+          <tr><td>使用 AIDLC 和 Superpowers 双编排</td><td>两套计划和状态互相冲突</td><td>Superpowers 是唯一活动编排器</td></tr>
+          <tr><td>让 Codex 自动决定生产发布</td><td>业务和数据风险失去人工控制</td><td>L3 发布和回滚保留人工 Gate</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="完成定义"><a class="heading-anchor" href="#完成定义" aria-label="链接到本节">#</a>完成定义</h2>
+      <p>一个涉及 2～3 个服务的功能只有同时满足以下条件才算完成：</p>
+      <ul>
+        <li>设计中的目标和非目标没有被静默改变。</li>
+        <li>任务计划全部完成，且没有隐藏待办。</li>
+        <li>每个新增行为都有对应 RED 和 GREEN 证据。</li>
+        <li>接口和消息契约兼容。</li>
+        <li>数据库所有权、迁移和混合版本行为明确。</li>
+        <li>重复、乱序、重试、超时和部分失败得到验证。</li>
+        <li>相关服务、受影响组合和完整 CI 通过。</li>
+        <li>代码评审没有未处理的重要发现。</li>
+        <li>日志、指标和告警足以观察新行为。</li>
+        <li>发布顺序、功能开关和回滚方式可执行。</li>
+      </ul>
+
+      <h2 id="参考资料"><a class="heading-anchor" href="#参考资料" aria-label="链接到本节">#</a>参考资料</h2>
+      <ul>
+        <li><a href="https://github.com/obra/superpowers" target="_blank" rel="noopener noreferrer">Superpowers 官方仓库</a> — 安装方式、基础工作流和技能清单，访问日期：2026-07-24。</li>
+        <li><a href="https://github.com/obra/superpowers/blob/main/skills/systematic-debugging/SKILL.md" target="_blank" rel="noopener noreferrer">Systematic Debugging</a> — 根因调查、边界证据、单一假设和回归测试，访问日期：2026-07-24。</li>
+        <li><a href="https://github.com/obra/superpowers/blob/main/skills/test-driven-development/SKILL.md" target="_blank" rel="noopener noreferrer">Test-Driven Development</a> — RED、GREEN、REFACTOR 与测试反模式，访问日期：2026-07-24。</li>
+        <li><a href="https://learn.chatgpt.com/docs/build-skills" target="_blank" rel="noopener noreferrer">Codex Build Skills</a> — 技能显式/隐式调用、发现范围和渐进披露，访问日期：2026-07-24。</li>
+        <li><a href="https://learn.chatgpt.com/docs/agent-configuration/agents-md" target="_blank" rel="noopener noreferrer">Codex AGENTS.md</a> — 分层发现、覆盖顺序和上下文大小，访问日期：2026-07-24。</li>
+        <li><a href="https://learn.chatgpt.com/docs/developer-commands" target="_blank" rel="noopener noreferrer">Codex Developer Commands</a> — <code>/plugins</code>、<code>/skills</code>、<code>/review</code> 和 CLI 命令，访问日期：2026-07-24。</li>
+        <li><a href="2026-07-24-Superpowers详细介绍.html">Superpowers 详细介绍</a> — 方法论、全部主要技能和局限。</li>
+        <li><a href="2026-07-24-AIDLC与Superpowers差异分析.html">AIDLC 与 Superpowers 差异分析</a> — 生命周期治理与实现内循环的差异。</li>
+      </ul>
+    </article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/codex/2026-07-24-Superpowers大型Java微服务Monorepo使用指南.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="2026-07-24-OpenSpec-Superpowers-CI-Codex-CLI实战教程.html"><small>上一篇</small><span>OpenSpec + Superpowers + CI：Codex CLI 全栈实战教程</span></a>
+        <a class="pager-link next" href="2026-07-24-Superpowers详细介绍.html"><small>下一篇</small><span>Superpowers 详细介绍：Codex 的技能化软件开发方法</span></a>
+      </nav>
+    </footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list">
+        <li class="toc-level-2"><a href="#核心结论">核心结论</a></li>
+        <li class="toc-level-2"><a href="#适用边界">适用边界</a></li>
+        <li class="toc-level-2"><a href="#安装与确认-superpowers">安装与确认 Superpowers</a></li>
+        <li class="toc-level-2"><a href="#推荐的-monorepo-结构">推荐的 Monorepo 结构</a></li>
+        <li class="toc-level-2"><a href="#分层-agents-md">分层 AGENTS.md</a></li>
+        <li class="toc-level-2"><a href="#superpowers-技能地图">Superpowers 技能地图</a></li>
+        <li class="toc-level-2"><a href="#四级工作模式">四级工作模式</a></li>
+        <li class="toc-level-2"><a href="#通用提示词模板">通用提示词模板</a></li>
+        <li class="toc-level-2"><a href="#实例一-跨服务-bugfix">实例一：跨服务 Bugfix</a></li>
+        <li class="toc-level-2"><a href="#实例二-标准跨服务功能">实例二：标准跨服务功能</a></li>
+        <li class="toc-level-2"><a href="#实例三-共享数据库迁移">实例三：共享数据库迁移</a></li>
+        <li class="toc-level-2"><a href="#实例四-新功能探索">实例四：新功能探索</a></li>
+        <li class="toc-level-2"><a href="#harness-与验证分层">Harness 与验证分层</a></li>
+        <li class="toc-level-2"><a href="#gitlab-ci-示例">GitLab CI 示例</a></li>
+        <li class="toc-level-2"><a href="#日常使用节奏">日常使用节奏</a></li>
+        <li class="toc-level-2"><a href="#从-aidlc-切换后的使用约定">从 AIDLC 切换后的使用约定</a></li>
+        <li class="toc-level-2"><a href="#常见错误">常见错误</a></li>
+        <li class="toc-level-2"><a href="#完成定义">完成定义</a></li>
+        <li class="toc-level-2"><a href="#参考资料">参考资料</a></li>
+      </ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+<div class="sidebar-scrim"></div>
+</body>
+</html>
