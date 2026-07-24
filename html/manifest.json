@@ -1,0 +1,48 @@
+{
+  "generatedAt": "2026-07-24T06:31:18.062Z",
+  "documentCount": 6,
+  "documents": [
+    {
+      "output": "AGENTS.html",
+      "title": "Java 全栈 AI 学习助手",
+      "category": "项目指南",
+      "date": "",
+      "sections": 10
+    },
+    {
+      "output": "notes/codex/2026-07-24-AI开发工作流选型与小团队沉淀指南.html",
+      "title": "AI 开发工作流选型与小团队沉淀指南",
+      "category": "Codex 与 AI 工程",
+      "date": "2026-07-24",
+      "sections": 77
+    },
+    {
+      "output": "notes/codex/2026-07-24-AIDLC详细介绍.html",
+      "title": "AIDLC 详细介绍：从 AI 辅助编码到可审计的软件交付生命周期",
+      "category": "Codex 与 AI 工程",
+      "date": "2026-07-24",
+      "sections": 64
+    },
+    {
+      "output": "notes/codex/2026-07-24-AIDLC与Superpowers差异分析.html",
+      "title": "AIDLC 与 Superpowers 差异分析：生命周期治理与工程 Inner Loop",
+      "category": "Codex 与 AI 工程",
+      "date": "2026-07-24",
+      "sections": 121
+    },
+    {
+      "output": "notes/codex/2026-07-24-Codex全栈开发最佳实践.html",
+      "title": "Codex 全栈开发最佳实践：Vibe Coding、Harness 与 Loop",
+      "category": "Codex 与 AI 工程",
+      "date": "2026-07-24",
+      "sections": 57
+    },
+    {
+      "output": "notes/codex/2026-07-24-Superpowers详细介绍.html",
+      "title": "Superpowers 详细介绍：Codex 的技能化软件开发方法",
+      "category": "Codex 与 AI 工程",
+      "date": "2026-07-24",
+      "sections": 67
+    }
+  ]
+}

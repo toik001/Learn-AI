@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="除 AIDLC 与 Superpowers 外，还有哪些较完整的 AI 开发工作流，以及 2 人小团队是否值得沉淀自己的工作流">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="Codex 与 AI 工程">
+  <meta name="study-date" content="2026-07-24">
+  <title>AI 开发工作流选型与小团队沉淀指南｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a href="../../index.html">全部文档</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <label class="sidebar-search">
+      <span class="sr-only">筛选文档</span>
+      <input type="search" placeholder="筛选文档…" data-sidebar-search>
+    </label>
+    <nav class="doc-nav" aria-label="文档列表">
+      <a class="doc-nav-item" href="../../AGENTS.html"><span>Java 全栈 AI 学习助手</span><small>项目指南</small></a><a class="doc-nav-item is-active" href="2026-07-24-AI开发工作流选型与小团队沉淀指南.html"><span>AI 开发工作流选型与小团队沉淀指南</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC详细介绍.html"><span>AIDLC 详细介绍：从 AI 辅助编码到可审计的软件交付生命周期</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC与Superpowers差异分析.html"><span>AIDLC 与 Superpowers 差异分析：生命周期治理与工程 Inner Loop</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-Codex全栈开发最佳实践.html"><span>Codex 全栈开发最佳实践：Vibe Coding、Harness 与 Loop</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-Superpowers详细介绍.html"><span>Superpowers 详细介绍：Codex 的技能化软件开发方法</span><small>Codex 与 AI 工程</small></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta">
+      <a href="../../index.html">知识库首页</a>
+      <span>·</span>
+      <span>Codex 与 AI 工程</span>
+      <span>·</span><time>2026-07-24</time>
+    </div>
+    <article class="markdown-body">
+      <h1 id="ai-开发工作流选型与小团队沉淀指南"><a class="heading-anchor" href="#ai-开发工作流选型与小团队沉淀指南" aria-label="链接到本节">#</a>AI 开发工作流选型与小团队沉淀指南</h1>
+<blockquote><p>整理日期：2026-07-24<br> 主题：除 AIDLC 与 Superpowers 外，还有哪些较完整的 AI 开发工作流，以及 2 人小团队是否值得沉淀自己的工作流<br> 适用团队：2 人、每人主要负责一个项目、Java 全栈为主、使用 Codex 等 AI 编码智能体<br> 说明：本文的“评分”是结合当前团队场景作出的定性判断，不是框架性能基准。</p></blockquote>
+<h2 id="核心结论"><a class="heading-anchor" href="#核心结论" aria-label="链接到本节">#</a>核心结论</h2>
+<h3 id="直接回答"><a class="heading-anchor" href="#直接回答" aria-label="链接到本节">#</a>直接回答</h3>
+<p>还有不少类似工作流，但它们并不处在同一层：</p>
+<ul><li><strong>BMAD Method</strong>：最接近 AIDLC 的“项目级完整开发方法”，覆盖分析、规划、架构、实现、评审和复盘。</li><li><strong>GSD（Get Shit Done）</strong>：更偏“单人拥有一个项目、按里程碑持续交付”的上下文工程与自治执行系统。</li><li><strong>GitHub Spec Kit</strong>：成熟的规格驱动开发框架，核心链路是 <code>Spec → Plan → Tasks → Implement</code>，还支持工作流编排、状态持久化和人工门禁。</li><li><strong>OpenSpec</strong>：较轻量的变更级规格工作流，适合存量项目和小团队，以 <code>Proposal → Apply → Archive</code> 管理一次变更。</li><li><strong>Kiro Specs</strong>：Kiro 产品内置的 <code>Requirements → Design → Tasks → Implement</code> 工作流，体验完整，但平台绑定更强。</li><li><strong>Ralph Loop</strong>：不是完整 SDLC，而是让智能体反复读取规格、任务列表和验证反馈的自治执行循环。</li><li><strong>Superpowers</strong>：主要解决实现阶段的设计、计划、TDD、调试、评审和完成前验证，也不是完整的产品生命周期框架。</li></ul>
+<p>对当前 2 人团队，结论是：</p>
+<blockquote><p><strong>有必要沉淀工作流，但没有必要从零开发一个新的工作流框架。</strong></p></blockquote>
+<p>最合适的做法不是把 AIDLC、BMAD、GSD、Spec Kit、OpenSpec 和 Superpowers 全部安装，而是沉淀一套薄的团队交付协议：</p>
+<ol><li>用项目 <code>AGENTS.md</code> 固化项目规则、命令和验证要求。</li><li>规格层只选择 <strong>OpenSpec 或 Spec Kit 其中一个</strong>。</li><li>实现内循环使用 Superpowers 的设计、计划、TDD、调试、评审与验证方法。</li><li>用 Maven、前端构建、测试、静态检查和 CI 形成确定性反馈。</li><li>对高风险、新项目或跨系统变更，按需升级为轻量 AIDLC。</li><li>同一项目只保留一个顶层流程指挥者，避免多个框架同时争夺任务状态和文档真相源。</li></ol>
+<p>如果主要是已有 Java 全栈项目，默认更推荐：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">OpenSpec（变更规格）
+    ↓
+Superpowers（实现内循环）
+    ↓
+Maven / 前端测试 / E2E / CI（确定性反馈）
+    ↓
+风险触发的人类交叉评审</code></pre></div>
+<p>如果主要是大型新项目、需求复杂或多人未来会共同开发，则可以把 OpenSpec 换成 Spec Kit；只有在项目风险和治理要求明显上升时，才启用 AIDLC 或 BMAD 的完整轨道。</p>
+<hr>
+<h2 id="一先区分四类工作流"><a class="heading-anchor" href="#一先区分四类工作流" aria-label="链接到本节">#</a>一、先区分四类“工作流”</h2>
+<p>“完整工作流”容易产生误解。一个工具拥有很多命令，并不代表它覆盖了完整的软件生命周期。</p>
+<h3 id="1-生命周期外循环"><a class="heading-anchor" href="#1-生命周期外循环" aria-label="链接到本节">#</a>1. 生命周期外循环</h3>
+<p>回答的是：</p>
+<ul><li>为什么做？</li><li>需求和范围是什么？</li><li>架构如何决策？</li><li>何时允许进入实现？</li><li>如何发布、运营、复盘和沉淀？</li></ul>
+<p>代表：</p>
+<ul><li>AIDLC</li><li>BMAD Method</li></ul>
+<h3 id="2-规格与变更管理层"><a class="heading-anchor" href="#2-规格与变更管理层" aria-label="链接到本节">#</a>2. 规格与变更管理层</h3>
+<p>回答的是：</p>
+<ul><li>这次具体要改变什么？</li><li>验收标准是什么？</li><li>设计和任务如何从需求推导？</li><li>规格与代码如何在 Git 中一起演进？</li></ul>
+<p>代表：</p>
+<ul><li>GitHub Spec Kit</li><li>OpenSpec</li><li>Kiro Specs</li></ul>
+<h3 id="3-实现内循环"><a class="heading-anchor" href="#3-实现内循环" aria-label="链接到本节">#</a>3. 实现内循环</h3>
+<p>回答的是：</p>
+<ul><li>如何理解现有代码？</li><li>如何拆计划？</li><li>如何用测试驱动实现？</li><li>如何系统调试、代码评审和完成前验证？</li></ul>
+<p>代表：</p>
+<ul><li>Superpowers</li><li>Codex 原生的计划、实现、评审和验证操作模式</li></ul>
+<h3 id="4-自治执行循环"><a class="heading-anchor" href="#4-自治执行循环" aria-label="链接到本节">#</a>4. 自治执行循环</h3>
+<p>回答的是：</p>
+<ul><li>如何让智能体在多轮或多个新上下文中持续推进？</li><li>每轮如何选一个任务？</li><li>如何通过测试、编译和静态检查形成反馈？</li><li>何时停止、回退或请求人工介入？</li></ul>
+<p>代表：</p>
+<ul><li>Ralph Loop</li><li>GSD 的自动执行部分</li><li>BMAD 的自动开发循环</li></ul>
+<h3 id="四层关系"><a class="heading-anchor" href="#四层关系" aria-label="链接到本节">#</a>四层关系</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">生命周期外循环
+  AIDLC / BMAD
+        ↓ 产生目标、需求、架构和门禁
+规格与变更层
+  Spec Kit / OpenSpec / Kiro Specs
+        ↓ 产生规格、设计和任务
+实现内循环
+  Superpowers / Codex
+        ↓ 产生代码、测试和评审证据
+自治执行循环
+  Ralph / GSD Auto Loop
+        ↺ 读取任务与验证反馈，继续下一轮
+
+确定性 Harness 横贯所有层：
+  编译 + 单测 + 集成测试 + E2E + 静态检查 + 安全扫描 + CI</code></pre></div>
+<p>因此，更合理的问题不是“哪个框架命令最多”，而是：</p>
+<blockquote><p>当前项目在哪一层缺少约束和反馈？</p></blockquote>
+<hr>
+<h2 id="二候选工作流总览"><a class="heading-anchor" href="#二候选工作流总览" aria-label="链接到本节">#</a>二、候选工作流总览</h2>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">方案</th><th style="text-align:left">主要定位</th><th style="text-align:right">生命周期覆盖</th><th style="text-align:left">最强能力</th><th style="text-align:left">主要成本</th><th style="text-align:right">当前 2 人团队适配度</th></tr></thead><tbody><tr><td style="text-align:left">AIDLC</td><td style="text-align:left">生命周期与治理外循环</td><td style="text-align:right">高</td><td style="text-align:left">阶段、状态、审计、运行与知识沉淀</td><td style="text-align:left">仪式和配置较重</td><td style="text-align:right">3/5，按风险启用</td></tr><tr><td style="text-align:left">BMAD Method</td><td style="text-align:left">AI 驱动项目开发方法</td><td style="text-align:right">高</td><td style="text-align:left">产品分析、PRD、UX、架构、故事、实现、评审</td><td style="text-align:left">角色与产物多，学习成本高</td><td style="text-align:right">2.5/5；复杂新项目可到 4/5</td></tr><tr><td style="text-align:left">GSD</td><td style="text-align:left">上下文工程与里程碑交付</td><td style="text-align:right">中高</td><td style="text-align:left">单人长期项目、阶段计划、自治推进、验证</td><td style="text-align:left">Token、命令和自治管理成本</td><td style="text-align:right">3.5/5</td></tr><tr><td style="text-align:left">GitHub Spec Kit</td><td style="text-align:left">可扩展规格驱动 Harness</td><td style="text-align:right">中高</td><td style="text-align:left">规格、计划、任务、工作流编排、门禁和恢复</td><td style="text-align:left">结构比 OpenSpec重</td><td style="text-align:right">4/5</td></tr><tr><td style="text-align:left">OpenSpec</td><td style="text-align:left">轻量变更级 SDD</td><td style="text-align:right">中</td><td style="text-align:left">存量项目、Git/PR 协作、一个变更一个负责人</td><td style="text-align:left">不覆盖完整治理与实现纪律</td><td style="text-align:right">5/5</td></tr><tr><td style="text-align:left">Kiro Specs</td><td style="text-align:left">Kiro 原生规格工作流</td><td style="text-align:right">中</td><td style="text-align:left">产品内一体化规格与执行体验</td><td style="text-align:left">平台绑定</td><td style="text-align:right">使用 Kiro 时 4/5，否则 2/5</td></tr><tr><td style="text-align:left">Superpowers</td><td style="text-align:left">实现阶段工程纪律</td><td style="text-align:right">中低</td><td style="text-align:left">TDD、调试、评审、验证和任务执行</td><td style="text-align:left">不负责产品与运行外循环</td><td style="text-align:right">5/5，但需搭配规格层</td></tr><tr><td style="text-align:left">Ralph Loop</td><td style="text-align:left">自治执行技术</td><td style="text-align:right">低</td><td style="text-align:left">新上下文反复执行、测试反馈、长时间推进</td><td style="text-align:left">容易漂移、烧 Token、需要强 Harness</td><td style="text-align:right">2/5，限定场景试验</td></tr></tbody></table></div>
+<h3 id="覆盖不等于质量"><a class="heading-anchor" href="#覆盖不等于质量" aria-label="链接到本节">#</a>“覆盖”不等于“质量”</h3>
+<p>一个框架声称覆盖从想法到部署，不代表：</p>
+<ul><li>自动生成的需求就是正确需求；</li><li>自动生成的架构经过了真实负载验证；</li><li>测试覆盖了业务风险；</li><li>部署具备回滚、监控和告警；</li><li>人类可以不再进行风险判断。</li></ul>
+<p>完整性应该从以下证据判断：</p>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">维度</th><th style="text-align:left">最低可接受证据</th></tr></thead><tbody><tr><td style="text-align:left">需求</td><td style="text-align:left">明确目标、非目标、验收标准</td></tr><tr><td style="text-align:left">设计</td><td style="text-align:left">关键技术决策、替代方案、风险</td></tr><tr><td style="text-align:left">实现</td><td style="text-align:left">可审查的小步提交、无占位实现</td></tr><tr><td style="text-align:left">测试</td><td style="text-align:left">单元、集成、契约或 E2E 的适当组合</td></tr><tr><td style="text-align:left">安全</td><td style="text-align:left">权限、输入、凭证、依赖和数据边界检查</td></tr><tr><td style="text-align:left">发布</td><td style="text-align:left">可重复构建、发布步骤、回滚方案</td></tr><tr><td style="text-align:left">运行</td><td style="text-align:left">日志、指标、告警、Runbook</td></tr><tr><td style="text-align:left">协作</td><td style="text-align:left">责任人、人工门禁、交接材料</td></tr><tr><td style="text-align:left">追踪</td><td style="text-align:left">规格、代码、测试、PR 和发布之间可关联</td></tr></tbody></table></div>
+<hr>
+<h2 id="三bmad-method最像-aidlc-的替代方案"><a class="heading-anchor" href="#三bmad-method最像-aidlc-的替代方案" aria-label="链接到本节">#</a>三、BMAD Method：最像 AIDLC 的替代方案</h2>
+<p>BMAD 官方工作流把项目分成四个主要阶段：</p>
+<ol><li>Analysis：可选的问题探索、研究、产品简报等。</li><li>Planning：PRD、UX 和规格。</li><li>Solutioning：架构、Epic/Story 拆解和实现就绪检查。</li><li>Implementation：Sprint、Story 实现、代码评审、调整和复盘。</li></ol>
+<p>小型且清晰的变更还可以使用 Quick Flow，跳过较重的前置阶段。</p>
+<h3 id="优点"><a class="heading-anchor" href="#优点" aria-label="链接到本节">#</a>优点</h3>
+<ul><li>从产品问题到代码实现的链路比较完整。</li><li>每个阶段产生明确文档，适合在新上下文中继续工作。</li><li>对 PRD、UX、架构和 Story 的关注比纯编码工具更完整。</li><li>同时提供完整轨道和 Quick Flow，可按任务复杂度切换。</li><li>适合需要产品探索、架构决策和长期规划的绿地项目。</li></ul>
+<h3 id="缺点"><a class="heading-anchor" href="#缺点" aria-label="链接到本节">#</a>缺点</h3>
+<ul><li>角色、Agent、命令和文档数量较多。</li><li>两个人若对所有需求都执行完整流程，容易出现“为维护流程而维护流程”。</li><li>多个 AI 角色并不等于多个真正独立的领域专家，人类仍需检查同源模型带来的共同盲区。</li><li>快速演进的框架需要额外承担升级、迁移和命令变化成本。</li><li>对已稳定运行的存量 Java 项目，小变更可能显得过重。</li></ul>
+<h3 id="适合当前团队的使用方式"><a class="heading-anchor" href="#适合当前团队的使用方式" aria-label="链接到本节">#</a>适合当前团队的使用方式</h3>
+<p>不要把 BMAD 作为两个项目的日常默认流程。可以在以下场景选择它：</p>
+<ul><li>从零定义一个产品；</li><li>用户体验和业务需求都不明确；</li><li>需要 PRD、UX、架构和 Epic 连贯生成；</li><li>一个项目未来会扩展到多人共同开发；</li><li>项目负责人希望由 AI 主动推动需求澄清。</li></ul>
+<p>对 2 人团队，优先使用 BMAD Quick Flow；只有新项目或大功能才进入完整轨道。</p>
+<hr>
+<h2 id="四gsd更适合一人负责一个长期项目"><a class="heading-anchor" href="#四gsd更适合一人负责一个长期项目" aria-label="链接到本节">#</a>四、GSD：更适合“一人负责一个长期项目”</h2>
+<p>GSD 强调上下文工程、阶段计划、原子任务和持续验证。典型新项目会形成：</p>
+<ul><li><code>PROJECT.md</code></li><li><code>REQUIREMENTS.md</code></li><li><code>ROADMAP.md</code></li><li><code>STATE.md</code></li><li>阶段研究、计划与验证材料</li></ul>
+<p>每个阶段通常经历讨论、研究、计划、执行和验证，并通过新上下文执行较小计划，降低长会话中的上下文退化。</p>
+<h3 id="优点-2"><a class="heading-anchor" href="#优点-2" aria-label="链接到本节">#</a>优点</h3>
+<ul><li>很贴合“一人主要拥有一个项目”的工作方式。</li><li>项目目标、路线图、当前状态和阶段计划落盘，便于中断后恢复。</li><li>强调小任务、原子提交和验证。</li><li>比单纯 Ralph Loop 更有项目结构和里程碑意识。</li><li>当前官方仓库提供 Codex 安装与 <code>$gsd-*</code> 技能入口。</li></ul>
+<h3 id="缺点-2"><a class="heading-anchor" href="#缺点-2" aria-label="链接到本节">#</a>缺点</h3>
+<ul><li>命令面和工作流表面较大，仍需学习。</li><li>自治执行和多轮上下文会产生较高 Token 与时间成本。</li><li>项目状态文件可能与现有 Issue、看板、PR 或规格目录重复。</li><li>主要强项是项目交付，不等同于生产运行治理。</li><li>如果两个负责人采用不同配置，跨项目交接仍可能困难。</li></ul>
+<h3 id="适合当前团队的使用方式-2"><a class="heading-anchor" href="#适合当前团队的使用方式-2" aria-label="链接到本节">#</a>适合当前团队的使用方式</h3>
+<p>如果每个项目：</p>
+<ul><li>周期较长；</li><li>负责人会独立连续开发；</li><li>容易被其他工作打断；</li><li>希望 AI 自动维护路线图和状态；</li><li>CI 已经能快速、可靠地反馈；</li></ul>
+<p>那么 GSD 值得在一个非核心项目试点。</p>
+<p>但不建议同时让 GSD、AIDLC 或 BMAD共同维护顶层任务状态。应选择一个作为项目指挥者。</p>
+<hr>
+<h2 id="五github-spec-kit较强的规格驱动-harness"><a class="heading-anchor" href="#五github-spec-kit较强的规格驱动-harness" aria-label="链接到本节">#</a>五、GitHub Spec Kit：较强的规格驱动 Harness</h2>
+<p>Spec Kit 的核心流程是：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">Spec → Plan → Tasks → Implement</code></pre></div>
+<p>官方文档还提供更完整的工作流能力：</p>
+<ul><li>规格、计划、任务和实现命令；</li><li>工作流 YAML；</li><li>人工 <code>gate</code>；</li><li>条件与循环；</li><li>扇出/汇聚；</li><li>状态、输入和日志持久化；</li><li>暂停后恢复；</li><li>多种编码智能体集成，包括 Codex。</li></ul>
+<h3 id="优点-3"><a class="heading-anchor" href="#优点-3" aria-label="链接到本节">#</a>优点</h3>
+<ul><li>规格产物是 Markdown，适合 Git 评审和长期维护。</li><li>比纯提示词更能建立稳定的变更上下文。</li><li>支持从手动分阶段运行逐步升级到自动工作流。</li><li>工作流状态和恢复能力适合长任务。</li><li>可以通过预设、扩展和 Bundle 形成组织标准。</li><li>既能用于绿地，也能通过扩展适配其他流程。</li></ul>
+<h3 id="缺点-3"><a class="heading-anchor" href="#缺点-3" aria-label="链接到本节">#</a>缺点</h3>
+<ul><li>默认结构比 OpenSpec 更重。</li><li>工作流编排能力很强，容易过早进入“开发流程平台”的诱惑。</li><li>社区工作流不应默认视为可信代码，安装和执行前仍需审查。</li><li>它能推动到实现，但生产发布、运行治理仍需团队补充。</li><li>与其他顶层规格框架并用时，容易产生重复规格和任务状态。</li></ul>
+<h3 id="适合当前团队的使用方式-3"><a class="heading-anchor" href="#适合当前团队的使用方式-3" aria-label="链接到本节">#</a>适合当前团队的使用方式</h3>
+<p>以下情况优先考虑 Spec Kit：</p>
+<ul><li>新项目或大型跨模块功能；</li><li>需求经常在实现前需要多轮澄清；</li><li>希望规格、计划、任务间有更强的结构；</li><li>需要人工门禁、暂停恢复或工作流自动化；</li><li>未来可能让多人或多个 Agent 共同处理同一项目。</li></ul>
+<p>对日常一两天的小改动，不需要每次都运行全套工作流。</p>
+<hr>
+<h2 id="六openspec当前-2-人团队最值得试用的规格层"><a class="heading-anchor" href="#六openspec当前-2-人团队最值得试用的规格层" aria-label="链接到本节">#</a>六、OpenSpec：当前 2 人团队最值得试用的规格层</h2>
+<p>OpenSpec 的新工作流可以概括为：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">Explore（可选）
+   ↓
+Propose
+   ├─ proposal.md
+   ├─ specs/
+   ├─ design.md
+   └─ tasks.md
+   ↓
+Apply
+   ↓
+Archive</code></pre></div>
+<p>其团队协作原则很适合当前模式：</p>
+<ul><li>OpenSpec 本身不代替 Git；</li><li>规格和代码在同一分支/PR 中演进；</li><li>一个变更由一个人负责；</li><li>不同变更目录减少冲突；</li><li>合并后归档变更，形成可追踪历史。</li></ul>
+<h3 id="优点-4"><a class="heading-anchor" href="#优点-4" aria-label="链接到本节">#</a>优点</h3>
+<ul><li>轻量、Markdown 优先。</li><li>对已有项目友好，不要求重建完整产品文档。</li><li>“一个变更一个负责人”与两人各自主导项目非常匹配。</li><li>规格和代码一起评审，减少“文档在另一个系统里过期”。</li><li>已提供 Codex 集成。</li><li>比完整 AIDLC/BMAD 更容易形成团队习惯。</li></ul>
+<h3 id="缺点-4"><a class="heading-anchor" href="#缺点-4" aria-label="链接到本节">#</a>缺点</h3>
+<ul><li>不负责完整的产品研究、组织治理和运行阶段。</li><li>不会自动保证 TDD、系统调试或高质量代码评审。</li><li>若每个微小修复都建立完整 Proposal，也会产生负担。</li><li>归档后如何维护系统级架构知识，仍需 ADR 或架构文档补充。</li><li>规格写得差时，流程只会更稳定地执行错误方向。</li></ul>
+<h3 id="为什么它适合当前团队"><a class="heading-anchor" href="#为什么它适合当前团队" aria-label="链接到本节">#</a>为什么它适合当前团队</h3>
+<p>两人各负责一个项目时，最大的风险通常不是“缺少 30 个 Agent 角色”，而是：</p>
+<ul><li>一个人离开后，另一个人不知道为何这样设计；</li><li>需求只存在于聊天记录；</li><li>AI 修改范围不可控；</li><li>验证命令不统一；</li><li>发布前没有风险检查点。</li></ul>
+<p>OpenSpec 可以用较低成本补齐“这次为什么改、改什么、怎么验收”；Superpowers 和 CI 再补齐“怎么正确实现”。</p>
+<hr>
+<h2 id="七kiro-specs产品内体验完整但不宜为流程而换平台"><a class="heading-anchor" href="#七kiro-specs产品内体验完整但不宜为流程而换平台" aria-label="链接到本节">#</a>七、Kiro Specs：产品内体验完整，但不宜为流程而换平台</h2>
+<p>Kiro Specs 通常产生：</p>
+<ul><li><code>requirements.md</code>，Bug 场景可能使用 <code>bugfix.md</code>；</li><li><code>design.md</code>；</li><li><code>tasks.md</code>；</li><li>任务执行与 PR。</li></ul>
+<p>它还区分 Feature、Bug 和 Quick Plan，能针对不同任务选择更合适的规格入口。</p>
+<h3 id="优点-5"><a class="heading-anchor" href="#优点-5" aria-label="链接到本节">#</a>优点</h3>
+<ul><li>规格、任务执行和 PR 形成一体化体验。</li><li>Feature 与 Bug 使用不同产物，符合真实工程差异。</li><li>Quick Plan 可以降低小改动的仪式成本。</li><li>对不熟悉规格驱动开发的团队，上手路径比较直观。</li></ul>
+<h3 id="缺点-5"><a class="heading-anchor" href="#缺点-5" aria-label="链接到本节">#</a>缺点</h3>
+<ul><li>工作流与 Kiro 产品结合紧密。</li><li>如果团队当前主力是 Codex，引入新平台会增加工具切换与配置成本。</li><li>规格流程完整不代表生产 Harness 完整。</li><li>跨工具迁移时仍要依赖 Markdown 产物，而非产品内状态。</li></ul>
+<h3 id="当前团队建议"><a class="heading-anchor" href="#当前团队建议" aria-label="链接到本节">#</a>当前团队建议</h3>
+<p>把 Kiro Specs 当作可借鉴的模式，而不是必须引入的工具：</p>
+<ul><li>Feature：需求优先；</li><li>Bug：先根因分析与不变行为；</li><li>Quick Plan：低风险小变更。</li></ul>
+<p>除非两个人都准备长期使用 Kiro，否则无需为了获得该流程而迁移。</p>
+<hr>
+<h2 id="八ralph-loop是一种执行模式不是完整工作流"><a class="heading-anchor" href="#八ralph-loop是一种执行模式不是完整工作流" aria-label="链接到本节">#</a>八、Ralph Loop：是一种执行模式，不是完整工作流</h2>
+<p>Ralph 的原始思想非常简单：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">读取规格与计划
+    ↓
+每轮选择一个最重要任务
+    ↓
+修改代码
+    ↓
+编译、测试、静态检查形成反压
+    ↓
+更新计划与学习
+    ↓
+新上下文继续下一轮</code></pre></div>
+<p>原始介绍明确强调：</p>
+<ul><li>Ralph 是一种技术，最纯粹的形式就是循环；</li><li>一轮只做一件事；</li><li>每轮重新读取规格和计划；</li><li>测试、编译、类型系统、静态分析和安全扫描形成 backpressure；</li><li>原作者更偏向将其用于绿地项目，并明确警告存量代码库风险。</li></ul>
+<h3 id="优点-6"><a class="heading-anchor" href="#优点-6" aria-label="链接到本节">#</a>优点</h3>
+<ul><li>实现简单，适合长时间自治推进。</li><li>新上下文能降低历史对话污染。</li><li>任务列表和验证输出成为跨轮次的外部记忆。</li><li>当规格清晰、测试快速、失败信号明确时，吞吐量可能较高。</li></ul>
+<h3 id="缺点-6"><a class="heading-anchor" href="#缺点-6" aria-label="链接到本节">#</a>缺点</h3>
+<ul><li>不是需求、架构、协作、发布和运营方法。</li><li>弱测试会导致智能体“错误地通过”。</li><li>容易重复实现、修改无关代码或追逐局部指标。</li><li>可能消耗大量 Token 和计算资源。</li><li>需要明确的最大轮次、范围、预算、停止条件和人工升级规则。</li><li>不适合对支付、权限、数据迁移、基础设施等高风险变化进行无人值守运行。</li></ul>
+<h3 id="当前团队建议-2"><a class="heading-anchor" href="#当前团队建议-2" aria-label="链接到本节">#</a>当前团队建议</h3>
+<p>不要把 Ralph 作为默认开发方式。只有同时满足以下条件时才试用：</p>
+<ul><li>任务有稳定且经评审的规格；</li><li>工作被拆成可独立验证的小项；</li><li>仓库可以在隔离分支或 Worktree 中运行；</li><li><code>./mvnw verify</code>、前端测试和必要 E2E 足够快；</li><li>不涉及不可逆数据和外部生产操作；</li><li>设置最大轮次、Token/时间预算和失败升级；</li><li>所有提交仍需人工或独立 Agent 评审。</li></ul>
+<hr>
+<h2 id="九当前团队到底要不要自己沉淀工作流"><a class="heading-anchor" href="#九当前团队到底要不要自己沉淀工作流" aria-label="链接到本节">#</a>九、当前团队到底要不要“自己沉淀工作流”</h2>
+<h3 id="要但要先明确沉淀的含义"><a class="heading-anchor" href="#要但要先明确沉淀的含义" aria-label="链接到本节">#</a>要，但要先明确“沉淀”的含义</h3>
+<p>值得沉淀的是：</p>
+<ul><li>反复出现的决策规则；</li><li>项目真实命令；</li><li>风险触发条件；</li><li>验证证据；</li><li>交接必需信息；</li><li>已经重复验证有效的操作顺序。</li></ul>
+<p>不值得从零构建的是：</p>
+<ul><li>新的多 Agent 调度引擎；</li><li>一套与 Git/Issue/PR 重复的状态系统；</li><li>数十个虚拟角色；</li><li>尚未实际使用过的全生命周期模板；</li><li>为了“自动化一切”而创建的大量 Hooks 和脚本。</li></ul>
+<h3 id="推荐的沉淀阶梯"><a class="heading-anchor" href="#推荐的沉淀阶梯" aria-label="链接到本节">#</a>推荐的沉淀阶梯</h3>
+<h4 id="level-1团队交付协议"><a class="heading-anchor" href="#level-1团队交付协议" aria-label="链接到本节">#</a>Level 1：团队交付协议</h4>
+<p>现在就应该做。</p>
+<p>产物可以是：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">AGENTS.md
+docs/workflow/TEAM-WORKFLOW.md
+docs/adr/
+docs/runbooks/
+openspec/changes/                 # 若选 OpenSpec
+# 或
+specs/ + .specify/                # 若选 Spec Kit
+.github/pull_request_template.md
+scripts/verify.sh</code></pre></div>
+<p>这一层解决“两个项目使用相同的最小质量标准”。</p>
+<h4 id="level-2模板与确定性脚本"><a class="heading-anchor" href="#level-2模板与确定性脚本" aria-label="链接到本节">#</a>Level 2：模板与确定性脚本</h4>
+<p>当相同步骤重复使用至少 3 次后再做。</p>
+<p>适合沉淀：</p>
+<ul><li>变更 Proposal 模板；</li><li>ADR 模板；</li><li>发布检查表；</li><li>Java 后端与前端统一验证脚本；</li><li>数据库迁移检查；</li><li>API 兼容性检查；</li><li>依赖和安全扫描；</li><li>日志、指标、告警的最低要求。</li></ul>
+<h4 id="level-3仓库级-codex-skill"><a class="heading-anchor" href="#level-3仓库级-codex-skill" aria-label="链接到本节">#</a>Level 3：仓库级 Codex Skill</h4>
+<p>当工作流已经稳定、输入输出明确、两个项目都重复使用时再做。</p>
+<p>Codex 官方建议将：</p>
+<ul><li><code>AGENTS.md</code> 用于仓库约定；</li><li>Skill 用于可复用的任务工作流；</li><li>Plugin 用于分发多个 Skills 或连接器；</li><li>Hooks/linters 用于机械强制；</li><li>MCP 用于访问外部系统。</li></ul>
+<p>因此，团队不应一开始就开发 Plugin。先用 Markdown 和脚本跑通，再把稳定流程封装成 <code>.agents/skills/&lt;skill-name&gt;/SKILL.md</code>。</p>
+<h4 id="level-4plugin复杂编排或组织平台"><a class="heading-anchor" href="#level-4plugin复杂编排或组织平台" aria-label="链接到本节">#</a>Level 4：Plugin、复杂编排或组织平台</h4>
+<p>只有出现以下信号才考虑：</p>
+<ul><li>多个团队需要安装同一套工作流；</li><li>需要同时分发多个 Skills、MCP 或 Hooks；</li><li>有明确版本管理、升级和兼容性需求；</li><li>工作流维护已经成为独立产品职责。</li></ul>
+<p>2 人团队通常不需要到这一层。</p>
+<hr>
+<h2 id="十最推荐的-2-人团队工作流"><a class="heading-anchor" href="#十最推荐的-2-人团队工作流" aria-label="链接到本节">#</a>十、最推荐的 2 人团队工作流</h2>
+<h3 id="总体结构"><a class="heading-anchor" href="#总体结构" aria-label="链接到本节">#</a>总体结构</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">任务进入
+  ↓
+风险分级
+  ├─ 快速变更：简短意图 + 测试 + 验证
+  ├─ 标准变更：Proposal/Spec + Plan + TDD + PR
+  └─ 高风险变更：AIDLC-lite + 人工检查点 + 发布/回滚方案
+  ↓
+Codex / Superpowers 实现内循环
+  ↓
+统一 Harness
+  ↓
+风险触发的同伴评审
+  ↓
+发布、观察、沉淀学习</code></pre></div>
+<h3 id="模式-a快速变更"><a class="heading-anchor" href="#模式-a快速变更" aria-label="链接到本节">#</a>模式 A：快速变更</h3>
+<p>适用条件：</p>
+<ul><li>预计小于 2 小时；</li><li>修改范围局部；</li><li>不改变公共 API、数据结构、权限或部署；</li><li>有明确测试可以覆盖。</li></ul>
+<p>最低流程：</p>
+<ol><li>用 3～5 行写清意图和验收条件。</li><li>先重现问题或编写失败测试。</li><li>做最小实现。</li><li>运行相关测试和完整快速验证。</li><li>提交时记录验证结果。</li></ol>
+<p>不必创建完整 Proposal、设计文档或 ADR。</p>
+<h3 id="模式-b标准变更"><a class="heading-anchor" href="#模式-b标准变更" aria-label="链接到本节">#</a>模式 B：标准变更</h3>
+<p>适用条件：</p>
+<ul><li>半天到约 3 天；</li><li>涉及多个文件或前后端联动；</li><li>需要明确接口、状态或交互行为；</li><li>风险可控且回滚简单。</li></ul>
+<p>推荐流程：</p>
+<ol><li>OpenSpec Proposal，或 Spec Kit Spec。</li><li>明确目标、非目标、验收标准和边界。</li><li>必要时记录简短设计。</li><li>形成可独立验证的任务计划。</li><li>采用 TDD 或至少测试先行处理关键行为。</li><li>后端、前端、数据库和接口契约分别验证。</li><li>AI 自评审后，由另一人按风险抽查。</li><li>PR 合并后归档规格。</li></ol>
+<h3 id="模式-c高风险变更"><a class="heading-anchor" href="#模式-c高风险变更" aria-label="链接到本节">#</a>模式 C：高风险变更</h3>
+<p>触发条件之一：</p>
+<ul><li>数据库 Schema 迁移或数据回填；</li><li>身份认证、权限、密钥或隐私数据；</li><li>支付、库存、结算或不可逆业务动作；</li><li>公共 API、事件 Schema 或跨服务契约；</li><li>CI/CD、容器、云资源或基础设施；</li><li>大规模重构、性能关键路径；</li><li>发布失败会影响生产可用性；</li><li>预计超过 3 天或跨多个系统。</li></ul>
+<p>推荐流程：</p>
+<ol><li>使用 AIDLC-lite、Spec Kit 完整流程或 BMAD 的适当轨道。</li><li>需求/规格评审后再进入设计。</li><li>记录 ADR、兼容策略和回滚方案。</li><li>先完成 Walking Skeleton 或最小纵向切片。</li><li>第二人检查关键接口、数据与发布风险。</li><li>CI、测试环境或灰度环境验证。</li><li>发布后检查日志、指标、告警和业务信号。</li><li>更新 Runbook 和知识记录。</li></ol>
+<hr>
+<h2 id="十一两个人如何分工而不制造评审瓶颈"><a class="heading-anchor" href="#十一两个人如何分工而不制造评审瓶颈" aria-label="链接到本节">#</a>十一、两个人如何分工，而不制造评审瓶颈</h2>
+<h3 id="每个项目两个角色"><a class="heading-anchor" href="#每个项目两个角色" aria-label="链接到本节">#</a>每个项目两个角色</h3>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">角色</th><th style="text-align:left">职责</th></tr></thead><tbody><tr><td style="text-align:left">Owner</td><td style="text-align:left">需求澄清、规格、实现、验证和发布</td></tr><tr><td style="text-align:left">Peer</td><td style="text-align:left">在风险检查点挑战假设，检查可接手性和发布风险</td></tr></tbody></table></div>
+<p>Owner 仍对结果负责。AI 不是第三个责任人，只是执行和分析能力。</p>
+<h3 id="建议的三个人类检查点"><a class="heading-anchor" href="#建议的三个人类检查点" aria-label="链接到本节">#</a>建议的三个人类检查点</h3>
+<h4 id="检查点-1规格或设计"><a class="heading-anchor" href="#检查点-1规格或设计" aria-label="链接到本节">#</a>检查点 1：规格或设计</h4>
+<p>只在标准/高风险变更使用。</p>
+<p>Peer 重点问：</p>
+<ul><li>真正解决的用户或业务问题是什么？</li><li>非目标是否明确？</li><li>是否改变 API、数据和权限边界？</li><li>验收条件能否自动验证？</li><li>有没有更小的纵向切片？</li></ul>
+<h4 id="检查点-2walking-skeleton"><a class="heading-anchor" href="#检查点-2walking-skeleton" aria-label="链接到本节">#</a>检查点 2：Walking Skeleton</h4>
+<p>仅用于大功能：</p>
+<ul><li>后端接口是否真实连通？</li><li>数据是否真实落库？</li><li>前端是否真实调用？</li><li>鉴权、错误处理和日志是否贯通？</li><li>测试能否在 CI 中运行？</li></ul>
+<h4 id="检查点-3发布"><a class="heading-anchor" href="#检查点-3发布" aria-label="链接到本节">#</a>检查点 3：发布</h4>
+<p>高风险变更必须进行：</p>
+<ul><li>如何回滚？</li><li>数据迁移能否重复执行或安全恢复？</li><li>哪些指标说明发布成功？</li><li>哪些信号触发停止或回滚？</li><li>另一人能否只看文档完成应急处理？</li></ul>
+<h3 id="不要求所有-pr-都同步评审"><a class="heading-anchor" href="#不要求所有-pr-都同步评审" aria-label="链接到本节">#</a>不要求所有 PR 都同步评审</h3>
+<p>可采用风险触发评审：</p>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">变更</th><th style="text-align:left">Peer 参与</th></tr></thead><tbody><tr><td style="text-align:left">文案、局部样式、低风险测试</td><td style="text-align:left">可只看 CI 与摘要</td></tr><tr><td style="text-align:left">一般业务功能</td><td style="text-align:left">异步 PR 抽查</td></tr><tr><td style="text-align:left">公共接口、数据库、权限</td><td style="text-align:left">必须评审</td></tr><tr><td style="text-align:left">生产发布与基础设施</td><td style="text-align:left">必须评审</td></tr><tr><td style="text-align:left">无人值守 Agent 循环产物</td><td style="text-align:left">必须评审</td></tr></tbody></table></div>
+<hr>
+<h2 id="十二java-全栈-harness-的最低标准"><a class="heading-anchor" href="#十二java-全栈-harness-的最低标准" aria-label="链接到本节">#</a>十二、Java 全栈 Harness 的最低标准</h2>
+<p>AI 工作流最终必须落到确定性反馈。对 Java 全栈项目，可按项目实际情况统一为一个入口：</p>
+<div class="code-block"><div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-bash">./scripts/verify.sh</code></pre></div>
+<p>脚本内部可组合：</p>
+<div class="code-block"><div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-bash">./mvnw verify
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+npm run e2e</code></pre></div>
+<p>不要求每次本地都执行最慢的完整 E2E，但 CI 必须明确区分：</p>
+<ul><li>快速检查：格式、编译、单元测试；</li><li>标准检查：集成测试、前端构建；</li><li>完整检查：E2E、契约测试、安全和依赖扫描；</li><li>发布检查：镜像、迁移、配置、健康检查与回滚。</li></ul>
+<h3 id="java-后端重点"><a class="heading-anchor" href="#java-后端重点" aria-label="链接到本节">#</a>Java 后端重点</h3>
+<ul><li>Java 版本和 Maven/Gradle Wrapper 固定；</li><li>Spring Boot 配置分环境管理；</li><li>Controller、Service、Repository 边界清晰；</li><li>Testcontainers 或等效方式验证真实基础设施交互；</li><li>数据迁移使用 Flyway/Liquibase 并检查向前/向后兼容；</li><li>API 契约、异常码、幂等性和事务边界有测试；</li><li>日志不泄露 Token、密码和隐私数据；</li><li>Actuator、指标、Trace 和健康检查满足运行需要。</li></ul>
+<h3 id="前端重点"><a class="heading-anchor" href="#前端重点" aria-label="链接到本节">#</a>前端重点</h3>
+<ul><li>TypeScript 严格模式；</li><li>API 类型或契约可追踪；</li><li>Loading、Empty、Error 和权限状态完整；</li><li>关键交互有组件测试或 E2E；</li><li>构建产物、环境变量和后端版本兼容；</li><li>不在浏览器暴露后端密钥。</li></ul>
+<h3 id="ai-功能重点"><a class="heading-anchor" href="#ai-功能重点" aria-label="链接到本节">#</a>AI 功能重点</h3>
+<ul><li>Prompt 与模型配置版本化；</li><li>输出使用 Schema 或强约束解析；</li><li>超时、重试、限流和熔断明确；</li><li>RAG 检索、引用和权限隔离可验证；</li><li>建立少量稳定评测样例，不只人工“感觉不错”；</li><li>记录 Token、延迟、错误率和业务质量；</li><li>模型失败有降级路径。</li></ul>
+<hr>
+<h2 id="十三避免框架互相打架"><a class="heading-anchor" href="#十三避免框架互相打架" aria-label="链接到本节">#</a>十三、避免框架互相打架</h2>
+<h3 id="单一指挥者原则"><a class="heading-anchor" href="#单一指挥者原则" aria-label="链接到本节">#</a>单一指挥者原则</h3>
+<p>每个项目同一时间只选择一个顶层指挥者：</p>
+<ul><li>AIDLC；</li><li>BMAD；</li><li>GSD；</li><li>Spec Kit；</li><li>OpenSpec。</li></ul>
+<p>Superpowers 可以作为实现内循环，因为它不必维护项目级唯一状态；Ralph 只能作为受控执行器。</p>
+<h3 id="推荐组合"><a class="heading-anchor" href="#推荐组合" aria-label="链接到本节">#</a>推荐组合</h3>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">组合</th><th style="text-align:left">评价</th></tr></thead><tbody><tr><td style="text-align:left">OpenSpec + Superpowers + CI</td><td style="text-align:left">当前团队默认推荐</td></tr><tr><td style="text-align:left">Spec Kit + Superpowers + CI</td><td style="text-align:left">复杂新项目推荐</td></tr><tr><td style="text-align:left">AIDLC-lite + Superpowers + CI</td><td style="text-align:left">高风险/治理场景推荐</td></tr><tr><td style="text-align:left">BMAD Quick Flow + CI</td><td style="text-align:left">产品探索较多的小项目可用</td></tr><tr><td style="text-align:left">GSD + 强 CI</td><td style="text-align:left">一人长期主导项目可试点</td></tr><tr><td style="text-align:left">OpenSpec + Spec Kit</td><td style="text-align:left">不推荐，规格和任务可能重复</td></tr><tr><td style="text-align:left">AIDLC + BMAD 全量</td><td style="text-align:left">不推荐，生命周期与角色重复</td></tr><tr><td style="text-align:left">GSD + Ralph 无边界运行</td><td style="text-align:left">不推荐，自治层叠加且难以停止</td></tr></tbody></table></div>
+<h3 id="多框架共存时的真相源"><a class="heading-anchor" href="#多框架共存时的真相源" aria-label="链接到本节">#</a>多框架共存时的真相源</h3>
+<p>如果确实要组合，必须约定：</p>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">信息</th><th style="text-align:left">唯一真相源</th></tr></thead><tbody><tr><td style="text-align:left">项目长期规则</td><td style="text-align:left"><code>AGENTS.md</code></td></tr><tr><td style="text-align:left">本次需求和验收</td><td style="text-align:left">OpenSpec 或 Spec Kit，二选一</td></tr><tr><td style="text-align:left">架构决策</td><td style="text-align:left">ADR</td></tr><tr><td style="text-align:left">实现任务状态</td><td style="text-align:left">所选顶层框架或 Issue，不重复</td></tr><tr><td style="text-align:left">验证证据</td><td style="text-align:left">CI</td></tr><tr><td style="text-align:left">合并与评审</td><td style="text-align:left">PR</td></tr><tr><td style="text-align:left">发布和回滚</td><td style="text-align:left">Runbook/Release</td></tr></tbody></table></div>
+<hr>
+<h2 id="十四30-天落地计划"><a class="heading-anchor" href="#十四30-天落地计划" aria-label="链接到本节">#</a>十四、30 天落地计划</h2>
+<h3 id="第-1-周建立基线"><a class="heading-anchor" href="#第-1-周建立基线" aria-label="链接到本节">#</a>第 1 周：建立基线</h3>
+<ol><li>两个人各选一个真实、风险适中的变更。</li><li>记录当前从需求到发布的实际步骤。</li><li>列出最常见的返工、遗漏和等待。</li><li>统一 Java、前端和 E2E 验证命令。</li><li>确定规格层：默认试点 OpenSpec；复杂绿地项目可选 Spec Kit。</li></ol>
+<p>验收：</p>
+<ul><li>每个项目都有能运行的验证入口；</li><li>能说清什么变更必须让另一个人参与；</li><li>没有同时引入多个规格框架。</li></ul>
+<h3 id="第-2-周在真实变更中试用"><a class="heading-anchor" href="#第-2-周在真实变更中试用" aria-label="链接到本节">#</a>第 2 周：在真实变更中试用</h3>
+<ol><li>Owner 写 Proposal/Spec。</li><li>Peer 只评审目标、边界和风险。</li><li>使用 Superpowers 内循环实现。</li><li>PR 记录规格链接与验证证据。</li><li>统计额外时间和避免的返工。</li></ol>
+<p>验收：</p>
+<ul><li>规格能让另一人理解变更；</li><li>CI 能拒绝明显错误；</li><li>流程没有让小变更停滞。</li></ul>
+<h3 id="第-3-周提炼团队协议"><a class="heading-anchor" href="#第-3-周提炼团队协议" aria-label="链接到本节">#</a>第 3 周：提炼团队协议</h3>
+<p>只固化已经重复有效的内容：</p>
+<ul><li>风险分级；</li><li>三种工作模式；</li><li>人工检查点；</li><li>统一验证脚本；</li><li>PR 和 ADR 模板；</li><li>发布与回滚最低要求。</li></ul>
+<p>将其写入：</p>
+<ul><li>根目录 <code>AGENTS.md</code>；</li><li><code>docs/workflow/TEAM-WORKFLOW.md</code>；</li><li>必要的模板和脚本。</li></ul>
+<h3 id="第-4-周复盘并决定是否封装-skill"><a class="heading-anchor" href="#第-4-周复盘并决定是否封装-skill" aria-label="链接到本节">#</a>第 4 周：复盘并决定是否封装 Skill</h3>
+<p>检查：</p>
+<ul><li>周期时间是否变长或变短；</li><li>返工是否减少；</li><li>线上遗漏是否减少；</li><li>另一人接手是否更快；</li><li>哪些步骤总被跳过；</li><li>哪些步骤只是形式。</li></ul>
+<p>只有当同一流程已经稳定重复至少 3 次，再创建仓库级 Codex Skill。</p>
+<hr>
+<h2 id="十五用什么指标判断工作流有效"><a class="heading-anchor" href="#十五用什么指标判断工作流有效" aria-label="链接到本节">#</a>十五、用什么指标判断工作流有效</h2>
+<p>不要以文档数量、Agent 数量或 Prompt 长度作为成功指标。</p>
+<p>推荐观察：</p>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">指标</th><th style="text-align:left">希望看到的趋势</th></tr></thead><tbody><tr><td style="text-align:left">从需求确认到合并的周期</td><td style="text-align:left">稳定或下降</td></tr><tr><td style="text-align:left">因需求误解产生的返工</td><td style="text-align:left">下降</td></tr><tr><td style="text-align:left">CI 之后才发现的基础错误</td><td style="text-align:left">下降</td></tr><tr><td style="text-align:left">生产逃逸缺陷</td><td style="text-align:left">下降</td></tr><tr><td style="text-align:left">Peer 理解变更所需时间</td><td style="text-align:left">下降</td></tr><tr><td style="text-align:left">Owner 不在时的接手时间</td><td style="text-align:left">下降</td></tr><tr><td style="text-align:left">发布回滚和恢复时间</td><td style="text-align:left">下降</td></tr><tr><td style="text-align:left">AI 宣称完成但验证失败的次数</td><td style="text-align:left">下降</td></tr><tr><td style="text-align:left">维护流程文档所需时间</td><td style="text-align:left">保持低水平</td></tr></tbody></table></div>
+<h3 id="建议的复盘问题"><a class="heading-anchor" href="#建议的复盘问题" aria-label="链接到本节">#</a>建议的复盘问题</h3>
+<p>每两周用 20～30 分钟回答：</p>
+<ol><li>哪个错误本可由规则、测试或脚本提前发现？</li><li>哪份文档实际帮助了接手、评审或调试？</li><li>哪个流程步骤没有提供决策价值？</li><li>哪个知识点已重复出现 3 次，值得写进 <code>AGENTS.md</code> 或 Skill？</li><li>哪条规则已经过时，应该删除？</li></ol>
+<hr>
+<h2 id="十六何时升级到更重的工作流"><a class="heading-anchor" href="#十六何时升级到更重的工作流" aria-label="链接到本节">#</a>十六、何时升级到更重的工作流</h2>
+<p>出现以下信号时，从 OpenSpec + Superpowers 升级到 Spec Kit、AIDLC-lite 或 BMAD：</p>
+<ul><li>两个人开始共同频繁修改同一个项目；</li><li>需求方增多且需求经常冲突；</li><li>项目包含多个服务、前端和数据管道；</li><li>架构决策频繁影响多个后续功能；</li><li>审计、合规、安全或发布审批成为硬要求；</li><li>生产事故暴露出需求、设计与运行之间断裂；</li><li>AI 生成速度已明显超过人工评审能力；</li><li>需要暂停、恢复和追踪长时间自动工作流；</li><li>新成员难以通过现有文档接手。</li></ul>
+<p>如果这些信号都不存在，继续保持轻量。</p>
+<hr>
+<h2 id="十七最终选型建议"><a class="heading-anchor" href="#十七最终选型建议" aria-label="链接到本节">#</a>十七、最终选型建议</h2>
+<h3 id="当前团队的首选"><a class="heading-anchor" href="#当前团队的首选" aria-label="链接到本节">#</a>当前团队的首选</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">项目级 AGENTS.md
+        +
+OpenSpec
+        +
+Superpowers
+        +
+统一 verify 脚本与 CI
+        +
+风险触发的 Peer 评审</code></pre></div>
+<p>理由：</p>
+<ul><li>两人各负责一个项目，变更所有权清楚；</li><li>需要的是低成本的规格、交接和验证，而不是复杂角色编排；</li><li>OpenSpec 补齐变更意图和可追踪性；</li><li>Superpowers 补齐工程实现纪律；</li><li>CI 提供不依赖模型判断的证据；</li><li>AIDLC 仍可作为高风险任务的升级路径。</li></ul>
+<h3 id="备选"><a class="heading-anchor" href="#备选" aria-label="链接到本节">#</a>备选</h3>
+<p>如果是复杂绿地项目：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">Spec Kit + Superpowers + CI</code></pre></div>
+<p>如果产品探索和 PRD/UX 工作很多：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">BMAD（先 Quick Flow，必要时完整轨道）+ CI</code></pre></div>
+<p>如果负责人需要长期自治推进单一项目：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">GSD + 强 Harness + 明确预算/停止条件</code></pre></div>
+<h3 id="不推荐"><a class="heading-anchor" href="#不推荐" aria-label="链接到本节">#</a>不推荐</h3>
+<ul><li>同时全面启用 AIDLC、BMAD、GSD、Spec Kit 和 OpenSpec；</li><li>为两人团队自研工作流引擎；</li><li>把所有小修复都升级为完整生命周期；</li><li>让 Ralph 或其他自治循环直接处理生产高风险变更；</li><li>只写 Prompt，不建设测试与 CI；</li><li>把 Agent 生成的“评审通过”当作真实验证证据。</li></ul>
+<hr>
+<h2 id="十八下一步学习与实践建议"><a class="heading-anchor" href="#十八下一步学习与实践建议" aria-label="链接到本节">#</a>十八、下一步学习与实践建议</h2>
+<p>建议按下面顺序推进：</p>
+<ol><li>选择一个真实存量 Java 全栈项目试用 OpenSpec。</li><li>把该项目的构建、测试、启动和发布命令精简写入 <code>AGENTS.md</code>。</li><li>建立统一的 <code>verify</code> 入口。</li><li>用一个标准变更走完整的 Proposal → Plan → TDD → Review → Archive。</li><li>两周后复盘，再决定是否创建团队级 <code>TEAM-WORKFLOW.md</code>。</li><li>至少重复 3 次后，才考虑封装 Codex Skill。</li></ol>
+<p>相关已有笔记：</p>
+<ul><li><a href="2026-07-24-Codex全栈开发最佳实践.html">Codex 全栈开发最佳实践</a></li><li><a href="2026-07-24-Superpowers详细介绍.html">Superpowers 详细介绍</a></li><li><a href="2026-07-24-AIDLC详细介绍.html">AIDLC 详细介绍</a></li><li><a href="2026-07-24-AIDLC与Superpowers差异分析.html">AIDLC 与 Superpowers 差异分析</a></li></ul>
+<hr>
+<h2 id="参考资料"><a class="heading-anchor" href="#参考资料" aria-label="链接到本节">#</a>参考资料</h2>
+<h3 id="codex-官方资料"><a class="heading-anchor" href="#codex-官方资料" aria-label="链接到本节">#</a>Codex 官方资料</h3>
+<ul><li><a href="https://learn.chatgpt.com/docs/customization/overview" target="_blank" rel="noopener noreferrer">OpenAI：Customization Overview</a> — 官方建议先用 <code>AGENTS.md</code> 固化仓库约定，再用 Hooks/linters 强制规则；已有工作流可安装 Plugin，否则先创建 Skill，访问外部系统再使用 MCP，访问日期：2026-07-24。</li><li><a href="https://learn.chatgpt.com/docs/agent-configuration/agents-md" target="_blank" rel="noopener noreferrer">OpenAI：Custom instructions with AGENTS.md</a> — <code>AGENTS.md</code> 的发现、层级覆盖、代码评审规则和验证方法，访问日期：2026-07-24。</li><li><a href="https://learn.chatgpt.com/docs/build-skills" target="_blank" rel="noopener noreferrer">OpenAI：Build skills</a> — Skill 用于封装可复用工作流，仓库级 Skill 位于 <code>.agents/skills</code>；Plugin 用于更广泛分发，访问日期：2026-07-24。</li></ul>
+<h3 id="工作流官方资料"><a class="heading-anchor" href="#工作流官方资料" aria-label="链接到本节">#</a>工作流官方资料</h3>
+<ul><li><a href="https://github.github.io/spec-kit/" target="_blank" rel="noopener noreferrer">GitHub Spec Kit Documentation</a> — Spec Kit 的定位、核心 <code>Spec → Plan → Tasks → Implement</code> 流程、集成和扩展能力，访问日期：2026-07-24。</li><li><a href="https://github.github.io/spec-kit/reference/workflows.html" target="_blank" rel="noopener noreferrer">GitHub Spec Kit：Workflows</a> — 工作流编排、人工门禁、条件、状态持久化、暂停与恢复，访问日期：2026-07-24。</li><li><a href="https://github.github.io/spec-kit/reference/integrations.html" target="_blank" rel="noopener noreferrer">GitHub Spec Kit：Integrations</a> — Codex 等编码智能体集成方式，访问日期：2026-07-24。</li><li><a href="https://docs.bmad-method.org/reference/workflow-map/" target="_blank" rel="noopener noreferrer">BMAD Method：Workflow Map</a> — Analysis、Planning、Solutioning、Implementation 与 Quick Flow，访问日期：2026-07-24。</li><li><a href="https://docs.bmad-method.org/" target="_blank" rel="noopener noreferrer">BMAD Method 官方文档</a> — BMAD 的整体定位和入门入口，访问日期：2026-07-24。</li><li><a href="https://github.com/gsd-build/get-shit-done" target="_blank" rel="noopener noreferrer">GSD 官方仓库</a> — 项目初始化、规划、执行、验证和 Codex 安装入口，访问日期：2026-07-24。</li><li><a href="https://github.com/gsd-build/get-shit-done/blob/main/docs/USER-GUIDE.md" target="_blank" rel="noopener noreferrer">GSD User Guide</a> — 阶段工作流、上下文管理和实际使用方法，访问日期：2026-07-24。</li><li><a href="https://github.com/Fission-AI/OpenSpec" target="_blank" rel="noopener noreferrer">OpenSpec 官方仓库</a> — OpenSpec 的定位、工作流和 Codex 支持，访问日期：2026-07-24。</li><li><a href="https://openspec.dev/docs/team-workflow" target="_blank" rel="noopener noreferrer">OpenSpec：Team Workflow</a> — 规格与 Git/分支/PR 的协作方式及一个变更一个负责人原则，访问日期：2026-07-24。</li><li><a href="https://github.com/Fission-AI/OpenSpec/blob/main/docs/supported-tools.md" target="_blank" rel="noopener noreferrer">OpenSpec：Supported Tools</a> — Codex 等工具的集成路径，访问日期：2026-07-24。</li><li><a href="https://kiro.dev/docs/specs/" target="_blank" rel="noopener noreferrer">Kiro：Specs</a> — Kiro IDE 中的 Requirements、Design、Tasks 与执行工作流，访问日期：2026-07-24。</li><li><a href="https://kiro.dev/docs/web/specs/" target="_blank" rel="noopener noreferrer">Kiro Web：Specs</a> — Feature、Bug、Quick Plan 及 Web 端实现与 PR 流程，访问日期：2026-07-24。</li><li><a href="https://ghuntley.com/ralph/" target="_blank" rel="noopener noreferrer">Geoffrey Huntley：Ralph Wiggum as a “software engineer”</a> — Ralph Loop 的原始说明、一轮一项、规格、上下文刷新和测试反压，访问日期：2026-07-24。</li></ul>
+    </article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/codex/2026-07-24-AI开发工作流选型与小团队沉淀指南.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="../../AGENTS.html"><small>上一篇</small><span>Java 全栈 AI 学习助手</span></a>
+        <a class="pager-link next" href="2026-07-24-AIDLC详细介绍.html"><small>下一篇</small><span>AIDLC 详细介绍：从 AI 辅助编码到可审计的软件交付生命周期</span></a>
+      </nav>
+    </footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-3"><a href="#直接回答">直接回答</a></li><li class="toc-level-2"><a href="#一先区分四类工作流">一、先区分四类“工作流”</a></li><li class="toc-level-3"><a href="#1-生命周期外循环">1. 生命周期外循环</a></li><li class="toc-level-3"><a href="#2-规格与变更管理层">2. 规格与变更管理层</a></li><li class="toc-level-3"><a href="#3-实现内循环">3. 实现内循环</a></li><li class="toc-level-3"><a href="#4-自治执行循环">4. 自治执行循环</a></li><li class="toc-level-3"><a href="#四层关系">四层关系</a></li><li class="toc-level-2"><a href="#二候选工作流总览">二、候选工作流总览</a></li><li class="toc-level-3"><a href="#覆盖不等于质量">“覆盖”不等于“质量”</a></li><li class="toc-level-2"><a href="#三bmad-method最像-aidlc-的替代方案">三、BMAD Method：最像 AIDLC 的替代方案</a></li><li class="toc-level-3"><a href="#优点">优点</a></li><li class="toc-level-3"><a href="#缺点">缺点</a></li><li class="toc-level-3"><a href="#适合当前团队的使用方式">适合当前团队的使用方式</a></li><li class="toc-level-2"><a href="#四gsd更适合一人负责一个长期项目">四、GSD：更适合“一人负责一个长期项目”</a></li><li class="toc-level-3"><a href="#优点-2">优点</a></li><li class="toc-level-3"><a href="#缺点-2">缺点</a></li><li class="toc-level-3"><a href="#适合当前团队的使用方式-2">适合当前团队的使用方式</a></li><li class="toc-level-2"><a href="#五github-spec-kit较强的规格驱动-harness">五、GitHub Spec Kit：较强的规格驱动 Harness</a></li><li class="toc-level-3"><a href="#优点-3">优点</a></li><li class="toc-level-3"><a href="#缺点-3">缺点</a></li><li class="toc-level-3"><a href="#适合当前团队的使用方式-3">适合当前团队的使用方式</a></li><li class="toc-level-2"><a href="#六openspec当前-2-人团队最值得试用的规格层">六、OpenSpec：当前 2 人团队最值得试用的规格层</a></li><li class="toc-level-3"><a href="#优点-4">优点</a></li><li class="toc-level-3"><a href="#缺点-4">缺点</a></li><li class="toc-level-3"><a href="#为什么它适合当前团队">为什么它适合当前团队</a></li><li class="toc-level-2"><a href="#七kiro-specs产品内体验完整但不宜为流程而换平台">七、Kiro Specs：产品内体验完整，但不宜为流程而换平台</a></li><li class="toc-level-3"><a href="#优点-5">优点</a></li><li class="toc-level-3"><a href="#缺点-5">缺点</a></li><li class="toc-level-3"><a href="#当前团队建议">当前团队建议</a></li><li class="toc-level-2"><a href="#八ralph-loop是一种执行模式不是完整工作流">八、Ralph Loop：是一种执行模式，不是完整工作流</a></li><li class="toc-level-3"><a href="#优点-6">优点</a></li><li class="toc-level-3"><a href="#缺点-6">缺点</a></li><li class="toc-level-3"><a href="#当前团队建议-2">当前团队建议</a></li><li class="toc-level-2"><a href="#九当前团队到底要不要自己沉淀工作流">九、当前团队到底要不要“自己沉淀工作流”</a></li><li class="toc-level-3"><a href="#要但要先明确沉淀的含义">要，但要先明确“沉淀”的含义</a></li><li class="toc-level-3"><a href="#推荐的沉淀阶梯">推荐的沉淀阶梯</a></li><li class="toc-level-4"><a href="#level-1团队交付协议">Level 1：团队交付协议</a></li><li class="toc-level-4"><a href="#level-2模板与确定性脚本">Level 2：模板与确定性脚本</a></li><li class="toc-level-4"><a href="#level-3仓库级-codex-skill">Level 3：仓库级 Codex Skill</a></li><li class="toc-level-4"><a href="#level-4plugin复杂编排或组织平台">Level 4：Plugin、复杂编排或组织平台</a></li><li class="toc-level-2"><a href="#十最推荐的-2-人团队工作流">十、最推荐的 2 人团队工作流</a></li><li class="toc-level-3"><a href="#总体结构">总体结构</a></li><li class="toc-level-3"><a href="#模式-a快速变更">模式 A：快速变更</a></li><li class="toc-level-3"><a href="#模式-b标准变更">模式 B：标准变更</a></li><li class="toc-level-3"><a href="#模式-c高风险变更">模式 C：高风险变更</a></li><li class="toc-level-2"><a href="#十一两个人如何分工而不制造评审瓶颈">十一、两个人如何分工，而不制造评审瓶颈</a></li><li class="toc-level-3"><a href="#每个项目两个角色">每个项目两个角色</a></li><li class="toc-level-3"><a href="#建议的三个人类检查点">建议的三个人类检查点</a></li><li class="toc-level-4"><a href="#检查点-1规格或设计">检查点 1：规格或设计</a></li><li class="toc-level-4"><a href="#检查点-2walking-skeleton">检查点 2：Walking Skeleton</a></li><li class="toc-level-4"><a href="#检查点-3发布">检查点 3：发布</a></li><li class="toc-level-3"><a href="#不要求所有-pr-都同步评审">不要求所有 PR 都同步评审</a></li><li class="toc-level-2"><a href="#十二java-全栈-harness-的最低标准">十二、Java 全栈 Harness 的最低标准</a></li><li class="toc-level-3"><a href="#java-后端重点">Java 后端重点</a></li><li class="toc-level-3"><a href="#前端重点">前端重点</a></li><li class="toc-level-3"><a href="#ai-功能重点">AI 功能重点</a></li><li class="toc-level-2"><a href="#十三避免框架互相打架">十三、避免框架互相打架</a></li><li class="toc-level-3"><a href="#单一指挥者原则">单一指挥者原则</a></li><li class="toc-level-3"><a href="#推荐组合">推荐组合</a></li><li class="toc-level-3"><a href="#多框架共存时的真相源">多框架共存时的真相源</a></li><li class="toc-level-2"><a href="#十四30-天落地计划">十四、30 天落地计划</a></li><li class="toc-level-3"><a href="#第-1-周建立基线">第 1 周：建立基线</a></li><li class="toc-level-3"><a href="#第-2-周在真实变更中试用">第 2 周：在真实变更中试用</a></li><li class="toc-level-3"><a href="#第-3-周提炼团队协议">第 3 周：提炼团队协议</a></li><li class="toc-level-3"><a href="#第-4-周复盘并决定是否封装-skill">第 4 周：复盘并决定是否封装 Skill</a></li><li class="toc-level-2"><a href="#十五用什么指标判断工作流有效">十五、用什么指标判断工作流有效</a></li><li class="toc-level-3"><a href="#建议的复盘问题">建议的复盘问题</a></li><li class="toc-level-2"><a href="#十六何时升级到更重的工作流">十六、何时升级到更重的工作流</a></li><li class="toc-level-2"><a href="#十七最终选型建议">十七、最终选型建议</a></li><li class="toc-level-3"><a href="#当前团队的首选">当前团队的首选</a></li><li class="toc-level-3"><a href="#备选">备选</a></li><li class="toc-level-3"><a href="#不推荐">不推荐</a></li><li class="toc-level-2"><a href="#十八下一步学习与实践建议">十八、下一步学习与实践建议</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li><li class="toc-level-3"><a href="#codex-官方资料">Codex 官方资料</a></li><li class="toc-level-3"><a href="#工作流官方资料">工作流官方资料</a></li></ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+<div class="sidebar-scrim"></div>
+</body>
+</html>

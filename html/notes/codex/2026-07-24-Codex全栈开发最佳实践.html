@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="面向 Java 全栈开发者，建立从快速原型到可靠交付的 Codex 操作方法">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="Codex 与 AI 工程">
+  <meta name="study-date" content="2026-07-24">
+  <title>Codex 全栈开发最佳实践：Vibe Coding、Harness 与 Loop｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a href="../../index.html">全部文档</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <label class="sidebar-search">
+      <span class="sr-only">筛选文档</span>
+      <input type="search" placeholder="筛选文档…" data-sidebar-search>
+    </label>
+    <nav class="doc-nav" aria-label="文档列表">
+      <a class="doc-nav-item" href="../../AGENTS.html"><span>Java 全栈 AI 学习助手</span><small>项目指南</small></a><a class="doc-nav-item" href="2026-07-24-AI开发工作流选型与小团队沉淀指南.html"><span>AI 开发工作流选型与小团队沉淀指南</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC详细介绍.html"><span>AIDLC 详细介绍：从 AI 辅助编码到可审计的软件交付生命周期</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC与Superpowers差异分析.html"><span>AIDLC 与 Superpowers 差异分析：生命周期治理与工程 Inner Loop</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item is-active" href="2026-07-24-Codex全栈开发最佳实践.html"><span>Codex 全栈开发最佳实践：Vibe Coding、Harness 与 Loop</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-Superpowers详细介绍.html"><span>Superpowers 详细介绍：Codex 的技能化软件开发方法</span><small>Codex 与 AI 工程</small></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta">
+      <a href="../../index.html">知识库首页</a>
+      <span>·</span>
+      <span>Codex 与 AI 工程</span>
+      <span>·</span><time>2026-07-24</time>
+    </div>
+    <article class="markdown-body">
+      <h1 id="codex-全栈开发最佳实践vibe-codingharness-与-loop"><a class="heading-anchor" href="#codex-全栈开发最佳实践vibe-codingharness-与-loop" aria-label="链接到本节">#</a>Codex 全栈开发最佳实践：Vibe Coding、Harness 与 Loop</h1>
+<blockquote><p>整理日期：2026-07-24<br> 主题：面向 Java 全栈开发者，建立从快速原型到可靠交付的 Codex 操作方法<br> 资料范围：OpenAI 官方 Codex、Prompting 与 Cookbook 文档</p>
+<p>延伸阅读：<a href="2026-07-24-Superpowers详细介绍.html">Superpowers 详细介绍</a> · <a href="2026-07-24-AIDLC详细介绍.html">AIDLC 详细介绍</a> · <a href="2026-07-24-AIDLC与Superpowers差异分析.html">AIDLC 与 Superpowers 差异分析</a></p></blockquote>
+<h2 id="核心结论"><a class="heading-anchor" href="#核心结论" aria-label="链接到本节">#</a>核心结论</h2>
+<p>Codex 的正确用法不是“写一句提示词，然后接受生成结果”，而是把它当成一个能够读取代码、执行命令、修改文件和验证结果的工程协作者。</p>
+<p>推荐采用三层工作方式：</p>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">层次</th><th style="text-align:left">解决的问题</th><th style="text-align:left">核心动作</th><th style="text-align:left">适用阶段</th></tr></thead><tbody><tr><td style="text-align:left">Vibe Coding</td><td style="text-align:left">快速把模糊想法变成可体验的软件</td><td style="text-align:left">描述目标、生成最小原型、观察、连续微调</td><td style="text-align:left">创意探索、UI 原型、技术验证</td></tr><tr><td style="text-align:left">Harness Engineering</td><td style="text-align:left">让 Codex 在可控环境中稳定工作</td><td style="text-align:left">固化规则、脚本、测试、数据、验收标准和权限</td><td style="text-align:left">正式开发、团队协作、持续交付</td></tr><tr><td style="text-align:left">Loop Engineering</td><td style="text-align:left">让实现根据真实反馈持续收敛</td><td style="text-align:left">Review → Repair → Validate → Feedback</td><td style="text-align:left">缺陷修复、重构、迁移、质量提升</td></tr></tbody></table></div>
+<p>三者不是互斥选择，而是一条成熟路径：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">模糊想法
+  ↓
+Vibe Coding：尽快得到可以运行和体验的版本
+  ↓
+Harness：把隐含要求变成机器可执行的约束
+  ↓
+Loop：根据测试、浏览器、日志和评审反馈迭代
+  ↓
+可审查、可复现、可部署的全栈交付物</code></pre></div>
+<p>需要特别说明：<code>Vibe Coding</code>、<code>Harness Engineering</code> 和 <code>Loop Engineering</code> 在本文中是工程操作模式，不应都理解成 Codex 的固定按钮或斜杠命令。Codex 官方文档明确提供或讨论了相邻能力，例如 <code>/plan</code>、可用时的 <code>/goal</code>、<code>/review</code>、<code>AGENTS.md</code>、浏览器验证以及 Review/Repair/Validate 闭环。</p>
+<h2 id="一先建立正确的-codex-心智模型"><a class="heading-anchor" href="#一先建立正确的-codex-心智模型" aria-label="链接到本节">#</a>一、先建立正确的 Codex 心智模型</h2>
+<h3 id="1-codex-是受约束的工程执行者"><a class="heading-anchor" href="#1-codex-是受约束的工程执行者" aria-label="链接到本节">#</a>1. Codex 是受约束的工程执行者</h3>
+<p>一个高质量 Codex 任务通常包含：</p>
+<ol><li>目标：最终要得到什么行为或交付物。</li><li>上下文：相关模块、入口、复现步骤、设计稿或接口契约。</li><li>边界：哪些 API、文件、数据库结构或用户行为不能改变。</li><li>验收：必须运行什么测试，如何证明任务完成。</li></ol>
+<p>OpenAI 的提示文档建议从结果开始描述，并根据需要补充 Goal、Context、Output 和 Boundaries；针对 Codex，还应指向相关代码或复现步骤，并明确如何验证修改。<a href="https://learn.chatgpt.com/docs/prompting#use-editor-context" target="_blank" rel="noopener noreferrer">Prompting Codex</a></p>
+<p>推荐提示词骨架：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">目标：
+实现/修复……
+
+上下文：
+- 后端模块：……
+- 前端页面：……
+- 接口契约：……
+- 复现步骤：……
+
+约束：
+- 不修改……
+- 保持向后兼容……
+- 不引入新的生产依赖……
+
+验收标准：
+- 后端测试……
+- 前端测试……
+- 浏览器验证……
+- 输出执行过的命令、结果和仍存在的风险。</code></pre></div>
+<h3 id="2-让-codex-对完成提供证据"><a class="heading-anchor" href="#2-让-codex-对完成提供证据" aria-label="链接到本节">#</a>2. 让 Codex 对“完成”提供证据</h3>
+<p>“代码已经改完”不是完成。完成必须对应可检查的证据：</p>
+<ul><li>文件和差异符合任务范围。</li><li>编译、静态检查和相关测试通过。</li><li>数据库迁移可以前进，必要时可以回退。</li><li>前端真实运行并检查关键状态。</li><li>API 调用、错误处理和权限边界符合契约。</li><li>没有把测试失败、未运行测试或环境问题描述成成功。</li></ul>
+<p>Codex Goals 的官方说明也强调证据式完成：完成审计应对照文件修改、执行命令、测试、基准结果、生成物或研究证据，而不是因为预算耗尽或代理停止就判定完成。<a href="https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex#how-goals-are-designed-in-codex" target="_blank" rel="noopener noreferrer">Using Goals in Codex</a></p>
+<h3 id="3-根据任务规模选择工作模式"><a class="heading-anchor" href="#3-根据任务规模选择工作模式" aria-label="链接到本节">#</a>3. 根据任务规模选择工作模式</h3>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">任务</th><th style="text-align:left">推荐方式</th></tr></thead><tbody><tr><td style="text-align:left">解释一段代码、修改一个局部函数</td><td style="text-align:left">直接对话，明确文件和输出</td></tr><tr><td style="text-align:left">有明确复现步骤的 Bug</td><td style="text-align:left">Reproduce → Fix → Regression Test → Reproduce Again</td></tr><tr><td style="text-align:left">跨模块需求、架构调整</td><td style="text-align:left">先 <code>/plan</code>，确认方案后再实现</td></tr><tr><td style="text-align:left">长时间、多阶段目标</td><td style="text-align:left">先规划；可用时通过 <code>/goal</code> 保存线程级目标</td></tr><tr><td style="text-align:left">UI 创意和产品原型</td><td style="text-align:left">Vibe Coding + 实时浏览器反馈</td></tr><tr><td style="text-align:left">可重复维护任务</td><td style="text-align:left">Harness + Headless/Automation + Loop</td></tr><tr><td style="text-align:left">合并或发布前检查</td><td style="text-align:left">测试流水线 + <code>/review</code> + 人工审查</td></tr></tbody></table></div>
+<p>官方文档建议多步骤任务可以先用 <code>/plan</code> 调研和提出方案；Goal Mode 可用时，再用 <code>/goal</code> 保存持续目标。<code>/review</code> 可用于本地工作树审查，并在修复后再次运行以确认问题已解决。<a href="https://learn.chatgpt.com/docs/prompting#goal-mode" target="_blank" rel="noopener noreferrer">Prompting Codex</a></p>
+<h2 id="二vibe-coding快速探索但不要无证据交付"><a class="heading-anchor" href="#二vibe-coding快速探索但不要无证据交付" aria-label="链接到本节">#</a>二、Vibe Coding：快速探索，但不要无证据交付</h2>
+<h3 id="1-什么是可控的-vibe-coding"><a class="heading-anchor" href="#1-什么是可控的-vibe-coding" aria-label="链接到本节">#</a>1. 什么是可控的 Vibe Coding</h3>
+<p>Vibe Coding 的价值是降低“想法 → 可体验结果”的成本。它适合：</p>
+<ul><li>从自然语言生成一个最小可用页面。</li><li>根据截图实现 UI。</li><li>快速试验交互、视觉风格或信息架构。</li><li>验证一个 API、组件库或 AI 能力是否可行。</li><li>在正式设计前创建可讨论的原型。</li></ul>
+<p>OpenAI 的概念验证指南推荐先形成视觉方向，再实现最小有用原型，并在浏览器中验证；第一版工作后，继续在同一上下文中提出范围明确的小修改。<a href="https://learn.chatgpt.com/use-cases/idea-to-proof-of-concept" target="_blank" rel="noopener noreferrer">Get from idea to proof of concept</a></p>
+<h3 id="2-推荐的具体操作流程"><a class="heading-anchor" href="#2-推荐的具体操作流程" aria-label="链接到本节">#</a>2. 推荐的具体操作流程</h3>
+<h4 id="第一步定义体验目标而不是一次写完规格"><a class="heading-anchor" href="#第一步定义体验目标而不是一次写完规格" aria-label="链接到本节">#</a>第一步：定义体验目标，而不是一次写完规格</h4>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">为内部运营人员创建一个订单异常处理原型。
+
+核心流程：
+1. 查看异常订单列表。
+2. 按异常类型筛选。
+3. 打开订单详情。
+4. 记录处理结果。
+
+先实现可以体验的前端原型，使用 React + TypeScript。
+数据先用本地 mock，不接真实后端。
+必须包含 loading、empty、error 和 success 状态。</code></pre></div>
+<h4 id="第二步让第一版尽快运行"><a class="heading-anchor" href="#第二步让第一版尽快运行" aria-label="链接到本节">#</a>第二步：让第一版尽快运行</h4>
+<p>要求 Codex：</p>
+<ul><li>使用现有项目结构和组件库。</li><li>只实现一个核心纵向流程。</li><li>启动开发服务器。</li><li>告知本地 URL 和具体路由。</li><li>不在第一轮提前建设复杂权限、抽象层或通用平台。</li></ul>
+<h4 id="第三步在浏览器中观察"><a class="heading-anchor" href="#第三步在浏览器中观察" aria-label="链接到本节">#</a>第三步：在浏览器中观察</h4>
+<p>不要只阅读 JSX、CSS 或截图。至少检查：</p>
+<ul><li>首屏层级和主操作是否清晰。</li><li>窄屏和宽屏布局。</li><li>加载、空数据、错误、禁用和提交中状态。</li><li>表单校验和错误提示。</li><li>键盘导航、焦点和基础可访问性。</li><li>控制台错误、网络失败和重复提交。</li></ul>
+<p>官方 Codex 文档对 UI 紧密迭代的建议是：保持开发服务器运行，使用小而具体的提示逐步修改，在浏览器中审查每次变化，并保存喜欢的版本。<a href="https://learn.chatgpt.com/docs/prompting#use-editor-context" target="_blank" rel="noopener noreferrer">Iterate on UI with live updates</a></p>
+<h4 id="第四步一次只改变一个维度"><a class="heading-anchor" href="#第四步一次只改变一个维度" aria-label="链接到本节">#</a>第四步：一次只改变一个维度</h4>
+<p>推荐：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">只修改订单详情抽屉：
+- 提高关键信息的视觉层级；
+- 把危险操作移到次要区域；
+- 保持 API 和数据结构不变；
+- 同时检查移动端。</code></pre></div>
+<p>不推荐：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">让整个系统更高级、更现代，顺便优化代码和数据库。</code></pre></div>
+<h4 id="第五步为满意版本建立检查点"><a class="heading-anchor" href="#第五步为满意版本建立检查点" aria-label="链接到本节">#</a>第五步：为满意版本建立检查点</h4>
+<ul><li>运行前端 lint、类型检查和构建。</li><li>保存 Git commit 或至少检查完整 diff。</li><li>记录确定下来的颜色、间距、组件和交互规范。</li><li>把稳定规则写入 <code>AGENTS.md</code>、设计文档或测试。</li><li>再进入真实后端和生产质量阶段。</li></ul>
+<h3 id="3-vibe-coding-的退出条件"><a class="heading-anchor" href="#3-vibe-coding-的退出条件" aria-label="链接到本节">#</a>3. Vibe Coding 的退出条件</h3>
+<p>出现下列任一情况时，应从 Vibe 模式切换到 Harness 模式：</p>
+<ul><li>开始接入真实用户、权限、支付或敏感数据。</li><li>API 和数据库结构需要长期维护。</li><li>两个以上开发者需要协同。</li><li>同类错误开始重复发生。</li><li>每次改动都可能影响多个模块。</li><li>需要部署、回滚、审计或服务等级保证。</li></ul>
+<h3 id="4-vibe-coding-常见风险"><a class="heading-anchor" href="#4-vibe-coding-常见风险" aria-label="链接到本节">#</a>4. Vibe Coding 常见风险</h3>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">风险</th><th style="text-align:left">典型表现</th><th style="text-align:left">控制方式</th></tr></thead><tbody><tr><td style="text-align:left">只看界面，不看行为</td><td style="text-align:left">页面漂亮但提交失败</td><td style="text-align:left">浏览器 + 网络请求 + E2E 验证</td></tr><tr><td style="text-align:left">随意改变技术栈</td><td style="text-align:left">重写现有框架或引入大量依赖</td><td style="text-align:left">在提示和 <code>AGENTS.md</code> 中锁定栈与边界</td></tr><tr><td style="text-align:left">生成假接口</td><td style="text-align:left">前端 mock 与真实 API 不一致</td><td style="text-align:left">OpenAPI/JSON Schema 作为契约</td></tr><tr><td style="text-align:left">缺少异常状态</td><td style="text-align:left">只实现 happy path</td><td style="text-align:left">明确 loading/empty/error/permission 状态</td></tr><tr><td style="text-align:left">不检查安全</td><td style="text-align:left">把鉴权放在前端、泄露密钥</td><td style="text-align:left">后端强制鉴权，密钥只来自安全配置</td></tr><tr><td style="text-align:left">大批量改动</td><td style="text-align:left">UI、数据模型、架构同时变化</td><td style="text-align:left">小步修改、频繁 diff、检查点提交</td></tr><tr><td style="text-align:left">“能运行”等于“可发布”</td><td style="text-align:left">无测试、无日志、无迁移策略</td><td style="text-align:left">进入 Harness 和 Loop 后再交付</td></tr></tbody></table></div>
+<h2 id="三harness-engineering让-codex-在成功跑道上工作"><a class="heading-anchor" href="#三harness-engineering让-codex-在成功跑道上工作" aria-label="链接到本节">#</a>三、Harness Engineering：让 Codex 在“成功跑道”上工作</h2>
+<h3 id="1-harness-的含义"><a class="heading-anchor" href="#1-harness-的含义" aria-label="链接到本节">#</a>1. Harness 的含义</h3>
+<p>本文中的 Harness，可以理解为包围 Codex 的工程执行环境：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">项目规则 + 可发现的上下文 + 可重复命令 + 测试数据
++ 自动验证 + 浏览器/日志反馈 + 权限边界 + 审计记录</code></pre></div>
+<p>好的 Harness 不需要 Codex 猜测：</p>
+<ul><li>项目怎么启动。</li><li>哪些目录是后端、前端、契约和迁移。</li><li>使用什么 Java、Node 和包管理器版本。</li><li>最小相关测试和完整测试分别怎么运行。</li><li>什么算破坏兼容性。</li><li>哪些操作需要人工批准。</li><li>完成后必须报告哪些证据。</li></ul>
+<h3 id="2-推荐的全栈-harness-结构"><a class="heading-anchor" href="#2-推荐的全栈-harness-结构" aria-label="链接到本节">#</a>2. 推荐的全栈 Harness 结构</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">repo/
+├── AGENTS.md
+├── README.md
+├── docs/
+│   ├── architecture.md
+│   ├── decisions/
+│   └── api/openapi.yaml
+├── backend/
+│   ├── pom.xml
+│   ├── src/main/
+│   └── src/test/
+├── frontend/
+│   ├── package.json
+│   ├── src/
+│   └── tests/
+├── e2e/
+│   └── playwright/
+├── db/
+│   └── migration/
+├── scripts/
+│   ├── dev.sh
+│   ├── verify-fast.sh
+│   └── verify-full.sh
+├── docker-compose.yml
+└── .github/workflows/</code></pre></div>
+<p>目录名可以不同，关键是入口明确、命令稳定、失败信息可操作。</p>
+<h3 id="3-把长期规则写入-agentsmd"><a class="heading-anchor" href="#3-把长期规则写入-agentsmd" aria-label="链接到本节">#</a>3. 把长期规则写入 <code>AGENTS.md</code></h3>
+<p>官方建议保持 <code>AGENTS.md</code> 简洁，用于每次都应遵循的构建/测试命令、评审预期、仓库约定和目录特定规则；反复发生的错误和 PR 反馈应沉淀进去，形成反馈闭环。<a href="https://learn.chatgpt.com/docs/customization/overview#agents-guidance" target="_blank" rel="noopener noreferrer">AGENTS Guidance</a></p>
+<p>适合 Java 全栈仓库的示例：</p>
+<div class="code-block"><div class="code-toolbar"><span>markdown</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-markdown"># Project instructions
+
+## Stack
+- Backend: Java 21, Spring Boot, Maven Wrapper.
+- Frontend: React, TypeScript, npm.
+- API contract: `docs/api/openapi.yaml`.
+- Database migrations: Flyway; never edit an applied migration.
+
+## Boundaries
+- Preserve public API compatibility unless the task explicitly authorizes a breaking change.
+- Never put authorization decisions only in the frontend.
+- Never commit secrets, tokens, generated credentials, or local environment files.
+- Keep unrelated user changes intact.
+
+## Verification
+- Backend focused test: `./mvnw -pl backend -Dtest=&lt;TestName&gt; test`
+- Backend full test: `./mvnw -pl backend verify`
+- Frontend: `npm --prefix frontend run lint`
+- Frontend type check: `npm --prefix frontend run typecheck`
+- Frontend test: `npm --prefix frontend test -- --run`
+- Frontend build: `npm --prefix frontend run build`
+- E2E: `npm --prefix e2e test`
+
+## Delivery
+- Report changed files, commands run, results, untested areas, and remaining risks.
+- Do not claim success when a required check was skipped or failed.</code></pre></div>
+<p>不要把完整百科、长篇架构史或每次任务才需要的临时约束全部塞进 <code>AGENTS.md</code>。稳定规则放 <code>AGENTS.md</code>，详细说明放专门文档，可复用复杂流程做成 Skill，外部系统通过 MCP/连接器访问。</p>
+<h3 id="4-把验收标准做成机器可执行命令"><a class="heading-anchor" href="#4-把验收标准做成机器可执行命令" aria-label="链接到本节">#</a>4. 把验收标准做成机器可执行命令</h3>
+<p>Harness 的核心不是“更多文档”，而是“更好的反馈信号”。</p>
+<p>建议至少提供两个入口：</p>
+<div class="code-block"><div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-bash"># 快速反馈：适合每次小改动
+./scripts/verify-fast.sh
+
+# 完整反馈：适合 PR 或交付前
+./scripts/verify-full.sh</code></pre></div>
+<p>快速检查可以包含：</p>
+<ul><li>修改模块的编译。</li><li>相关单元测试。</li><li>前端 lint 和类型检查。</li><li>OpenAPI 或 Schema 校验。</li></ul>
+<p>完整检查可以包含：</p>
+<ul><li>后端全部测试和集成测试。</li><li>Testcontainers 数据库测试。</li><li>前端测试与生产构建。</li><li>端到端浏览器测试。</li><li>数据库迁移验证。</li><li>依赖、许可证和安全扫描。</li></ul>
+<p>脚本应满足：</p>
+<ul><li>非零退出码表示失败。</li><li>输出明确指出失败位置和修复方向。</li><li>可在本地和 CI 中重复运行。</li><li>不依赖某个开发者机器里的隐藏状态。</li><li>不自动执行不可逆的生产操作。</li></ul>
+<h3 id="5-为-codex-提供最小但充分的上下文"><a class="heading-anchor" href="#5-为-codex-提供最小但充分的上下文" aria-label="链接到本节">#</a>5. 为 Codex 提供最小但充分的上下文</h3>
+<p>优先提供：</p>
+<ul><li>复现步骤和错误日志。</li><li>相关入口文件与最近调用方。</li><li>OpenAPI、Schema、数据库迁移和领域规则。</li><li>一两个符合团队风格的相邻实现。</li><li>相关测试和测试数据。</li></ul>
+<p>避免：</p>
+<ul><li>无差别附加整个文档库。</li><li>把过期设计稿当成当前事实。</li><li>同时提供互相冲突但不标注优先级的规则。</li><li>在提示里粘贴密钥、生产数据或客户隐私信息。</li></ul>
+<h3 id="6-把反复任务封装为-skill-或自动化"><a class="heading-anchor" href="#6-把反复任务封装为-skill-或自动化" aria-label="链接到本节">#</a>6. 把反复任务封装为 Skill 或自动化</h3>
+<p>当一个流程稳定并重复出现，例如：</p>
+<ul><li>新增 Spring Boot CRUD 垂直切片。</li><li>根据 OpenAPI 同步 Java DTO 与 TypeScript Client。</li><li>排查线上接口慢查询。</li><li>生成数据库迁移并做兼容性检查。</li><li>发布前运行全栈验收。</li></ul>
+<p>就应把“使用时机、输入、步骤、命令、预期输出、失败处理”封装为可复用 Skill 或脚本，而不是每次重新描述。OpenAI 的 Codex 最佳实践也建议把重复工作转为 Skills，把稳定工作流自动化，并用 MCP 连接外部系统。<a href="https://learn.chatgpt.com/guides/best-practices" target="_blank" rel="noopener noreferrer">Codex best practices</a></p>
+<h2 id="四loop-engineering用实际结果推动下一轮"><a class="heading-anchor" href="#四loop-engineering用实际结果推动下一轮" aria-label="链接到本节">#</a>四、Loop Engineering：用实际结果推动下一轮</h2>
+<h3 id="1-标准闭环"><a class="heading-anchor" href="#1-标准闭环" aria-label="链接到本节">#</a>1. 标准闭环</h3>
+<p>OpenAI Cookbook 给出的迭代修复模式包含三个阶段：</p>
+<ol><li>Review：只检查并输出结构化问题，不编辑。</li><li>Repair：根据问题和上次验证反馈进行小范围修改。</li><li>Validate：运行真正的检查，将剩余问题反馈给下一轮。</li></ol>
+<p>其关键不是“多执行几次”，而是每一轮都使用新的验证证据。<a href="https://developers.openai.com/cookbook/examples/codex/build_iterative_repair_loops_with_codex" target="_blank" rel="noopener noreferrer">Build iterative repair loops with Codex</a></p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">Review
+  ↓ findings
+Repair
+  ↓ changed artifact
+Validate
+  ↓ pass / remaining delta
+┌───────────────┐
+│ 未通过：进入下一轮 │
+└───────┬───────┘
+        └────────────→ Repair</code></pre></div>
+<h3 id="2-java-全栈开发闭环"><a class="heading-anchor" href="#2-java-全栈开发闭环" aria-label="链接到本节">#</a>2. Java 全栈开发闭环</h3>
+<h4 id="review"><a class="heading-anchor" href="#review" aria-label="链接到本节">#</a>Review</h4>
+<p>要求 Codex：</p>
+<ul><li>读取需求、现有实现、测试和契约。</li><li>找到最可能的根因或缺口。</li><li>列出涉及的后端、前端和数据层。</li><li>不立即重写代码。</li><li>输出风险、假设和最小修复方向。</li></ul>
+<h4 id="repair"><a class="heading-anchor" href="#repair" aria-label="链接到本节">#</a>Repair</h4>
+<p>要求 Codex：</p>
+<ul><li>只修复当前有证据支持的问题。</li><li>保持 API、数据库和用户行为边界。</li><li>添加回归测试。</li><li>避免顺手进行无关重构。</li><li>保留用户已有修改。</li></ul>
+<h4 id="validate"><a class="heading-anchor" href="#validate" aria-label="链接到本节">#</a>Validate</h4>
+<p>建议按成本从低到高运行：</p>
+<ol><li>编译、格式和静态检查。</li><li>最小相关单元测试。</li><li>模块测试和集成测试。</li><li>数据库迁移与真实依赖测试。</li><li>前端生产构建。</li><li>浏览器端到端流程。</li><li><code>/review</code> 或独立人工评审。</li></ol>
+<h4 id="feedback"><a class="heading-anchor" href="#feedback" aria-label="链接到本节">#</a>Feedback</h4>
+<p>将失败转换为下一轮可操作输入：</p>
+<div class="code-block"><div class="code-toolbar"><span>json</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-json">{
+  &quot;passed&quot;: false,
+  &quot;failed_check&quot;: &quot;OrderControllerIT.shouldRejectDuplicateSubmission&quot;,
+  &quot;evidence&quot;: &quot;expected 409 but received 500&quot;,
+  &quot;remaining_delta&quot;: [
+    &quot;duplicate-key exception is not mapped to Conflict response&quot;,
+    &quot;frontend still allows repeated submission while request is pending&quot;
+  ]
+}</code></pre></div>
+<p>下一轮只处理 <code>remaining_delta</code>，不要重新从模糊原始需求开始。</p>
+<h3 id="3-loop-的停止条件"><a class="heading-anchor" href="#3-loop-的停止条件" aria-label="链接到本节">#</a>3. Loop 的停止条件</h3>
+<p>生产闭环必须有显式停止条件：</p>
+<ul><li>所有必需验证通过。</li><li>达到最大尝试次数。</li><li>连续两轮的剩余问题没有实质变化。</li><li>修改开始扩大到未授权范围。</li><li>需要产品、架构、安全或数据负责人判断。</li><li>需要不可逆操作或生产权限。</li></ul>
+<p>OpenAI Cookbook 同样建议在验证通过、达到最大次数、剩余差异不再变化或需要人工评审时停止，并保留每轮的发现、修改、验证结果和剩余差异作为审计记录。<a href="https://developers.openai.com/cookbook/examples/codex/build_iterative_repair_loops_with_codex#generalize-to-a-continuous-loop" target="_blank" rel="noopener noreferrer">Generalize to a continuous loop</a></p>
+<h3 id="4-一个可直接使用的闭环提示词"><a class="heading-anchor" href="#4-一个可直接使用的闭环提示词" aria-label="链接到本节">#</a>4. 一个可直接使用的闭环提示词</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">修复订单重复提交问题，使用 Review → Repair → Validate 闭环，最多 3 轮。
+
+Review：
+- 先复现问题；
+- 检查前端按钮状态、后端幂等策略、事务和数据库唯一约束；
+- 在确认根因前不要大规模修改。
+
+Repair：
+- 每轮只做解决当前证据所需的最小修改；
+- 保持现有 API 兼容；
+- 添加回归测试。
+
+Validate：
+- 运行最小相关测试；
+- 运行 backend verify、frontend typecheck/build；
+- 在浏览器中验证快速双击和网络重试；
+- 每轮输出执行命令、结果和 remaining delta。
+
+停止：
+- 全部验收通过；
+- 连续两轮没有收敛；
+- 需要修改公开 API 或生产数据；
+- 达到 3 轮。</code></pre></div>
+<h2 id="五java-全栈开发的重点注意事项"><a class="heading-anchor" href="#五java-全栈开发的重点注意事项" aria-label="链接到本节">#</a>五、Java 全栈开发的重点注意事项</h2>
+<h3 id="1-先守住契约再分别实现前后端"><a class="heading-anchor" href="#1-先守住契约再分别实现前后端" aria-label="链接到本节">#</a>1. 先守住契约，再分别实现前后端</h3>
+<p>对跨端需求，先明确：</p>
+<ul><li>URL、HTTP 方法和状态码。</li><li>请求/响应字段、必填项、枚举和空值语义。</li><li>分页、排序、过滤方式。</li><li>错误结构和错误码。</li><li>时间、时区、金额和精度。</li><li>认证与授权规则。</li><li>兼容策略和废弃周期。</li></ul>
+<p>推荐将 OpenAPI 或等价 Schema 作为单一契约来源。提示 Codex：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">先更新并校验 OpenAPI，再实现 Spring Boot 接口和 TypeScript Client。
+如果需求会造成破坏性变更，停止并说明影响，不要自行改变契约。</code></pre></div>
+<h3 id="2-后端不要只验证-controller"><a class="heading-anchor" href="#2-后端不要只验证-controller" aria-label="链接到本节">#</a>2. 后端不要只验证 Controller</h3>
+<p>至少检查：</p>
+<ul><li>Controller：输入边界、状态码、序列化。</li><li>Application/Service：业务规则和用例编排。</li><li>Domain：不变量是否在可信边界内执行。</li><li>Repository：查询语义、锁、批量行为和 N+1。</li><li>Transaction：事务范围、重试、回滚和事件发布时机。</li><li>Database：索引、唯一约束、迁移和历史数据兼容。</li><li>Security：认证、资源级授权、越权访问和审计。</li><li>Observability：日志、指标、Trace 和关联 ID。</li></ul>
+<p>不要接受“前端隐藏按钮”作为授权方案；授权必须在服务端执行。</p>
+<h3 id="3-数据库迁移必须面向真实发布"><a class="heading-anchor" href="#3-数据库迁移必须面向真实发布" aria-label="链接到本节">#</a>3. 数据库迁移必须面向真实发布</h3>
+<p>要求 Codex检查：</p>
+<ul><li>已应用的迁移不可直接修改。</li><li>新旧应用版本并存时是否兼容。</li><li>大表 DDL 是否会长时间锁表。</li><li>新的非空字段如何回填。</li><li>索引创建、数据清理和回滚策略。</li><li>是否需要 expand → migrate → contract 分阶段发布。</li></ul>
+<h3 id="4-前端必须覆盖非理想状态"><a class="heading-anchor" href="#4-前端必须覆盖非理想状态" aria-label="链接到本节">#</a>4. 前端必须覆盖非理想状态</h3>
+<p>每个数据页面至少考虑：</p>
+<ul><li>Initial/loading。</li><li>Empty。</li><li>Partial data。</li><li>Error/retry。</li><li>Unauthorized/forbidden。</li><li>Submitting/disabled。</li><li>Success feedback。</li><li>Stale data/conflict。</li></ul>
+<p>还应检查：</p>
+<ul><li>TypeScript 类型是否来自或对齐 API 契约。</li><li>表单校验与后端规则是否一致。</li><li>请求取消、竞态和重复提交。</li><li>响应式布局。</li><li>键盘、焦点、标签和颜色对比。</li><li>浏览器控制台与网络错误。</li></ul>
+<h3 id="5-测试应形成分层反馈"><a class="heading-anchor" href="#5-测试应形成分层反馈" aria-label="链接到本节">#</a>5. 测试应形成分层反馈</h3>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">层次</th><th style="text-align:left">主要目的</th><th style="text-align:left">示例</th></tr></thead><tbody><tr><td style="text-align:left">单元测试</td><td style="text-align:left">快速验证业务规则</td><td style="text-align:left">JUnit、Mockito、Vitest</td></tr><tr><td style="text-align:left">Slice/组件测试</td><td style="text-align:left">验证框架边界</td><td style="text-align:left"><code>@WebMvcTest</code>、React Testing Library</td></tr><tr><td style="text-align:left">集成测试</td><td style="text-align:left">验证数据库和服务组合</td><td style="text-align:left">Spring Boot Test、Testcontainers</td></tr><tr><td style="text-align:left">契约测试</td><td style="text-align:left">防止前后端或服务间漂移</td><td style="text-align:left">OpenAPI 校验、消费者契约</td></tr><tr><td style="text-align:left">E2E</td><td style="text-align:left">验证真实用户路径</td><td style="text-align:left">Playwright</td></tr><tr><td style="text-align:left">人工探索</td><td style="text-align:left">发现自动化未覆盖的体验问题</td><td style="text-align:left">浏览器、辅助技术、弱网</td></tr></tbody></table></div>
+<p>Codex 的默认验证顺序应是“最小相关测试 → 模块测试 → 全栈验收”，避免每个微小改动都先跑最慢的完整流水线，也避免只跑单测就宣称全栈功能完成。</p>
+<h3 id="6-启动真实应用做最后验证"><a class="heading-anchor" href="#6-启动真实应用做最后验证" aria-label="链接到本节">#</a>6. 启动真实应用做最后验证</h3>
+<p>对全栈功能，至少完成一次：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">启动依赖 → 启动 Spring Boot → 启动前端
+→ 打开浏览器 → 执行核心流程 → 检查网络、控制台与服务日志</code></pre></div>
+<p>截图只能提供视觉要求，无法表达 hover、校验、键盘操作等行为；官方 Codex 提示指南也要求用文字补足截图未显示的行为，并建议启动开发服务器进行验证。<a href="https://learn.chatgpt.com/docs/prompting#use-editor-context" target="_blank" rel="noopener noreferrer">Prototype from a screenshot</a></p>
+<h2 id="六推荐的端到端操作模式"><a class="heading-anchor" href="#六推荐的端到端操作模式" aria-label="链接到本节">#</a>六、推荐的端到端操作模式</h2>
+<h3 id="模式-a小型明确修改"><a class="heading-anchor" href="#模式-a小型明确修改" aria-label="链接到本节">#</a>模式 A：小型明确修改</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">Inspect → Edit → Focused Test → Diff Review → Report</code></pre></div>
+<p>适用：文案、局部校验、小函数、小组件。</p>
+<h3 id="模式-bbug-修复"><a class="heading-anchor" href="#模式-bbug-修复" aria-label="链接到本节">#</a>模式 B：Bug 修复</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">Reproduce → Locate Cause → Add Regression Test
+→ Minimal Fix → Re-run Reproduction → Broader Checks</code></pre></div>
+<p>官方 Bug 修复示例强调提供可执行复现步骤、限制范围、要求最小修复和回归测试，并在修复后重新执行复现流程。<a href="https://learn.chatgpt.com/docs/prompting#use-editor-context" target="_blank" rel="noopener noreferrer">Fix a bug with Codex</a></p>
+<h3 id="模式-c跨端功能"><a class="heading-anchor" href="#模式-c跨端功能" aria-label="链接到本节">#</a>模式 C：跨端功能</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">Clarify Acceptance Criteria
+→ Define/Confirm API Contract
+→ Plan Vertical Slice
+→ Backend + Migration
+→ Frontend Integration
+→ Contract/Integration Tests
+→ Browser E2E
+→ Review</code></pre></div>
+<p>纵向切片应尽快贯通一个真实流程，避免先生成大量没有集成的 Controller、DTO、页面和假数据。</p>
+<h3 id="模式-d大型重构"><a class="heading-anchor" href="#模式-d大型重构" aria-label="链接到本节">#</a>模式 D：大型重构</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">/plan
+→ Dependency and Behavior Baseline
+→ Milestones with Stable Interfaces
+→ Implement One Milestone
+→ Tests and Review
+→ Commit/Checkpoint
+→ Next Milestone</code></pre></div>
+<p>不要让一次 Codex 任务同时承担“大规模移动文件、改变公开 API、替换框架、迁移数据、重做前端”的全部风险。</p>
+<h3 id="模式-evibe-production"><a class="heading-anchor" href="#模式-evibe-production" aria-label="链接到本节">#</a>模式 E：Vibe → Production</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">One-shot Prototype
+→ Browser Feedback
+→ Scoped Visual Iterations
+→ Freeze UX Direction
+→ Define API/Domain Contracts
+→ Add Harness
+→ Implement Real Vertical Slice
+→ Closed-loop Validation
+→ Security/Performance/Release Review</code></pre></div>
+<h3 id="模式-f持续维护-loop"><a class="heading-anchor" href="#模式-f持续维护-loop" aria-label="链接到本节">#</a>模式 F：持续维护 Loop</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">Scheduled/Triggered Review
+→ Structured Findings
+→ Bounded Repair
+→ Automated Validation
+→ Audit Record
+→ Auto-stop or Human Gate</code></pre></div>
+<p>适用于依赖升级、过期 API、文档代码样例、静态检查修复和有限范围的代码现代化。自动化范围越大，越需要严格的目录、命令、网络和审批边界。</p>
+<h2 id="七提示词与交互技巧"><a class="heading-anchor" href="#七提示词与交互技巧" aria-label="链接到本节">#</a>七、提示词与交互技巧</h2>
+<h3 id="1-先说结果少做微观遥控"><a class="heading-anchor" href="#1-先说结果少做微观遥控" aria-label="链接到本节">#</a>1. 先说结果，少做微观遥控</h3>
+<p>应描述结果、关键上下文和不可违反的边界。除非流程本身是要求，否则不要把 Codex 限死在你预想的每个内部步骤中。官方提示指南也建议优先描述结果，让模型有空间搜索、比较和调整方案。<a href="https://learn.chatgpt.com/docs/prompting#prompts" target="_blank" rel="noopener noreferrer">Prompting overview</a></p>
+<h3 id="2-长任务需要计划和进度"><a class="heading-anchor" href="#2-长任务需要计划和进度" aria-label="链接到本节">#</a>2. 长任务需要计划和进度</h3>
+<p>要求：</p>
+<ul><li>拆分任务。</li><li>在关键工具操作前简短说明。</li><li>维护 TODO 或验收清单。</li><li>每次工具结果后检查是否仍满足目标。</li><li>完成前做最终审计。</li></ul>
+<p>OpenAI 的编码提示建议为长时间 Agent 任务加入计划、持续性、关键操作说明和 TODO/量表，以降低遗漏。<a href="https://developers.openai.com/api/docs/guides/prompt-engineering#coding" target="_blank" rel="noopener noreferrer">Prompt engineering: Coding</a></p>
+<h3 id="3-工作中及时-steer不必等它完成"><a class="heading-anchor" href="#3-工作中及时-steer不必等它完成" aria-label="链接到本节">#</a>3. 工作中及时 Steer，不必等它完成</h3>
+<p>Codex 工作过程中：</p>
+<ul><li><code>Steer</code>：将新要求加入当前执行，用于纠正方向或补充关键信息。</li><li><code>Queue</code>：把下一项要求排到之后，不干扰当前任务。</li></ul>
+<p>CLI 中，工作时按 Enter 可将消息 Steer 到当前 turn，Tab 可排队到下一 turn，具体以当前版本快捷键说明为准。<a href="https://learn.chatgpt.com/docs/prompting#context" target="_blank" rel="noopener noreferrer">Steering and queuing</a></p>
+<h3 id="4-明确不要做什么"><a class="heading-anchor" href="#4-明确不要做什么" aria-label="链接到本节">#</a>4. 明确“不要做什么”</h3>
+<p>高价值边界示例：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">- 不改变公开 API。
+- 不编辑已执行的 Flyway migration。
+- 不升级无关依赖。
+- 不覆盖工作区中已有的未提交修改。
+- 不发送消息、不部署、不操作生产数据。
+- 无法运行测试时必须明确说明，不能推测为通过。</code></pre></div>
+<h3 id="5-用-review-建立第二视角"><a class="heading-anchor" href="#5-用-review-建立第二视角" aria-label="链接到本节">#</a>5. 用 <code>/review</code> 建立第二视角</h3>
+<p>交付前：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">/review Focus on:
+- correctness and edge cases
+- authorization and data exposure
+- transaction and concurrency risks
+- API compatibility
+- missing tests</code></pre></div>
+<p>修复评审问题后再次运行 <code>/review</code>。但模型评审不能替代高风险代码的人工审批。</p>
+<h2 id="八反模式清单"><a class="heading-anchor" href="#八反模式清单" aria-label="链接到本节">#</a>八、反模式清单</h2>
+<ul><li>只说“帮我完善一下”，不给目标和验收。</li><li>把一个大型系统一次性交给 one-shot 生成。</li><li>让 Codex 修改代码但不允许运行任何验证。</li><li>只看 diff，不运行应用或复现用户流程。</li><li>让前端类型、Java DTO 和 OpenAPI 分别手写并长期漂移。</li><li>为了测试通过而删除测试或弱化断言。</li><li>自动循环没有最大次数、收敛判断和人工闸门。</li><li>把生产密钥、客户数据或访问令牌放进提示词或仓库。</li><li>将所有规则塞进根 <code>AGENTS.md</code>，导致指令冗长冲突。</li><li>每次纠正 Codex，却不把重复问题沉淀为规则、测试或脚本。</li><li>在一个修改中混入无关格式化、依赖升级和架构重构。</li><li>因为 Codex 报告“完成”就跳过 Git diff、测试结果和浏览器检查。</li></ul>
+<h2 id="九个人推荐的最小落地方案"><a class="heading-anchor" href="#九个人推荐的最小落地方案" aria-label="链接到本节">#</a>九、个人推荐的最小落地方案</h2>
+<p>针对 Java + Spring Boot + TypeScript 全栈项目，先完成以下六件事：</p>
+<ol><li>根目录维护简洁的 <code>AGENTS.md</code>。</li><li>固化 <code>verify-fast</code> 和 <code>verify-full</code> 两套命令。</li><li>用 OpenAPI 管理前后端契约。</li><li>为数据库和外部依赖建立可重复的集成测试环境。</li><li>用 Playwright 覆盖最关键的 3～5 条用户路径。</li><li>所有 Codex 任务都要求报告：改了什么、跑了什么、结果如何、什么没验证。</li></ol>
+<p>之后再逐步增加：</p>
+<ul><li>目录级 <code>AGENTS.md</code>。</li><li>复用 Skills。</li><li>MCP 外部系统连接。</li><li><code>/review</code> 质量门。</li><li>自动化维护 Loop。</li><li>基于真实失败案例持续增强 Harness。</li></ul>
+<h2 id="十可复制的全栈任务模板"><a class="heading-anchor" href="#十可复制的全栈任务模板" aria-label="链接到本节">#</a>十、可复制的全栈任务模板</h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">你正在维护一个 Java 21 + Spring Boot + React/TypeScript 项目。
+
+目标：
+[描述用户可以观察到的最终行为]
+
+范围：
+- backend: [模块/路径]
+- frontend: [模块/路径]
+- contract: [OpenAPI/Schema 路径]
+- database: [迁移路径]
+
+约束：
+- 保持现有公开 API 向后兼容；
+- 不修改已应用迁移；
+- 不升级无关依赖；
+- 不覆盖已有未提交改动；
+- 鉴权必须由后端执行；
+- 不使用真实密钥或生产数据。
+
+工作方式：
+1. 先检查 AGENTS.md、相关实现、测试和契约。
+2. 若涉及多个模块，先给出简洁计划和验收矩阵。
+3. 优先实现最小完整纵向切片。
+4. 使用 Review → Repair → Validate 闭环。
+5. 每轮只处理有证据支持的 remaining delta。
+
+验收：
+- 运行最小相关测试；
+- 运行后端 verify；
+- 运行前端 lint、typecheck、test、build；
+- 验证 OpenAPI/Schema；
+- 启动应用并在浏览器验证核心流程及错误状态；
+- 检查最终 diff；
+- 输出变更文件、执行命令、结果、未验证项和剩余风险。
+
+停止条件：
+- 所有验收通过；
+- 连续两轮没有收敛；
+- 需要破坏性 API/数据库修改；
+- 需要生产权限或人工业务决策。</code></pre></div>
+<h2 id="易错点与局限"><a class="heading-anchor" href="#易错点与局限" aria-label="链接到本节">#</a>易错点与局限</h2>
+<ol><li>Codex 的功能、命令和界面会演进，<code>/plan</code>、<code>/goal</code>、快捷键和具体入口应以当前产品界面与官方文档为准。</li><li>Vibe Coding 可以快速发现产品方向，但不能代替领域建模、安全设计、容量规划和发布治理。</li><li>Harness 的质量决定了自动 Loop 的上限；测试或验收标准错误，循环会稳定地产生错误结果。</li><li>模型评审和自动测试都有盲区，高风险权限、支付、隐私、迁移和生产操作需要人工审批。</li><li>并非所有任务都适合自动循环。结果难以客观验证、修改不可逆或反馈周期很长时，应缩小范围并增加人工闸门。</li></ol>
+<h2 id="下一步学习建议"><a class="heading-anchor" href="#下一步学习建议" aria-label="链接到本节">#</a>下一步学习建议</h2>
+<ol><li>使用本文模板完成一个 Spring Boot + React 的最小纵向功能。</li><li>为当前仓库补充 <code>verify-fast</code> 和 <code>verify-full</code>。</li><li>选择一个真实 Bug，实践三轮以内的 Review/Repair/Validate。</li><li>将重复发生的一个 Codex 错误沉淀为 <code>AGENTS.md</code> 规则和自动测试。</li><li>为一个前端页面建立“浏览器观察 → 小步修改 → 再验证”的 Vibe Coding 流程。</li></ol>
+<h2 id="参考资料"><a class="heading-anchor" href="#参考资料" aria-label="链接到本节">#</a>参考资料</h2>
+<ul><li><a href="https://learn.chatgpt.com/guides/best-practices" target="_blank" rel="noopener noreferrer">Codex best practices</a> — Codex 上下文、<code>AGENTS.md</code>、配置、MCP、Skills 与自动化的整体最佳实践，访问日期：2026-07-24。</li><li><a href="https://learn.chatgpt.com/docs/prompting" target="_blank" rel="noopener noreferrer">Prompting</a> — Goal、Context、Output、Boundaries，Codex 提示、计划、Bug 修复、UI 迭代、评审和验证工作流，访问日期：2026-07-24。</li><li><a href="https://learn.chatgpt.com/docs/customization/overview#agents-guidance" target="_blank" rel="noopener noreferrer">Customization: AGENTS Guidance</a> — <code>AGENTS.md</code> 的适用内容、层级与反馈闭环，访问日期：2026-07-24。</li><li><a href="https://developers.openai.com/api/docs/guides/prompt-engineering#coding" target="_blank" rel="noopener noreferrer">Prompt engineering: Coding</a> — 编码 Agent 的角色、工具、测试、长任务计划和进度跟踪建议，访问日期：2026-07-24。</li><li><a href="https://learn.chatgpt.com/use-cases/idea-to-proof-of-concept" target="_blank" rel="noopener noreferrer">Get from idea to proof of concept</a> — 从视觉方向到最小原型及浏览器迭代的工作方式，访问日期：2026-07-24。</li><li><a href="https://developers.openai.com/cookbook/examples/codex/build_iterative_repair_loops_with_codex" target="_blank" rel="noopener noreferrer">Build iterative repair loops with Codex</a> — Review、Repair、Validate、结构化反馈、审计记录和停止条件，访问日期：2026-07-24。</li><li><a href="https://developers.openai.com/cookbook/examples/codex/using_goals_in_codex#how-goals-are-designed-in-codex" target="_blank" rel="noopener noreferrer">Using Goals in Codex</a> — 线程级目标、持续执行、预算边界与基于证据的完成审计，访问日期：2026-07-24。</li></ul>
+    </article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/codex/2026-07-24-Codex全栈开发最佳实践.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="2026-07-24-AIDLC与Superpowers差异分析.html"><small>上一篇</small><span>AIDLC 与 Superpowers 差异分析：生命周期治理与工程 Inner Loop</span></a>
+        <a class="pager-link next" href="2026-07-24-Superpowers详细介绍.html"><small>下一篇</small><span>Superpowers 详细介绍：Codex 的技能化软件开发方法</span></a>
+      </nav>
+    </footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#一先建立正确的-codex-心智模型">一、先建立正确的 Codex 心智模型</a></li><li class="toc-level-3"><a href="#1-codex-是受约束的工程执行者">1. Codex 是受约束的工程执行者</a></li><li class="toc-level-3"><a href="#2-让-codex-对完成提供证据">2. 让 Codex 对“完成”提供证据</a></li><li class="toc-level-3"><a href="#3-根据任务规模选择工作模式">3. 根据任务规模选择工作模式</a></li><li class="toc-level-2"><a href="#二vibe-coding快速探索但不要无证据交付">二、Vibe Coding：快速探索，但不要无证据交付</a></li><li class="toc-level-3"><a href="#1-什么是可控的-vibe-coding">1. 什么是可控的 Vibe Coding</a></li><li class="toc-level-3"><a href="#2-推荐的具体操作流程">2. 推荐的具体操作流程</a></li><li class="toc-level-4"><a href="#第一步定义体验目标而不是一次写完规格">第一步：定义体验目标，而不是一次写完规格</a></li><li class="toc-level-4"><a href="#第二步让第一版尽快运行">第二步：让第一版尽快运行</a></li><li class="toc-level-4"><a href="#第三步在浏览器中观察">第三步：在浏览器中观察</a></li><li class="toc-level-4"><a href="#第四步一次只改变一个维度">第四步：一次只改变一个维度</a></li><li class="toc-level-4"><a href="#第五步为满意版本建立检查点">第五步：为满意版本建立检查点</a></li><li class="toc-level-3"><a href="#3-vibe-coding-的退出条件">3. Vibe Coding 的退出条件</a></li><li class="toc-level-3"><a href="#4-vibe-coding-常见风险">4. Vibe Coding 常见风险</a></li><li class="toc-level-2"><a href="#三harness-engineering让-codex-在成功跑道上工作">三、Harness Engineering：让 Codex 在“成功跑道”上工作</a></li><li class="toc-level-3"><a href="#1-harness-的含义">1. Harness 的含义</a></li><li class="toc-level-3"><a href="#2-推荐的全栈-harness-结构">2. 推荐的全栈 Harness 结构</a></li><li class="toc-level-3"><a href="#3-把长期规则写入-agentsmd">3. 把长期规则写入 AGENTS.md</a></li><li class="toc-level-3"><a href="#4-把验收标准做成机器可执行命令">4. 把验收标准做成机器可执行命令</a></li><li class="toc-level-3"><a href="#5-为-codex-提供最小但充分的上下文">5. 为 Codex 提供最小但充分的上下文</a></li><li class="toc-level-3"><a href="#6-把反复任务封装为-skill-或自动化">6. 把反复任务封装为 Skill 或自动化</a></li><li class="toc-level-2"><a href="#四loop-engineering用实际结果推动下一轮">四、Loop Engineering：用实际结果推动下一轮</a></li><li class="toc-level-3"><a href="#1-标准闭环">1. 标准闭环</a></li><li class="toc-level-3"><a href="#2-java-全栈开发闭环">2. Java 全栈开发闭环</a></li><li class="toc-level-4"><a href="#review">Review</a></li><li class="toc-level-4"><a href="#repair">Repair</a></li><li class="toc-level-4"><a href="#validate">Validate</a></li><li class="toc-level-4"><a href="#feedback">Feedback</a></li><li class="toc-level-3"><a href="#3-loop-的停止条件">3. Loop 的停止条件</a></li><li class="toc-level-3"><a href="#4-一个可直接使用的闭环提示词">4. 一个可直接使用的闭环提示词</a></li><li class="toc-level-2"><a href="#五java-全栈开发的重点注意事项">五、Java 全栈开发的重点注意事项</a></li><li class="toc-level-3"><a href="#1-先守住契约再分别实现前后端">1. 先守住契约，再分别实现前后端</a></li><li class="toc-level-3"><a href="#2-后端不要只验证-controller">2. 后端不要只验证 Controller</a></li><li class="toc-level-3"><a href="#3-数据库迁移必须面向真实发布">3. 数据库迁移必须面向真实发布</a></li><li class="toc-level-3"><a href="#4-前端必须覆盖非理想状态">4. 前端必须覆盖非理想状态</a></li><li class="toc-level-3"><a href="#5-测试应形成分层反馈">5. 测试应形成分层反馈</a></li><li class="toc-level-3"><a href="#6-启动真实应用做最后验证">6. 启动真实应用做最后验证</a></li><li class="toc-level-2"><a href="#六推荐的端到端操作模式">六、推荐的端到端操作模式</a></li><li class="toc-level-3"><a href="#模式-a小型明确修改">模式 A：小型明确修改</a></li><li class="toc-level-3"><a href="#模式-bbug-修复">模式 B：Bug 修复</a></li><li class="toc-level-3"><a href="#模式-c跨端功能">模式 C：跨端功能</a></li><li class="toc-level-3"><a href="#模式-d大型重构">模式 D：大型重构</a></li><li class="toc-level-3"><a href="#模式-evibe-production">模式 E：Vibe → Production</a></li><li class="toc-level-3"><a href="#模式-f持续维护-loop">模式 F：持续维护 Loop</a></li><li class="toc-level-2"><a href="#七提示词与交互技巧">七、提示词与交互技巧</a></li><li class="toc-level-3"><a href="#1-先说结果少做微观遥控">1. 先说结果，少做微观遥控</a></li><li class="toc-level-3"><a href="#2-长任务需要计划和进度">2. 长任务需要计划和进度</a></li><li class="toc-level-3"><a href="#3-工作中及时-steer不必等它完成">3. 工作中及时 Steer，不必等它完成</a></li><li class="toc-level-3"><a href="#4-明确不要做什么">4. 明确“不要做什么”</a></li><li class="toc-level-3"><a href="#5-用-review-建立第二视角">5. 用 /review 建立第二视角</a></li><li class="toc-level-2"><a href="#八反模式清单">八、反模式清单</a></li><li class="toc-level-2"><a href="#九个人推荐的最小落地方案">九、个人推荐的最小落地方案</a></li><li class="toc-level-2"><a href="#十可复制的全栈任务模板">十、可复制的全栈任务模板</a></li><li class="toc-level-2"><a href="#易错点与局限">易错点与局限</a></li><li class="toc-level-2"><a href="#下一步学习建议">下一步学习建议</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+<div class="sidebar-scrim"></div>
+</body>
+</html>

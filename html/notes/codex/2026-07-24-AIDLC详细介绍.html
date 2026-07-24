@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="AI-DLC 不是一个模型，也不只是“先写规格再写代码”的提示词模板。它是一套以 AI 为执行中心、以人类为决策中心的软件开发生命周期方法： 它试图解决两种常见极端： AI 只做补全、文档、单测等局部辅助，整体流程仍然低效。 只给一句需求就让 Agent 自主生成整个应用，人类失去关键决策和质量控制">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="Codex 与 AI 工程">
+  <meta name="study-date" content="2026-07-24">
+  <title>AIDLC 详细介绍：从 AI 辅助编码到可审计的软件交付生命周期｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a href="../../index.html">全部文档</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <label class="sidebar-search">
+      <span class="sr-only">筛选文档</span>
+      <input type="search" placeholder="筛选文档…" data-sidebar-search>
+    </label>
+    <nav class="doc-nav" aria-label="文档列表">
+      <a class="doc-nav-item" href="../../AGENTS.html"><span>Java 全栈 AI 学习助手</span><small>项目指南</small></a><a class="doc-nav-item" href="2026-07-24-AI开发工作流选型与小团队沉淀指南.html"><span>AI 开发工作流选型与小团队沉淀指南</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item is-active" href="2026-07-24-AIDLC详细介绍.html"><span>AIDLC 详细介绍：从 AI 辅助编码到可审计的软件交付生命周期</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC与Superpowers差异分析.html"><span>AIDLC 与 Superpowers 差异分析：生命周期治理与工程 Inner Loop</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-Codex全栈开发最佳实践.html"><span>Codex 全栈开发最佳实践：Vibe Coding、Harness 与 Loop</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-Superpowers详细介绍.html"><span>Superpowers 详细介绍：Codex 的技能化软件开发方法</span><small>Codex 与 AI 工程</small></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta">
+      <a href="../../index.html">知识库首页</a>
+      <span>·</span>
+      <span>Codex 与 AI 工程</span>
+      <span>·</span><time>2026-07-24</time>
+    </div>
+    <article class="markdown-body">
+      <h1 id="aidlc-详细介绍从-ai-辅助编码到可审计的软件交付生命周期"><a class="heading-anchor" href="#aidlc-详细介绍从-ai-辅助编码到可审计的软件交付生命周期" aria-label="链接到本节">#</a>AIDLC 详细介绍：从 AI 辅助编码到可审计的软件交付生命周期</h1>
+<blockquote><p>整理日期：2026-07-24<br> 适用对象：以 Java、Spring Boot 为主的全栈开发者<br> 本文范围：AWS 提出的 AI-DLC（AI-Driven Development Life Cycle）方法论及 <code>awslabs/aidlc-workflows</code> 官方实现<br> 资料状态：官方最新可见 Tag 为 v0.1.8；在线指南已描述更新的五阶段、多 Harness 实现，二者存在版本差异</p>
+<p>相关笔记：<a href="2026-07-24-Codex全栈开发最佳实践.html">Codex 全栈开发最佳实践</a> · <a href="2026-07-24-Superpowers详细介绍.html">Superpowers 详细介绍</a> · <a href="2026-07-24-AIDLC与Superpowers差异分析.html">AIDLC 与 Superpowers 差异分析</a></p></blockquote>
+<h2 id="核心结论"><a class="heading-anchor" href="#核心结论" aria-label="链接到本节">#</a>核心结论</h2>
+<p>AI-DLC 不是一个模型，也不只是“先写规格再写代码”的提示词模板。它是一套以 AI 为执行中心、以人类为决策中心的软件开发生命周期方法：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">人类提供目标和业务上下文
+        ↓
+AI 制定计划、识别不确定项并提出问题
+        ↓
+人类澄清、选择和批准
+        ↓
+AI 生成需求、设计、代码、测试与运维产物
+        ↓
+人类审查结果并决定继续、修改或停止
+        ↓
+状态、产物、决定和经验持久化</code></pre></div>
+<p>它试图解决两种常见极端：</p>
+<ul><li>AI 只做补全、文档、单测等局部辅助，整体流程仍然低效。</li><li>只给一句需求就让 Agent 自主生成整个应用，人类失去关键决策和质量控制。</li></ul>
+<p>AWS 对其核心模式的描述是：AI 负责计划和执行，主动寻求澄清；人类负责关键判断与验证。这个循环在生命周期的每项活动中重复。<a href="https://aws.amazon.com/blogs/devops/ai-driven-development-life-cycle/" target="_blank" rel="noopener noreferrer">AWS 方法论介绍</a></p>
+<p>对于 Java 全栈团队，可把它理解为：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">AI-DLC = 生命周期编排
+       + 需求/设计/代码/测试/运维的结构化产物
+       + Human-in-the-loop 审批门
+       + 可恢复状态与审计日志
+       + 面向项目持续演进的规则和知识</code></pre></div>
+<p>最重要的实践判断是：</p>
+<ol><li>它适合需要多阶段协作、可追踪性和生产交付的工作，不应强行套在每个一行修复上。</li><li>Scope、Depth 和 Test Strategy 必须按风险调整，否则可能从“减少流程浪费”变成“自动制造文档”。</li><li>第一条端到端 Walking Skeleton 验证成功前，不宜开放后续 Bolt 的自主执行。</li><li>AI 生成的计划、代码和验证结论仍需人审；官方仓库也明确提醒生成式 AI 会犯错，并需关注执行成本。<a href="https://github.com/awslabs/aidlc-workflows" target="_blank" rel="noopener noreferrer">官方仓库</a></li><li>在 Codex 中应把 AI-DLC 作为主编排器使用；若同时引入 Superpowers，应复用其 TDD、调试和验证纪律，不要让两个顶层工作流同时争夺流程控制。</li></ol>
+<h2 id="一名称与范围辨析"><a class="heading-anchor" href="#一名称与范围辨析" aria-label="链接到本节">#</a>一、名称与范围辨析</h2>
+<h3 id="1-ai-dlcaidlc-和-aidlc"><a class="heading-anchor" href="#1-ai-dlcaidlc-和-aidlc" aria-label="链接到本节">#</a>1. AI-DLC、AIDLC 和 <code>aidlc</code></h3>
+<p>AWS 正式写法是 <strong>AI-DLC</strong>，全称 <strong>AI-Driven Development Life Cycle</strong>。项目目录、命令和状态文件普遍使用不带连字符的 <code>aidlc</code>，因此社区中也常写作 AIDLC。</p>
+<p>本文介绍的是：</p>
+<ul><li>方法论：AWS AI-DLC。</li><li>开源实现：<code>awslabs/aidlc-workflows</code>。</li><li>Codex 接入：官方 <code>dist/codex</code> Harness 分发及 <code>$aidlc</code> Skills。</li></ul>
+<p>网络上还有使用 AIDLC 缩写的其他框架，例如把字母拆解为 Analyze、Ideate、Develop、Launch、Curate 的流程。它们不是本文所说的 AWS AI-DLC。</p>
+<h3 id="2-方法论与工具实现不是同一层"><a class="heading-anchor" href="#2-方法论与工具实现不是同一层" aria-label="链接到本节">#</a>2. 方法论与工具实现不是同一层</h3>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">层次</th><th style="text-align:left">关注点</th><th style="text-align:left">是否绑定某个 Agent</th></tr></thead><tbody><tr><td style="text-align:left">AI-DLC 方法论</td><td style="text-align:left">AI 与人的职责、生命周期、协作仪式</td><td style="text-align:left">否</td></tr><tr><td style="text-align:left"><code>aidlc-workflows</code> 核心</td><td style="text-align:left">Stage、Scope、Agent、规则、状态机、审计</td><td style="text-align:left">Harness-neutral</td></tr><tr><td style="text-align:left">Harness 分发</td><td style="text-align:left">将核心映射为 Codex、Claude Code、Kiro 等原生能力</td><td style="text-align:left">是</td></tr><tr><td style="text-align:left">项目实践</td><td style="text-align:left">Java 规范、测试命令、架构边界、发布约束</td><td style="text-align:left">由团队定义</td></tr></tbody></table></div>
+<p>当前在线指南说明，同一套核心可生成 Claude Code、Kiro CLI/IDE、Codex CLI 和 opencode 分发；方法论是“做什么”，Harness 分发是“在某个 Agent 环境里怎样运行”。<a href="https://awslabs.github.io/aidlc-workflows/guide/00-introduction/" target="_blank" rel="noopener noreferrer">AI-DLC Introduction</a></p>
+<h2 id="二为什么需要-ai-dlc"><a class="heading-anchor" href="#二为什么需要-ai-dlc" aria-label="链接到本节">#</a>二、为什么需要 AI-DLC</h2>
+<h3 id="1-普通-vibe-coding-的典型失控路径"><a class="heading-anchor" href="#1-普通-vibe-coding-的典型失控路径" aria-label="链接到本节">#</a>1. 普通 Vibe Coding 的典型失控路径</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">一句模糊需求
+→ Agent 立即改很多文件
+→ 测试只覆盖快乐路径
+→ 需求、设计和代码逐渐不一致
+→ 新会话丢失上下文
+→ “应该可以”替代了可验证证据</code></pre></div>
+<p>Vibe Coding 对原型和探索非常有效，但缺少以下机制时，不适合作为生产交付制度：</p>
+<ul><li>需求到代码的追踪。</li><li>不确定项和关键决策的显式确认。</li><li>按风险决定流程深度。</li><li>可恢复的长期状态。</li><li>分阶段审批与审计。</li><li>从本次纠正沉淀长期规则。</li></ul>
+<h3 id="2-传统-sdlc-的另一端问题"><a class="heading-anchor" href="#2-传统-sdlc-的另一端问题" aria-label="链接到本节">#</a>2. 传统 SDLC 的另一端问题</h3>
+<p>传统流程又可能存在：</p>
+<ul><li>长时间规划和会议。</li><li>不同角色之间大量交接。</li><li>需求、设计、测试文档手工同步。</li><li>两周一个 Sprint，但反馈仍然过晚。</li><li>AI 只是被塞进原有流程的“高级补全工具”。</li></ul>
+<p>AI-DLC 的目标不是取消工程纪律，而是让 AI 承担产物生成、分析和执行，让人集中在目标、权衡、风险和验收上。AWS 将其概括为两个维度：</p>
+<ol><li><strong>AI Powered Execution with Human Oversight</strong>：AI 计划并执行，人类掌握关键决策。</li><li><strong>Dynamic Team Collaboration</strong>：跨职能成员围绕 AI 的问题和方案实时协作。</li></ol>
+<h2 id="三核心心智模型"><a class="heading-anchor" href="#三核心心智模型" aria-label="链接到本节">#</a>三、核心心智模型</h2>
+<h3 id="1-每项活动都执行同一个小循环"><a class="heading-anchor" href="#1-每项活动都执行同一个小循环" aria-label="链接到本节">#</a>1. 每项活动都执行同一个小循环</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">Plan → Clarify → Human Validate → Execute → Human Verify</code></pre></div>
+<p>它不是“需求批准一次，后面全自动”，而是把人类判断嵌入每个需要判断的节点。</p>
+<h3 id="2-small-mob-broad-agents"><a class="heading-anchor" href="#2-small-mob-broad-agents" aria-label="链接到本节">#</a>2. Small Mob, Broad Agents</h3>
+<p>当前实现强调“小型 Mob、宽能力 Agent”，而不是建立几十个极窄的专家：</p>
+<ul><li>11 个领域 Agent。</li><li>2 个只审查、不写主产物的 Reviewer。</li><li>1 个 Adaptive Composer。</li><li>合计 14 个 Persona。</li></ul>
+<p>领域 Agent 包括 Product、Design、Delivery、Architect、AWS Platform、Compliance、DevSecOps、Developer、Quality、Pipeline &amp; Deploy、Operations。一个 Agent 跨多个阶段参与，以减少瀑布式交接和上下文损耗。<a href="https://awslabs.github.io/aidlc-workflows/guide/06-agents/" target="_blank" rel="noopener noreferrer">Agents</a></p>
+<p>“14 个 Agent”不等于每项任务都要并发启动 14 个子智能体。多数 Stage 是内联执行，只有适合独立协作的 Stage 才使用 subagent、pipeline 或 mob 拓扑。</p>
+<h3 id="3-确定性引擎与概率性执行分离"><a class="heading-anchor" href="#3-确定性引擎与概率性执行分离" aria-label="链接到本节">#</a>3. 确定性引擎与概率性执行分离</h3>
+<p>当前实现把“下一步应该做什么”与“这一步怎样做好”分开：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">确定性 Orchestrator
+  ├── 选择/确认 Scope
+  ├── 判断下一 Stage
+  ├── 检查依赖与 Gate
+  ├── 维护状态和恢复点
+  └── 决定完成或停止
+            ↓
+Conductor + Agent Persona
+  ├── 读取 Stage 输入
+  ├── 分析问题
+  ├── 生成产物
+  ├── 调用工具
+  └── 提交人类审批</code></pre></div>
+<p>这样可减少纯提示词编排常见的跳步、重复、伪造进度和会话恢复失败。</p>
+<h2 id="四版本差异为什么同时看到三阶段和五阶段"><a class="heading-anchor" href="#四版本差异为什么同时看到三阶段和五阶段" aria-label="链接到本节">#</a>四、版本差异：为什么同时看到三阶段和五阶段</h2>
+<p>截至 2026-07-24，官方资料存在两套不同代际的表达。</p>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">官方资料面</th><th style="text-align:left">主要形态</th><th style="text-align:left">生命周期</th><th style="text-align:left">产物目录</th><th style="text-align:left">Codex 接入</th></tr></thead><tbody><tr><td style="text-align:left">最新可见 Tag v0.1.8 / 仓库 README 的 Rules 包</td><td style="text-align:left">Markdown Steering Rules</td><td style="text-align:left">Inception、Construction、Operations</td><td style="text-align:left"><code>aidlc-docs/</code></td><td style="text-align:left">核心规则放入 <code>AGENTS.md</code>，细节放入 <code>.aidlc-rule-details/</code></td></tr><tr><td style="text-align:left">当前 GitHub Pages 指南 / 多 Harness 分发</td><td style="text-align:left">Skills + Agents + Hooks + TypeScript Engine</td><td style="text-align:left">Initialization、Ideation、Inception、Construction、Operation，共 32 Stage</td><td style="text-align:left"><code>aidlc/spaces/...</code></td><td style="text-align:left"><code>.codex/</code> + <code>.agents/skills/</code> + <code>aidlc/</code> + 合并 <code>AGENTS.md</code></td></tr></tbody></table></div>
+<p>三阶段是 AWS 最初方法论的主干：</p>
+<ol><li>Inception：把业务意图变成需求、故事和 Unit of Work。</li><li>Construction：形成架构、领域模型、代码和测试。</li><li>Operations：以基础设施即代码、部署和运维完成交付。</li></ol>
+<p>五阶段实现是在主干前增加 Initialization、Ideation，并把阶段细化为可编排 Stage。它不是简单地否定三阶段，而是对工具执行模型的扩展。</p>
+<p><strong>使用建议：</strong></p>
+<ul><li>使用发布包时，严格跟随该 Tag 自带 README。</li><li>使用源码中的 <code>dist/codex</code> 时，跟随同一 Commit 的指南。</li><li>不要把 v0.1.8 的 <code>AGENTS.md + .aidlc-rule-details</code> 安装法，与新版 <code>$aidlc + .codex + aidlc/spaces</code> 运行法混装。</li><li>团队项目应固定 Tag 或 Commit，并在升级前检查目录、状态和命令迁移。</li><li>版本差异较大时，先在试验仓库运行 Doctor 和一条小型工作流。</li></ul>
+<h2 id="五五阶段与-32-个-stage"><a class="heading-anchor" href="#五五阶段与-32-个-stage" aria-label="链接到本节">#</a>五、五阶段与 32 个 Stage</h2>
+<p>当前在线指南的完整生命周期如下。<a href="https://awslabs.github.io/aidlc-workflows/guide/04-phases-and-stages/" target="_blank" rel="noopener noreferrer">Phases and Stages</a></p>
+<h3 id="phase-0initialization"><a class="heading-anchor" href="#phase-0initialization" aria-label="链接到本节">#</a>Phase 0：Initialization</h3>
+<p>目的：初始化工作区、检测项目并创建状态。</p>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">Stage</th><th style="text-align:left">内容</th><th style="text-align:left">主要产物</th></tr></thead><tbody><tr><td style="text-align:left">0.1 Workspace Scaffold</td><td style="text-align:left">创建 Intent 记录目录</td><td style="text-align:left"><code>aidlc/spaces/&lt;space&gt;/intents/...</code></td></tr><tr><td style="text-align:left">0.2 Workspace Detection</td><td style="text-align:left">检测语言、框架、构建系统和项目类型</td><td style="text-align:left">workspace state</td></tr><tr><td style="text-align:left">0.3 State Initialization</td><td style="text-align:left">生成 Scope 执行表、状态和审计目录</td><td style="text-align:left"><code>aidlc-state.md</code>、<code>audit/</code></td></tr></tbody></table></div>
+<p>这三个 Stage 由确定性工具内联执行，不需要审批。</p>
+<h3 id="phase-1ideation"><a class="heading-anchor" href="#phase-1ideation" aria-label="链接到本节">#</a>Phase 1：Ideation</h3>
+<p>目的：判断项目是否值得做、约束是什么、范围多大、由谁参与。</p>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">Stage</th><th style="text-align:left">内容</th></tr></thead><tbody><tr><td style="text-align:left">1.1 Intent Capture &amp; Framing</td><td style="text-align:left">捕获意图、利益相关者和成功目标</td></tr><tr><td style="text-align:left">1.2 Market Research</td><td style="text-align:left">市场、竞品、Build vs Buy</td></tr><tr><td style="text-align:left">1.3 Feasibility &amp; Constraints</td><td style="text-align:left">技术可行性、约束、风险和依赖</td></tr><tr><td style="text-align:left">1.4 Scope Definition</td><td style="text-align:left">范围、非目标、优先级</td></tr><tr><td style="text-align:left">1.5 Team Formation</td><td style="text-align:left">需要的角色和 Mob 组合</td></tr><tr><td style="text-align:left">1.6 Rough Mockups</td><td style="text-align:left">低保真界面和用户流</td></tr><tr><td style="text-align:left">1.7 Approval &amp; Handoff</td><td style="text-align:left">形成 Initiative Brief 并批准进入 Inception</td></tr></tbody></table></div>
+<p>Bugfix、Refactor 等 Scope 会跳过大部分 Ideation，避免小任务套完整产品立项流程。</p>
+<h3 id="phase-2inception"><a class="heading-anchor" href="#phase-2inception" aria-label="链接到本节">#</a>Phase 2：Inception</h3>
+<p>目的：把已批准的意图变成可实现、可测试、可排期的工程定义。</p>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">Stage</th><th style="text-align:left">内容</th><th style="text-align:left">Java 全栈对应物</th></tr></thead><tbody><tr><td style="text-align:left">2.1 Reverse Engineering</td><td style="text-align:left">Brownfield 代码扫描与架构综合</td><td style="text-align:left">Maven 模块、Spring Bean、数据流、调用链</td></tr><tr><td style="text-align:left">2.2 Practices Discovery</td><td style="text-align:left">发现团队已有实践并请人确认</td><td style="text-align:left"><code>pom.xml</code>、测试模式、CI、包结构</td></tr><tr><td style="text-align:left">2.3 Requirements Analysis</td><td style="text-align:left">功能和约束需求</td><td style="text-align:left"><code>requirements.md</code>、验收条件</td></tr><tr><td style="text-align:left">2.4 User Stories</td><td style="text-align:left">用户故事、角色和场景</td><td style="text-align:left">UI/API 端到端故事</td></tr><tr><td style="text-align:left">2.5 Refined Mockups</td><td style="text-align:left">高保真原型和交互规格</td><td style="text-align:left">React/Vue 页面与状态</td></tr><tr><td style="text-align:left">2.6 Application Design</td><td style="text-align:left">应用架构、ADR、接口与数据设计</td><td style="text-align:left">Spring 分层、REST、Kafka、PostgreSQL</td></tr><tr><td style="text-align:left">2.7 Units Generation</td><td style="text-align:left">拆分 Unit of Work 和依赖 DAG</td><td style="text-align:left">后端、前端、迁移、集成测试单元</td></tr><tr><td style="text-align:left">2.8 Delivery Planning</td><td style="text-align:left">生成 Bolt、人员、风险和外部依赖计划</td><td style="text-align:left">可交付切片和验证顺序</td></tr></tbody></table></div>
+<h3 id="phase-3construction"><a class="heading-anchor" href="#phase-3construction" aria-label="链接到本节">#</a>Phase 3：Construction</h3>
+<p>目的：按可审查的端到端切片实现系统。</p>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">Stage</th><th style="text-align:left">内容</th><th style="text-align:left">执行频率</th></tr></thead><tbody><tr><td style="text-align:left">3.1 Functional Design</td><td style="text-align:left">业务逻辑和规则设计</td><td style="text-align:left">每个 Bolt，按需</td></tr><tr><td style="text-align:left">3.2 NFR Requirements</td><td style="text-align:left">安全、性能、可靠性等非功能需求</td><td style="text-align:left">每个 Bolt，按需</td></tr><tr><td style="text-align:left">3.3 NFR Design</td><td style="text-align:left">NFR 的实现设计</td><td style="text-align:left">每个 Bolt，按需</td></tr><tr><td style="text-align:left">3.4 Infrastructure Design</td><td style="text-align:left">基础设施和 IaC 设计</td><td style="text-align:left">每个 Bolt，按需</td></tr><tr><td style="text-align:left">3.5 Code Generation</td><td style="text-align:left">代码与代码文档</td><td style="text-align:left">每个 Bolt</td></tr><tr><td style="text-align:left">3.6 Build and Test</td><td style="text-align:left">全量构建和测试</td><td style="text-align:left">所有 Bolt 完成后一次</td></tr><tr><td style="text-align:left">3.7 CI Pipeline</td><td style="text-align:left">CI 配置和质量门</td><td style="text-align:left">最后按需执行</td></tr></tbody></table></div>
+<p>Construction 的关键单位是 <strong>Bolt</strong>：</p>
+<ul><li>一个 Bolt 对应一个 Unit，或少量依赖紧密的 Units。</li><li>每个 Bolt 运行 3.1～3.5 中属于它的步骤。</li><li>没有依赖关系的 Bolt 可以并行成一个 Batch。</li><li>3.6 和 3.7 在所有 Bolt 后统一执行。</li></ul>
+<h4 id="walking-skeleton"><a class="heading-anchor" href="#walking-skeleton" aria-label="链接到本节">#</a>Walking Skeleton</h4>
+<p>第一个 Bolt 是 Walking Skeleton：用最小端到端功能证明技术架构真实可行。</p>
+<p>它不应只是一个孤立 Controller、一个前端静态页，或 Mock 掉所有关键边界后宣称链路成立。它应尽可能贯通：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">浏览器/客户端
+→ API
+→ 领域逻辑
+→ 数据库或关键外部边界
+→ 响应
+→ 最小自动化验证</code></pre></div>
+<p>Walking Skeleton 必须经过人类 Gate。通过后，系统只询问一次：剩余 Bolt 是继续逐个审批，还是转为自主 Construction。选择会持久化到状态中。即使开启自主模式，任何 Bolt 失败仍应停止并让人选择 retry、skip 或 abort。</p>
+<h3 id="phase-4operation"><a class="heading-anchor" href="#phase-4operation" aria-label="链接到本节">#</a>Phase 4：Operation</h3>
+<p>目的：将“代码完成”延伸到“可部署、可观测、可恢复、可改进”。</p>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">Stage</th><th style="text-align:left">内容</th></tr></thead><tbody><tr><td style="text-align:left">4.1 Deployment Pipeline</td><td style="text-align:left">CD、发布策略、回滚 Runbook</td></tr><tr><td style="text-align:left">4.2 Environment Provisioning</td><td style="text-align:left">环境和基础设施准备</td></tr><tr><td style="text-align:left">4.3 Deployment Execution</td><td style="text-align:left">部署、Smoke Test、健康检查</td></tr><tr><td style="text-align:left">4.4 Observability Setup</td><td style="text-align:left">Metrics、Logs、Tracing、Dashboard、Alarm、SLO</td></tr><tr><td style="text-align:left">4.5 Incident Response</td><td style="text-align:left">事件响应、升级矩阵和 Runbook</td></tr><tr><td style="text-align:left">4.6 Performance Validation</td><td style="text-align:left">负载测试和 NFR 验证</td></tr><tr><td style="text-align:left">4.7 Feedback &amp; Optimization</td><td style="text-align:left">SLO、成本、反馈和下一轮优化</td></tr></tbody></table></div>
+<p>Operation 的七个 Stage 都是条件执行。完成 4.7 后可结束 Intent，也可把反馈送回 Ideation 开启新循环。</p>
+<h2 id="六scopedepth-与-test-strategy"><a class="heading-anchor" href="#六scopedepth-与-test-strategy" aria-label="链接到本节">#</a>六、Scope、Depth 与 Test Strategy</h2>
+<p>AI-DLC 用三个互相独立的旋钮控制流程成本。</p>
+<h3 id="1-scope哪些-stage-要运行"><a class="heading-anchor" href="#1-scope哪些-stage-要运行" aria-label="链接到本节">#</a>1. Scope：哪些 Stage 要运行</h3>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">Scope</th><th style="text-align:right">Stage 数</th><th style="text-align:left">默认深度</th><th style="text-align:left">默认测试</th><th style="text-align:left">适用场景</th></tr></thead><tbody><tr><td style="text-align:left"><code>enterprise</code></td><td style="text-align:right">32/32</td><td style="text-align:left">Comprehensive</td><td style="text-align:left">Comprehensive</td><td style="text-align:left">受监管、强合规、完整生产交付</td></tr><tr><td style="text-align:left"><code>feature</code></td><td style="text-align:right">32/32</td><td style="text-align:left">Standard</td><td style="text-align:left">Standard</td><td style="text-align:left">普通生产功能，默认全流程</td></tr><tr><td style="text-align:left"><code>mvp</code></td><td style="text-align:right">22/32</td><td style="text-align:left">Standard</td><td style="text-align:left">Standard</td><td style="text-align:left">Greenfield MVP，暂不做后期运维</td></tr><tr><td style="text-align:left"><code>poc</code></td><td style="text-align:right">8/32</td><td style="text-align:left">Minimal</td><td style="text-align:left">Minimal</td><td style="text-align:left">快速验证技术可行性</td></tr><tr><td style="text-align:left"><code>bugfix</code></td><td style="text-align:right">7/32</td><td style="text-align:left">Minimal</td><td style="text-align:left">Minimal</td><td style="text-align:left">已知缺陷修复</td></tr><tr><td style="text-align:left"><code>refactor</code></td><td style="text-align:right">8/32</td><td style="text-align:left">Minimal</td><td style="text-align:left">Minimal</td><td style="text-align:left">保持行为的代码重构</td></tr><tr><td style="text-align:left"><code>infra</code></td><td style="text-align:right">13/32</td><td style="text-align:left">Standard</td><td style="text-align:left">Standard</td><td style="text-align:left">环境、IaC、部署和成本工作</td></tr><tr><td style="text-align:left"><code>security-patch</code></td><td style="text-align:right">10/32</td><td style="text-align:left">Minimal</td><td style="text-align:left">Minimal</td><td style="text-align:left">CVE 或安全漏洞修复</td></tr><tr><td style="text-align:left"><code>workshop</code></td><td style="text-align:right">25/32</td><td style="text-align:left">Standard</td><td style="text-align:left">Minimal</td><td style="text-align:left">培训和多人工作坊</td></tr></tbody></table></div>
+<p>Scope 不是项目大小标签，而是“这次 Intent 需要哪些生命周期活动”的路由表。官方实现还支持从自然语言关键词自动检测，以及通过 Adaptive Composer 生成满足依赖的最小自定义 Stage 集合。<a href="https://awslabs.github.io/aidlc-workflows/guide/05-scopes-and-depth/" target="_blank" rel="noopener noreferrer">Scopes, Depth, and Test Strategy</a></p>
+<h3 id="2-depth每个产物写多深"><a class="heading-anchor" href="#2-depth每个产物写多深" aria-label="链接到本节">#</a>2. Depth：每个产物写多深</h3>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">Depth</th><th style="text-align:left">特点</th><th style="text-align:left">建议</th></tr></thead><tbody><tr><td style="text-align:left">Minimal</td><td style="text-align:left">只保留核心决定和必要证据</td><td style="text-align:left">小 Bug、PoC、补丁</td></tr><tr><td style="text-align:left">Standard</td><td style="text-align:left">完整但适度的需求、设计和理由</td><td style="text-align:left">大多数生产功能</td></tr><tr><td style="text-align:left">Comprehensive</td><td style="text-align:left">完整合规矩阵、NFR、审计和详细论证</td><td style="text-align:left">监管或高风险系统</td></tr></tbody></table></div>
+<h3 id="3-test-strategy测试多少覆盖哪些层"><a class="heading-anchor" href="#3-test-strategy测试多少覆盖哪些层" aria-label="链接到本节">#</a>3. Test Strategy：测试多少、覆盖哪些层</h3>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">策略</th><th style="text-align:left">官方建议模型</th><th style="text-align:left">Java 全栈落地</th></tr></thead><tbody><tr><td style="text-align:left">Minimal</td><td style="text-align:left">每项需求至少一个测试，主要为单元测试</td><td style="text-align:left">JUnit 关键规则 + 最小 Smoke</td></tr><tr><td style="text-align:left">Standard</td><td style="text-align:left">每组件约 5～8 个，单元 + 集成</td><td style="text-align:left">JUnit、Spring Boot Test、Testcontainers、关键 E2E</td></tr><tr><td style="text-align:left">Comprehensive</td><td style="text-align:left">每组件约 10～15 个，覆盖所有所需类型</td><td style="text-align:left">再增加契约、安全、性能、故障和完整 E2E</td></tr></tbody></table></div>
+<p>这些数字是软指导，不是质量等式。关键支付、权限或数据一致性 Bug 即使文档采用 Minimal，也可能需要 Comprehensive 测试。</p>
+<h2 id="七关键术语"><a class="heading-anchor" href="#七关键术语" aria-label="链接到本节">#</a>七、关键术语</h2>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">术语</th><th style="text-align:left">含义</th><th style="text-align:left">与传统概念的差异</th></tr></thead><tbody><tr><td style="text-align:left">Intent</td><td style="text-align:left">一次独立的生命周期工作</td><td style="text-align:left">比 Ticket 更完整，拥有状态、审计和产物</td></tr><tr><td style="text-align:left">Unit of Work</td><td style="text-align:left">可设计和实现的业务/技术单元</td><td style="text-align:left">取代笼统的 Epic</td></tr><tr><td style="text-align:left">Bolt</td><td style="text-align:left">一个短而密集的可交付切片</td><td style="text-align:left">取代以周计的 Sprint，通常以小时或天计</td></tr><tr><td style="text-align:left">Walking Skeleton</td><td style="text-align:left">第一个最小端到端 Bolt</td><td style="text-align:left">先证明架构，再放大自主执行</td></tr><tr><td style="text-align:left">Space</td><td style="text-align:left">一个团队的规则、知识和 Intents 世界</td><td style="text-align:left">多团队共享仓库时隔离方法和记录</td></tr></tbody></table></div>
+<p>当前实现允许一个 Workspace 有多个 Space，一个 Space 有多个并行 Intent。每个 Intent 有独立状态、审计和产物，用户通过游标切换，不再让新任务覆盖旧任务。<a href="https://awslabs.github.io/aidlc-workflows/guide/03-spaces-and-intents/" target="_blank" rel="noopener noreferrer">Spaces and Intents</a></p>
+<h2 id="八状态审计与-learning-loop"><a class="heading-anchor" href="#八状态审计与-learning-loop" aria-label="链接到本节">#</a>八、状态、审计与 Learning Loop</h2>
+<h3 id="1-aidlc-statemd"><a class="heading-anchor" href="#1-aidlc-statemd" aria-label="链接到本节">#</a>1. <code>aidlc-state.md</code></h3>
+<p>每个 Intent 的状态文件是进度的单一事实源，记录 Scope、Depth、项目类型、待运行 Stage、当前 Agent、下一步和会话恢复点。</p>
+<p>Stage 使用六态表示：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">[ ] 未开始
+[-] 执行中
+[?] 等待人类审批
+[R] 根据反馈修改中
+[x] 完成
+[S] 跳过</code></pre></div>
+<h3 id="2-audit-trail"><a class="heading-anchor" href="#2-audit-trail" aria-label="链接到本节">#</a>2. Audit Trail</h3>
+<p>审计日志是追加式事件记录，当前指南定义 74 类事件，覆盖初始化、Scope、Stage、问题回答、Gate、Artifact、Subagent、错误和恢复。状态说明“现在在哪里”，审计解释“为什么走到这里”。<a href="https://awslabs.github.io/aidlc-workflows/guide/10-state-and-audit/" target="_blank" rel="noopener noreferrer">State Tracking and Audit Trail</a></p>
+<h3 id="3-learning-loop"><a class="heading-anchor" href="#3-learning-loop" aria-label="链接到本节">#</a>3. Learning Loop</h3>
+<p>Learning Loop 把本次纠正变成下次默认规则：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">Stage 记录 interpretation / deviation / tradeoff / open question
+→ Gate 展示候选经验
+→ 人类选择保留、修改或丢弃
+→ 写入 project.md 或提升到 team.md
+→ 下一次工作流编译时生效</code></pre></div>
+<p>当前规则链为：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">org → team → project → phase → stage</code></pre></div>
+<p>规则严格叠加，冲突应在写入时处理，而不是运行中静默覆盖。新学习对下一次工作流生效，不应在当前工作流中途改变已经编译好的规则视图。<a href="https://awslabs.github.io/aidlc-workflows/guide/09-rules-and-the-learning-loop/" target="_blank" rel="noopener noreferrer">Rules and the Learning Loop</a></p>
+<h2 id="九三种交互模式与审批门"><a class="heading-anchor" href="#九三种交互模式与审批门" aria-label="链接到本节">#</a>九、三种交互模式与审批门</h2>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">模式</th><th style="text-align:left">方式</th><th style="text-align:left">适用场景</th></tr></thead><tbody><tr><td style="text-align:left">Guide Me</td><td style="text-align:left">Agent 逐项提出结构化问题</td><td style="text-align:left">初次使用、需求容易遗漏</td></tr><tr><td style="text-align:left">Edit File</td><td style="text-align:left">用户直接编辑 Questions/Artifact</td><td style="text-align:left">已有明确规格或批量输入</td></tr><tr><td style="text-align:left">Chat</td><td style="text-align:left">自由讨论，Agent 把结论写回文件</td><td style="text-align:left">需求探索和复杂权衡</td></tr></tbody></table></div>
+<p>三种模式最终都汇入 Questions File，使会话讨论转化为可追踪事实。每个非 Initialization Stage 通常以 Gate 收尾：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">Approve → 更新状态并进入下一 Stage
+Request Changes → 修订产物后重新提交</code></pre></div>
+<p>Gate 的价值不是多点一次按钮，而是明确责任边界：AI 不能把自己的输出当作人类验收，人类的批准应对应可阅读产物和可运行证据。<a href="https://awslabs.github.io/aidlc-workflows/guide/07-interaction-modes/" target="_blank" rel="noopener noreferrer">Interaction Modes</a></p>
+<h2 id="十在-codex-中怎样运行"><a class="heading-anchor" href="#十在-codex-中怎样运行" aria-label="链接到本节">#</a>十、在 Codex 中怎样运行</h2>
+<h3 id="1-当前多-harness-版本"><a class="heading-anchor" href="#1-当前多-harness-版本" aria-label="链接到本节">#</a>1. 当前多 Harness 版本</h3>
+<p>官方当前 Codex 指南要求：</p>
+<ul><li>项目是 Git 仓库。</li><li>Codex CLI 版本满足该分发的最低要求。</li><li>安装 Bun，用于 TypeScript 工具和 Hooks。</li><li>从同一源码版本复制 <code>.codex/</code>、<code>.agents/</code> 和 <code>aidlc/</code>。</li><li>将分发中的 <code>AGENTS.md</code> 与项目现有文件合并。</li><li>信任项目和 Hooks。</li><li>合并/检查 <code>.codex/config.toml</code>。</li><li>运行 Doctor 验证。</li></ul>
+<p>示意命令如下；路径必须替换为实际 AI-DLC 源码和项目目录：</p>
+<div class="code-block"><div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-bash">cp -r dist/codex/.codex/  your-project/.codex/
+cp -r dist/codex/.agents/ your-project/.agents/
+cp -r dist/codex/aidlc/   your-project/aidlc/
+
+cd your-project
+bun .codex/tools/aidlc-utility.ts doctor</code></pre></div>
+<p><code>AGENTS.md</code> 必须人工合并，不能用 <code>cp</code> 直接覆盖。Codex 官方文档也把仓库级 Skill 放在 <code>.agents/skills/</code>，并支持用 <code>$skill-name</code> 显式调用。<a href="https://learn.chatgpt.com/docs/build-skills" target="_blank" rel="noopener noreferrer">OpenAI：Build skills</a></p>
+<p>AI-DLC 在 Codex 中的入口是：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">$aidlc Build a REST API for inventory management
+$aidlc feature
+$aidlc-bugfix
+$aidlc-code-generation
+$aidlc --status
+$aidlc --help</code></pre></div>
+<p>不要照抄 Claude Code 文档中的 <code>/aidlc</code>。Codex 使用 <code>$aidlc</code>，Stage Runner 也是 <code>$aidlc-application-design</code> 形式。<a href="https://awslabs.github.io/aidlc-workflows/guide/harnesses/codex-cli/" target="_blank" rel="noopener noreferrer">AI-DLC on Codex CLI</a> · <a href="https://awslabs.github.io/aidlc-workflows/guide/17-skills/" target="_blank" rel="noopener noreferrer">Skills and Runner Commands</a></p>
+<h3 id="2-v018-rules-包"><a class="heading-anchor" href="#2-v018-rules-包" aria-label="链接到本节">#</a>2. v0.1.8 Rules 包</h3>
+<p>旧版发布包的 Codex 安装方式是：</p>
+<ul><li>把 <code>core-workflow.md</code> 作为根 <code>AGENTS.md</code>。</li><li>把细节规则复制到 <code>.aidlc-rule-details/</code>。</li><li>以 “Using AI-DLC, ...” 触发。</li><li>验证 Agent 能说明 Inception → Construction → Operations。</li></ul>
+<p>对于已经存在 <code>AGENTS.md</code> 的项目，这个命令具有覆盖风险。应先备份并合并，或直接选择当前 Skills/Hooks 分发；不要在当前学习仓库里直接执行 README 的覆盖命令。</p>
+<h2 id="十一java-全栈示例订单取消功能"><a class="heading-anchor" href="#十一java-全栈示例订单取消功能" aria-label="链接到本节">#</a>十一、Java 全栈示例：订单取消功能</h2>
+<p>已有系统：</p>
+<ul><li>Java 21、Spring Boot 3.x、Maven。</li><li>PostgreSQL。</li><li>Kafka/Outbox 发布订单事件。</li><li>React + TypeScript。</li><li>JUnit 5、Testcontainers、Playwright。</li></ul>
+<p>目标：</p>
+<blockquote><p>支持用户在未发货时取消订单，退款由异步流程处理，管理端可以查看取消原因。</p></blockquote>
+<h3 id="step-1选择-scope"><a class="heading-anchor" href="#step-1选择-scope" aria-label="链接到本节">#</a>Step 1：选择 Scope</h3>
+<p>这是现有生产系统的新功能：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">$aidlc feature Add order cancellation with async refund and admin visibility</code></pre></div>
+<p>若需求已由产品团队完整确认，可通过 Composer 或 Gate 跳过不增值的市场研究，而不应把整个任务错误改成 <code>bugfix</code>。</p>
+<h3 id="step-2回答关键问题"><a class="heading-anchor" href="#step-2回答关键问题" aria-label="链接到本节">#</a>Step 2：回答关键问题</h3>
+<ul><li>哪些订单状态可取消？</li><li>取消请求是否幂等？</li><li>退款失败是否影响订单取消事务？</li><li>库存回补与订单取消如何保证一致性？</li><li>API 的错误码和并发冲突语义是什么？</li><li>谁能取消订单？</li><li>取消原因是否包含敏感信息？</li><li>管理端需要实时更新还是最终一致？</li><li>SLO、吞吐量、审计保留期是什么？</li></ul>
+<h3 id="step-3形成-unit-of-work"><a class="heading-anchor" href="#step-3形成-unit-of-work" aria-label="链接到本节">#</a>Step 3：形成 Unit of Work</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">U1 取消领域规则与状态机
+U2 REST API、权限和幂等
+U3 PostgreSQL 迁移与 Outbox 事件
+U4 退款消费者与失败重试
+U5 React 用户端和管理端
+U6 可观测性、告警和运维 Runbook</code></pre></div>
+<p>依赖 DAG：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">U1 → U2
+U1 → U3 → U4
+U2 → U5
+U3 → U6
+U4 → U6</code></pre></div>
+<h3 id="step-4walking-skeleton"><a class="heading-anchor" href="#step-4walking-skeleton" aria-label="链接到本节">#</a>Step 4：Walking Skeleton</h3>
+<p>第一个 Bolt 贯通最小真实链路：</p>
+<ol><li>创建一条可取消测试订单。</li><li>React 页面调用 <code>POST /api/orders/{id}/cancellation</code>。</li><li>Spring Boot 校验最小领域规则。</li><li>在 PostgreSQL 事务中更新状态并写入 Outbox。</li><li>返回新的订单状态。</li><li>使用 Testcontainers 验证数据库结果。</li><li>使用 Playwright 验证用户能看到“已取消”。</li></ol>
+<p>Skeleton Gate 应审查：</p>
+<ul><li>API 契约是否稳定。</li><li>事务边界是否正确。</li><li>错误语义是否适合前端。</li><li>测试是否真的经过数据库。</li><li>是否证明前后端和数据层能共同工作。</li></ul>
+<p>通过后再决定是否让 U2～U6 自主执行。</p>
+<h3 id="step-5测试纪律"><a class="heading-anchor" href="#step-5测试纪律" aria-label="链接到本节">#</a>Step 5：测试纪律</h3>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">层次</th><th style="text-align:left">建议验证</th></tr></thead><tbody><tr><td style="text-align:left">Domain</td><td style="text-align:left">JUnit 参数化测试覆盖状态转换和重复取消</td></tr><tr><td style="text-align:left">Repository</td><td style="text-align:left">Testcontainers 验证乐观锁、Outbox 原子性</td></tr><tr><td style="text-align:left">API</td><td style="text-align:left">MockMvc/RestAssured 验证权限、幂等和错误码</td></tr><tr><td style="text-align:left">Messaging</td><td style="text-align:left">契约测试验证事件 Schema 和兼容性</td></tr><tr><td style="text-align:left">Frontend</td><td style="text-align:left">Vitest 测状态，Playwright 测关键路径</td></tr><tr><td style="text-align:left">NFR</td><td style="text-align:left">并发取消、重试、日志脱敏、Trace 关联</td></tr><tr><td style="text-align:left">Operation</td><td style="text-align:left">Smoke Test、Dashboard、退款积压告警、回滚 Runbook</td></tr></tbody></table></div>
+<p>完成标准不是“代码已经生成”，而是需求能映射到设计、实现和测试，构建及 E2E 有最新证据，迁移可演进，关键失败可观测且可恢复。</p>
+<h2 id="十二与其他开发模式的关系"><a class="heading-anchor" href="#十二与其他开发模式的关系" aria-label="链接到本节">#</a>十二、与其他开发模式的关系</h2>
+<h3 id="1-与-vibe-coding"><a class="heading-anchor" href="#1-与-vibe-coding" aria-label="链接到本节">#</a>1. 与 Vibe Coding</h3>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">维度</th><th style="text-align:left">Vibe Coding</th><th style="text-align:left">AI-DLC</th></tr></thead><tbody><tr><td style="text-align:left">起点</td><td style="text-align:left">自然语言快速探索</td><td style="text-align:left">Intent + Scope</td></tr><tr><td style="text-align:left">过程</td><td style="text-align:left">对话驱动、路径灵活</td><td style="text-align:left">Stage 和依赖驱动</td></tr><tr><td style="text-align:left">人类控制</td><td style="text-align:left">依赖操作者主动审查</td><td style="text-align:left">内置 Gate</td></tr><tr><td style="text-align:left">状态</td><td style="text-align:left">多依赖会话上下文</td><td style="text-align:left">持久状态与恢复点</td></tr><tr><td style="text-align:left">产物</td><td style="text-align:left">代码优先</td><td style="text-align:left">需求、设计、代码、测试、运维全链路</td></tr><tr><td style="text-align:left">最适合</td><td style="text-align:left">原型、学习、探索</td><td style="text-align:left">多阶段生产交付</td></tr></tbody></table></div>
+<p>AI-DLC 不是反对 Vibe，而是给 Vibe 加上 Harness、状态、检查点和证据。</p>
+<h3 id="2-与-spec-driven-development"><a class="heading-anchor" href="#2-与-spec-driven-development" aria-label="链接到本节">#</a>2. 与 Spec-Driven Development</h3>
+<p>SDD 强调先形成可执行规格，再让 Agent 依据规格实现，主要回答“要实现的行为和约束是什么”。AI-DLC 还覆盖是否值得做、走哪些阶段、怎样拆分、如何部署运营以及经验如何沉淀。</p>
+<p>可以把 SDD 作为 AI-DLC Inception 和 Construction 的核心技术纪律，但 SDD 本身通常不提供完整 Operation、组织知识、审计和多 Intent 管理。</p>
+<h3 id="3-与-superpowers"><a class="heading-anchor" href="#3-与-superpowers" aria-label="链接到本节">#</a>3. 与 Superpowers</h3>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">维度</th><th style="text-align:left">AI-DLC</th><th style="text-align:left">Superpowers</th></tr></thead><tbody><tr><td style="text-align:left">主要范围</td><td style="text-align:left">端到端生命周期</td><td style="text-align:left">开发 Inner Loop</td></tr><tr><td style="text-align:left">核心单位</td><td style="text-align:left">Intent、Stage、Unit、Bolt</td><td style="text-align:left">Design、Plan、Task、Skill</td></tr><tr><td style="text-align:left">强项</td><td style="text-align:left">Scope、产物、审计、运维、Learning Loop</td><td style="text-align:left">TDD、系统调试、任务审查、完成前验证</td></tr><tr><td style="text-align:left">人类控制</td><td style="text-align:left">每 Stage/Bolt Gate</td><td style="text-align:left">设计批准、计划与任务审查</td></tr></tbody></table></div>
+<p>推荐组合：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">AI-DLC 负责 Outer Loop
+  ├── Intent、需求、设计、Unit、Bolt、运维
+  └── Gate、状态、审计、学习
+
+Superpowers 的纪律用于 Inner Loop
+  ├── Red-Green-Refactor
+  ├── Systematic Debugging
+  ├── Code Review
+  └── Verification Before Completion</code></pre></div>
+<p>不要同时启动 <code>$aidlc</code> 和 Superpowers 的完整顶层编排器，让二者都决定下一步。应明确一个主 Conductor；另一个只提供局部实践。</p>
+<h3 id="4-与-agilescrum"><a class="heading-anchor" href="#4-与-agilescrum" aria-label="链接到本节">#</a>4. 与 Agile/Scrum</h3>
+<ul><li>Unit of Work 类似更聚焦的 Epic。</li><li>Bolt 类似更短的 Sprint，但以端到端价值和快速验证为中心。</li><li>AI 生成并维护大量传统由人手工维护的产物。</li><li>人类从分别生产文档和代码，转向共同回答关键问题并验证 AI 输出。</li><li>Scrum 可保留，但不应重复制造两套状态源和审批仪式。</li></ul>
+<h2 id="十三适用场景与不适用场景"><a class="heading-anchor" href="#十三适用场景与不适用场景" aria-label="链接到本节">#</a>十三、适用场景与不适用场景</h2>
+<h3 id="适合"><a class="heading-anchor" href="#适合" aria-label="链接到本节">#</a>适合</h3>
+<ul><li>跨后端、前端、数据库、消息和基础设施的功能。</li><li>Brownfield 大型系统，需要先理解架构和实践。</li><li>金融、医疗、政企等强追踪或合规工作。</li><li>多个团队共享知识和交付规则。</li><li>需要跨会话或跨天持续执行。</li><li>希望逐步提升 Agent 自主权，而不是一次性全放开。</li></ul>
+<h3 id="应缩小使用"><a class="heading-anchor" href="#应缩小使用" aria-label="链接到本节">#</a>应缩小使用</h3>
+<ul><li>一次性脚本或明确的一行修复。</li><li>纯探索性 Spike，结果可能全部丢弃。</li><li>没有测试、构建和版本控制的临时目录。</li><li>团队不愿审查产物，却希望 Gate 自动通过。</li><li>只追求最快 Demo，不考虑生产维护。</li></ul>
+<p>这些场景可用 <code>poc</code>、<code>bugfix</code> 或单 Stage Runner，而不是强行运行 <code>feature</code> 的 32 个 Stage。</p>
+<h2 id="十四收益成本与局限"><a class="heading-anchor" href="#十四收益成本与局限" aria-label="链接到本节">#</a>十四、收益、成本与局限</h2>
+<h3 id="可能收益"><a class="heading-anchor" href="#可能收益" aria-label="链接到本节">#</a>可能收益</h3>
+<ul><li>需求到生产的追踪更完整。</li><li>新会话可以从状态和产物恢复。</li><li>高风险决定不会被 Agent 静默替代。</li><li>Walking Skeleton 能更早暴露架构错误。</li><li>Scope 避免所有任务走同一流程。</li><li>Learning Loop 让团队纠正逐渐制度化。</li></ul>
+<p>AWS 博客列出的速度、创新、质量、市场响应和开发体验属于方法论提出方的预期收益，不应当作对所有团队都已独立验证的量化结论。</p>
+<h3 id="成本与局限"><a class="heading-anchor" href="#成本与局限" aria-label="链接到本节">#</a>成本与局限</h3>
+<ul><li>更多 Markdown、状态、审计和 Git 变更。</li><li>Gate 带来等待和审查成本。</li><li>多 Agent 和 Comprehensive Depth 会增加 Token、时间和费用。</li><li>团队需要维护规则、知识、模板和 Harness。</li><li>Agent 仍可能误读需求、代码或测试结果。</li><li>形式上的可追踪不等于真实正确。</li><li>并行 Bolt 可能在公共 Schema、模块和迁移上冲突。</li><li>不同 Harness 的命令、Gate、Hooks 和沙箱行为并不完全相同。</li></ul>
+<h2 id="十五java-全栈团队最佳实践"><a class="heading-anchor" href="#十五java-全栈团队最佳实践" aria-label="链接到本节">#</a>十五、Java 全栈团队最佳实践</h2>
+<ol><li><strong>从低风险试点开始</strong>：先运行一个 <code>bugfix</code> 或边界清楚的 <code>feature</code>，比较周期、返工、缺陷和人工审批成本。</li><li><strong>固定版本</strong>：记录 AI-DLC Commit、Codex 最低版本、Bun 版本、安装和 Doctor 命令。</li><li><strong>把 Java 事实放进团队知识</strong>：JDK/Spring 版本、Maven 命令、模块边界、REST/事件/Schema、事务、测试、可观测和回滚规则。</li><li><strong>先验证 Skeleton，再扩大自治</strong>：真实构建、关键边界、最小 E2E、日志诊断和可审查 Diff 都通过后再选 autonomous。</li><li><strong>测试策略与文档深度解耦</strong>：关键安全补丁可用 <code>Depth=Minimal</code>、<code>Test Strategy=Comprehensive</code>。</li><li><strong>每个 Bolt 都要有新鲜证据</strong>：先运行相关编译和测试，最终再跑后端、前端、契约、E2E 和 NFR 全量验证。</li><li><strong>控制并行边界</strong>：数据库迁移、公共 DTO/事件、根 <code>pom.xml</code>、全局路由和 Security 配置不宜无约束并行。</li><li><strong>定期治理规则</strong>：合并重复项，删除过时项，保留日期、原因和作用域，不把每次偏好都提升为永久规范。</li></ol>
+<p>每个 Java Bolt 至少可以运行：</p>
+<div class="code-block"><div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-bash">./mvnw -q -DskipTests compile
+./mvnw -q -Dtest=RelevantTest test</code></pre></div>
+<p>具体命令应以项目 <code>AGENTS.md</code> 和 CI 为准。</p>
+<h2 id="十六常见问题"><a class="heading-anchor" href="#十六常见问题" aria-label="链接到本节">#</a>十六、常见问题</h2>
+<h3 id="1-aidlc-不存在"><a class="heading-anchor" href="#1-aidlc-不存在" aria-label="链接到本节">#</a>1. <code>$aidlc</code> 不存在</h3>
+<p>检查 <code>.agents/skills/aidlc/</code>、当前仓库根目录、<code>SKILL.md</code>、Codex 版本，并在必要时重启 Codex 以重新发现 Skill。</p>
+<h3 id="2-aidlc-在-codex-中不能用"><a class="heading-anchor" href="#2-aidlc-在-codex-中不能用" aria-label="链接到本节">#</a>2. <code>/aidlc</code> 在 Codex 中不能用</h3>
+<p>Codex 显式 Skill 使用 <code>$aidlc</code>；<code>/aidlc</code> 是 Claude Code/Kiro 文档常见写法。</p>
+<h3 id="3-doctor-报-workspace-shell-缺失"><a class="heading-anchor" href="#3-doctor-报-workspace-shell-缺失" aria-label="链接到本节">#</a>3. Doctor 报 Workspace Shell 缺失</h3>
+<p>新版除 <code>.codex/</code> 和 <code>.agents/</code> 外，还需要：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">aidlc/spaces/default/memory/</code></pre></div>
+<h3 id="4-hooks-没有运行"><a class="heading-anchor" href="#4-hooks-没有运行" aria-label="链接到本节">#</a>4. Hooks 没有运行</h3>
+<p>检查项目和 Hook Trust、Hook Manifest、用户配置、Git 仓库状态及 Sandbox 权限。</p>
+<h3 id="5-gitworktree-被-sandbox-拒绝"><a class="heading-anchor" href="#5-gitworktree-被-sandbox-拒绝" aria-label="链接到本节">#</a>5. Git/Worktree 被 Sandbox 拒绝</h3>
+<p>Codex 的 workspace-write 通常会保护 <code>.git</code>。交互会话需要审批；Headless/CI 应按官方模板配置最小必要 writable root，不能为了省事开放整个用户目录。</p>
+<h3 id="6-工作流太慢问题太多"><a class="heading-anchor" href="#6-工作流太慢问题太多" aria-label="链接到本节">#</a>6. 工作流太慢、问题太多</h3>
+<p>检查是否错误使用 <code>feature</code>/<code>enterprise</code>，是否应改为 <code>bugfix</code>、<code>poc</code> 或单 Stage Runner，能否降低 Depth，是否有可跳过 Stage，以及是否同时运行了两个顶层编排框架。</p>
+<h3 id="7-agent-一直修改无法通过-gate"><a class="heading-anchor" href="#7-agent-一直修改无法通过-gate" aria-label="链接到本节">#</a>7. Agent 一直修改，无法通过 Gate</h3>
+<p>回到 Questions/Requirements File，写出反例和期望结果，用测试或样例将验收条件可执行化；必要时重做 Application/Functional Design，不要继续让 Agent 猜。</p>
+<h2 id="十七推荐操作模板"><a class="heading-anchor" href="#十七推荐操作模板" aria-label="链接到本节">#</a>十七、推荐操作模板</h2>
+<h3 id="新生产功能"><a class="heading-anchor" href="#新生产功能" aria-label="链接到本节">#</a>新生产功能</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">$aidlc feature
+
+为现有 Spring Boot 订单系统增加订单取消能力。
+必须覆盖 React 用户端、REST API、PostgreSQL、Outbox 事件、
+异步退款、权限、幂等、可观测性和回滚。
+先确认 Scope、Depth、Test Strategy 和 Walking Skeleton，
+在 Skeleton Gate 通过前保持 gated 模式。</code></pre></div>
+<h3 id="关键-bug"><a class="heading-anchor" href="#关键-bug" aria-label="链接到本节">#</a>关键 Bug</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">$aidlc-bugfix
+
+修复并发支付回调导致订单重复记账的问题。
+文档深度使用 Minimal，测试策略使用 Comprehensive。
+先稳定复现并定位事务/幂等根因；没有失败测试不得修改生产代码。</code></pre></div>
+<h3 id="快速-poc"><a class="heading-anchor" href="#快速-poc" aria-label="链接到本节">#</a>快速 PoC</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">$aidlc poc
+
+验证 Spring AI 调用内部模型网关并完成最小 RAG 问答。
+只验证认证、流式响应、向量检索和引用返回。
+不建设生产级管理后台、扩缩容和完整告警。</code></pre></div>
+<p>具体可用参数以安装版本的 <code>$aidlc --help</code> 和同版本文档为准。</p>
+<h2 id="十八建议学习顺序"><a class="heading-anchor" href="#十八建议学习顺序" aria-label="链接到本节">#</a>十八、建议学习顺序</h2>
+<ol><li>理解 Intent、Scope、Depth、Stage、Unit 和 Bolt。</li><li>用 <code>bugfix</code> 跑一次小型 Brownfield 工作流。</li><li>用 <code>feature</code> 跑一个 Walking Skeleton。</li><li>阅读 <code>aidlc-state.md</code> 和 Audit Trail，练习会话恢复。</li><li>将一条真实纠正通过 Learning Loop 提升为项目规则。</li><li>再研究 Adaptive Composer、并行 Bolt、Space 和团队知识。</li><li>最后考虑自定义 Scope、Agent、Sensor 或 Plugin。</li></ol>
+<h2 id="参考资料"><a class="heading-anchor" href="#参考资料" aria-label="链接到本节">#</a>参考资料</h2>
+<ul><li><a href="https://aws.amazon.com/blogs/devops/ai-driven-development-life-cycle/" target="_blank" rel="noopener noreferrer">AWS：AI-Driven Development Life Cycle: Reimagining Software Engineering</a> — 方法论、三阶段、AI 执行与人类监督、Unit/Bolt，访问日期：2026-07-24。</li><li><a href="https://aws.amazon.com/blogs/devops/open-sourcing-adaptive-workflows-for-ai-driven-development-life-cycle-ai-dlc/" target="_blank" rel="noopener noreferrer">AWS：Open-Sourcing Adaptive Workflows for AI-DLC</a> — 自适应流程、阶段深度和 Human-in-the-loop，访问日期：2026-07-24。</li><li><a href="https://github.com/awslabs/aidlc-workflows" target="_blank" rel="noopener noreferrer">awslabs/aidlc-workflows</a> — 官方仓库、v0.1.8 Rules 包、旧版三阶段安装和使用说明，访问日期：2026-07-24。</li><li><a href="https://awslabs.github.io/aidlc-workflows/guide/00-introduction/" target="_blank" rel="noopener noreferrer">AI-DLC Introduction</a> — 当前 Harness-neutral 实现，访问日期：2026-07-24。</li><li><a href="https://awslabs.github.io/aidlc-workflows/guide/04-phases-and-stages/" target="_blank" rel="noopener noreferrer">Phases and Stages</a> — 五阶段、32 Stage、Bolt 和执行拓扑，访问日期：2026-07-24。</li><li><a href="https://awslabs.github.io/aidlc-workflows/guide/05-scopes-and-depth/" target="_blank" rel="noopener noreferrer">Scopes, Depth, and Test Strategy</a> — 9 种 Scope、深度和测试策略，访问日期：2026-07-24。</li><li><a href="https://awslabs.github.io/aidlc-workflows/guide/03-spaces-and-intents/" target="_blank" rel="noopener noreferrer">Spaces and Intents</a> — 多 Space、多 Intent 和目录模型，访问日期：2026-07-24。</li><li><a href="https://awslabs.github.io/aidlc-workflows/guide/06-agents/" target="_blank" rel="noopener noreferrer">Agents</a> — 领域 Agent、Reviewer 和 Composer，访问日期：2026-07-24。</li><li><a href="https://awslabs.github.io/aidlc-workflows/guide/07-interaction-modes/" target="_blank" rel="noopener noreferrer">Interaction Modes</a> — 交互模式和审批门，访问日期：2026-07-24。</li><li><a href="https://awslabs.github.io/aidlc-workflows/guide/10-state-and-audit/" target="_blank" rel="noopener noreferrer">State Tracking and Audit Trail</a> — 六态工作流和审计事件，访问日期：2026-07-24。</li><li><a href="https://awslabs.github.io/aidlc-workflows/guide/09-rules-and-the-learning-loop/" target="_blank" rel="noopener noreferrer">Rules and the Learning Loop</a> — 规则链和经验沉淀，访问日期：2026-07-24。</li><li><a href="https://awslabs.github.io/aidlc-workflows/guide/harnesses/codex-cli/" target="_blank" rel="noopener noreferrer">AI-DLC on Codex CLI</a> — Codex 分发、Hook Trust、Sandbox 和 <code>$aidlc</code>，访问日期：2026-07-24。</li><li><a href="https://awslabs.github.io/aidlc-workflows/guide/17-skills/" target="_blank" rel="noopener noreferrer">Skills and Runner Commands</a> — Scope Runner、Stage Runner 和 Harness 命令前缀，访问日期：2026-07-24。</li><li><a href="https://learn.chatgpt.com/docs/build-skills" target="_blank" rel="noopener noreferrer">OpenAI：Build skills</a> — Codex Skill 目录、显式 <code>$skill</code> 调用和渐进式加载，访问日期：2026-07-24。</li></ul>
+    </article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/codex/2026-07-24-AIDLC详细介绍.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="2026-07-24-AI开发工作流选型与小团队沉淀指南.html"><small>上一篇</small><span>AI 开发工作流选型与小团队沉淀指南</span></a>
+        <a class="pager-link next" href="2026-07-24-AIDLC与Superpowers差异分析.html"><small>下一篇</small><span>AIDLC 与 Superpowers 差异分析：生命周期治理与工程 Inner Loop</span></a>
+      </nav>
+    </footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#一名称与范围辨析">一、名称与范围辨析</a></li><li class="toc-level-3"><a href="#1-ai-dlcaidlc-和-aidlc">1. AI-DLC、AIDLC 和 aidlc</a></li><li class="toc-level-3"><a href="#2-方法论与工具实现不是同一层">2. 方法论与工具实现不是同一层</a></li><li class="toc-level-2"><a href="#二为什么需要-ai-dlc">二、为什么需要 AI-DLC</a></li><li class="toc-level-3"><a href="#1-普通-vibe-coding-的典型失控路径">1. 普通 Vibe Coding 的典型失控路径</a></li><li class="toc-level-3"><a href="#2-传统-sdlc-的另一端问题">2. 传统 SDLC 的另一端问题</a></li><li class="toc-level-2"><a href="#三核心心智模型">三、核心心智模型</a></li><li class="toc-level-3"><a href="#1-每项活动都执行同一个小循环">1. 每项活动都执行同一个小循环</a></li><li class="toc-level-3"><a href="#2-small-mob-broad-agents">2. Small Mob, Broad Agents</a></li><li class="toc-level-3"><a href="#3-确定性引擎与概率性执行分离">3. 确定性引擎与概率性执行分离</a></li><li class="toc-level-2"><a href="#四版本差异为什么同时看到三阶段和五阶段">四、版本差异：为什么同时看到三阶段和五阶段</a></li><li class="toc-level-2"><a href="#五五阶段与-32-个-stage">五、五阶段与 32 个 Stage</a></li><li class="toc-level-3"><a href="#phase-0initialization">Phase 0：Initialization</a></li><li class="toc-level-3"><a href="#phase-1ideation">Phase 1：Ideation</a></li><li class="toc-level-3"><a href="#phase-2inception">Phase 2：Inception</a></li><li class="toc-level-3"><a href="#phase-3construction">Phase 3：Construction</a></li><li class="toc-level-4"><a href="#walking-skeleton">Walking Skeleton</a></li><li class="toc-level-3"><a href="#phase-4operation">Phase 4：Operation</a></li><li class="toc-level-2"><a href="#六scopedepth-与-test-strategy">六、Scope、Depth 与 Test Strategy</a></li><li class="toc-level-3"><a href="#1-scope哪些-stage-要运行">1. Scope：哪些 Stage 要运行</a></li><li class="toc-level-3"><a href="#2-depth每个产物写多深">2. Depth：每个产物写多深</a></li><li class="toc-level-3"><a href="#3-test-strategy测试多少覆盖哪些层">3. Test Strategy：测试多少、覆盖哪些层</a></li><li class="toc-level-2"><a href="#七关键术语">七、关键术语</a></li><li class="toc-level-2"><a href="#八状态审计与-learning-loop">八、状态、审计与 Learning Loop</a></li><li class="toc-level-3"><a href="#1-aidlc-statemd">1. aidlc-state.md</a></li><li class="toc-level-3"><a href="#2-audit-trail">2. Audit Trail</a></li><li class="toc-level-3"><a href="#3-learning-loop">3. Learning Loop</a></li><li class="toc-level-2"><a href="#九三种交互模式与审批门">九、三种交互模式与审批门</a></li><li class="toc-level-2"><a href="#十在-codex-中怎样运行">十、在 Codex 中怎样运行</a></li><li class="toc-level-3"><a href="#1-当前多-harness-版本">1. 当前多 Harness 版本</a></li><li class="toc-level-3"><a href="#2-v018-rules-包">2. v0.1.8 Rules 包</a></li><li class="toc-level-2"><a href="#十一java-全栈示例订单取消功能">十一、Java 全栈示例：订单取消功能</a></li><li class="toc-level-3"><a href="#step-1选择-scope">Step 1：选择 Scope</a></li><li class="toc-level-3"><a href="#step-2回答关键问题">Step 2：回答关键问题</a></li><li class="toc-level-3"><a href="#step-3形成-unit-of-work">Step 3：形成 Unit of Work</a></li><li class="toc-level-3"><a href="#step-4walking-skeleton">Step 4：Walking Skeleton</a></li><li class="toc-level-3"><a href="#step-5测试纪律">Step 5：测试纪律</a></li><li class="toc-level-2"><a href="#十二与其他开发模式的关系">十二、与其他开发模式的关系</a></li><li class="toc-level-3"><a href="#1-与-vibe-coding">1. 与 Vibe Coding</a></li><li class="toc-level-3"><a href="#2-与-spec-driven-development">2. 与 Spec-Driven Development</a></li><li class="toc-level-3"><a href="#3-与-superpowers">3. 与 Superpowers</a></li><li class="toc-level-3"><a href="#4-与-agilescrum">4. 与 Agile/Scrum</a></li><li class="toc-level-2"><a href="#十三适用场景与不适用场景">十三、适用场景与不适用场景</a></li><li class="toc-level-3"><a href="#适合">适合</a></li><li class="toc-level-3"><a href="#应缩小使用">应缩小使用</a></li><li class="toc-level-2"><a href="#十四收益成本与局限">十四、收益、成本与局限</a></li><li class="toc-level-3"><a href="#可能收益">可能收益</a></li><li class="toc-level-3"><a href="#成本与局限">成本与局限</a></li><li class="toc-level-2"><a href="#十五java-全栈团队最佳实践">十五、Java 全栈团队最佳实践</a></li><li class="toc-level-2"><a href="#十六常见问题">十六、常见问题</a></li><li class="toc-level-3"><a href="#1-aidlc-不存在">1. $aidlc 不存在</a></li><li class="toc-level-3"><a href="#2-aidlc-在-codex-中不能用">2. /aidlc 在 Codex 中不能用</a></li><li class="toc-level-3"><a href="#3-doctor-报-workspace-shell-缺失">3. Doctor 报 Workspace Shell 缺失</a></li><li class="toc-level-3"><a href="#4-hooks-没有运行">4. Hooks 没有运行</a></li><li class="toc-level-3"><a href="#5-gitworktree-被-sandbox-拒绝">5. Git/Worktree 被 Sandbox 拒绝</a></li><li class="toc-level-3"><a href="#6-工作流太慢问题太多">6. 工作流太慢、问题太多</a></li><li class="toc-level-3"><a href="#7-agent-一直修改无法通过-gate">7. Agent 一直修改，无法通过 Gate</a></li><li class="toc-level-2"><a href="#十七推荐操作模板">十七、推荐操作模板</a></li><li class="toc-level-3"><a href="#新生产功能">新生产功能</a></li><li class="toc-level-3"><a href="#关键-bug">关键 Bug</a></li><li class="toc-level-3"><a href="#快速-poc">快速 PoC</a></li><li class="toc-level-2"><a href="#十八建议学习顺序">十八、建议学习顺序</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+<div class="sidebar-scrim"></div>
+</body>
+</html>

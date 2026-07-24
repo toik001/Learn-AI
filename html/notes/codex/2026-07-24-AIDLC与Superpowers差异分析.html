@@ -1,0 +1,716 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="两者都自称软件开发方法论，也都包含设计、计划、实现、人类确认和多 Agent 协作，因此表面看起来相似。但它们解决的是不同层级的问题： 项目 本质定位 最强能力 --- --- --- AIDLC AI 驱动的端到端 Development Life Cycle 与 Harness 生命周期编排、S">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="Codex 与 AI 工程">
+  <meta name="study-date" content="2026-07-24">
+  <title>AIDLC 与 Superpowers 差异分析：生命周期治理与工程 Inner Loop｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a href="../../index.html">全部文档</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <label class="sidebar-search">
+      <span class="sr-only">筛选文档</span>
+      <input type="search" placeholder="筛选文档…" data-sidebar-search>
+    </label>
+    <nav class="doc-nav" aria-label="文档列表">
+      <a class="doc-nav-item" href="../../AGENTS.html"><span>Java 全栈 AI 学习助手</span><small>项目指南</small></a><a class="doc-nav-item" href="2026-07-24-AI开发工作流选型与小团队沉淀指南.html"><span>AI 开发工作流选型与小团队沉淀指南</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC详细介绍.html"><span>AIDLC 详细介绍：从 AI 辅助编码到可审计的软件交付生命周期</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item is-active" href="2026-07-24-AIDLC与Superpowers差异分析.html"><span>AIDLC 与 Superpowers 差异分析：生命周期治理与工程 Inner Loop</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-Codex全栈开发最佳实践.html"><span>Codex 全栈开发最佳实践：Vibe Coding、Harness 与 Loop</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-Superpowers详细介绍.html"><span>Superpowers 详细介绍：Codex 的技能化软件开发方法</span><small>Codex 与 AI 工程</small></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta">
+      <a href="../../index.html">知识库首页</a>
+      <span>·</span>
+      <span>Codex 与 AI 工程</span>
+      <span>·</span><time>2026-07-24</time>
+    </div>
+    <article class="markdown-body">
+      <h1 id="aidlc-与-superpowers-差异分析生命周期治理与工程-inner-loop"><a class="heading-anchor" href="#aidlc-与-superpowers-差异分析生命周期治理与工程-inner-loop" aria-label="链接到本节">#</a>AIDLC 与 Superpowers 差异分析：生命周期治理与工程 Inner Loop</h1>
+<blockquote><p>整理日期：2026-07-24<br> 适用对象：使用 Codex 开发 Java、Spring Boot 和前端应用的个人与团队<br> 对比对象：AWS <code>awslabs/aidlc-workflows</code> 与 <code>obra/superpowers</code><br> 结论性质：基于两个项目的官方仓库和官方文档进行架构与工作流分析，不是量化性能评测</p>
+<p>前置阅读：<a href="2026-07-24-AIDLC详细介绍.html">AIDLC 详细介绍</a> · <a href="2026-07-24-Superpowers详细介绍.html">Superpowers 详细介绍</a> · <a href="2026-07-24-Codex全栈开发最佳实践.html">Codex 全栈开发最佳实践</a></p></blockquote>
+<h2 id="核心结论"><a class="heading-anchor" href="#核心结论" aria-label="链接到本节">#</a>核心结论</h2>
+<h3 id="一句话区别"><a class="heading-anchor" href="#一句话区别" aria-label="链接到本节">#</a>一句话区别</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">AIDLC 管“从想法到生产如何完整交付”
+Superpowers 管“进入开发后如何可靠地设计、编码、调试、审查和验证”</code></pre></div>
+<p>两者都自称软件开发方法论，也都包含设计、计划、实现、人类确认和多 Agent 协作，因此表面看起来相似。但它们解决的是不同层级的问题：</p>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">项目</th><th style="text-align:left">本质定位</th><th style="text-align:left">最强能力</th></tr></thead><tbody><tr><td style="text-align:left">AIDLC</td><td style="text-align:left">AI 驱动的端到端 Development Life Cycle 与 Harness</td><td style="text-align:left">生命周期编排、Scope、追踪、状态、审计、团队知识、Operation</td></tr><tr><td style="text-align:left">Superpowers</td><td style="text-align:left">编码 Agent 的可组合工程 Skills 与强制 Inner Loop</td><td style="text-align:left">TDD、系统化调试、细粒度计划、双重代码审查、完成前验证</td></tr></tbody></table></div>
+<p>AIDLC 当前在线指南把工作组织为 5 个 Phase、32 个 Stage、9 种 Scope、3 种 Depth、3 种 Test Strategy，并维护 Intent 状态与审计。<a href="https://awslabs.github.io/aidlc-workflows/guide/00-introduction/" target="_blank" rel="noopener noreferrer">AIDLC Introduction</a></p>
+<p>Superpowers 的基础工作流是：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">brainstorming
+→ using-git-worktrees
+→ writing-plans
+→ subagent-driven-development / executing-plans
+→ test-driven-development
+→ requesting-code-review
+→ finishing-a-development-branch</code></pre></div>
+<p>它明确要求 Red-Green-Refactor、先查根因、用最新命令输出证明完成。<a href="https://github.com/obra/superpowers/blob/main/README.md" target="_blank" rel="noopener noreferrer">Superpowers README</a></p>
+<h3 id="选型结论"><a class="heading-anchor" href="#选型结论" aria-label="链接到本节">#</a>选型结论</h3>
+<ul><li><strong>小到中型代码任务、Bug、重构</strong>：优先 Superpowers。</li><li><strong>跨产品、架构、研发、测试和运维的生产项目</strong>：优先 AIDLC。</li><li><strong>需要合规、审计、跨会话恢复或多团队知识治理</strong>：AIDLC 更合适。</li><li><strong>最关注代码实现质量、严格 TDD 和系统调试</strong>：Superpowers 更强。</li><li><strong>典型 Java 全栈生产功能</strong>：AIDLC 做 Outer Loop，吸收 Superpowers 的 TDD、调试、审查和验证纪律。</li><li><strong>不要同时运行两个顶层 Orchestrator</strong>：一个负责下一步路由，另一个只能作为局部实践来源。</li></ul>
+<h2 id="一为什么不能简单问谁更好"><a class="heading-anchor" href="#一为什么不能简单问谁更好" aria-label="链接到本节">#</a>一、为什么不能简单问“谁更好”</h2>
+<p>一个方法论是否更好，取决于它被放在哪个责任层。</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">产品与业务层
+  ├── 是否值得做
+  ├── 谁是利益相关者
+  ├── 范围和成功指标
+  └── Build vs Buy
+          ↑ AIDLC 覆盖
+
+系统与交付层
+  ├── 需求、故事、架构、NFR
+  ├── Unit、依赖、发布、运维
+  └── 状态、审计、团队规则
+          ↑ AIDLC 强项
+
+实现 Inner Loop
+  ├── 设计细化
+  ├── 任务计划
+  ├── Red-Green-Refactor
+  ├── Debug、Review、Verify
+  └── Git 分支收尾
+          ↑ Superpowers 强项</code></pre></div>
+<p>如果只用 AIDLC 评价 TDD 纪律，它不如 Superpowers 严格；如果只用 Superpowers 评价完整生命周期，它又缺少 AIDLC 的 Ideation、Operation、状态和治理。正确比较方式是逐层看职责覆盖和控制机制。</p>
+<h2 id="二定位与目标差异"><a class="heading-anchor" href="#二定位与目标差异" aria-label="链接到本节">#</a>二、定位与目标差异</h2>
+<h3 id="aidlc-的目标"><a class="heading-anchor" href="#aidlc-的目标" aria-label="链接到本节">#</a>AIDLC 的目标</h3>
+<p>AIDLC 试图重新安排人和 AI 在整个 SDLC 中的职责：</p>
+<ul><li>AI 主动制定计划、分析和生成产物。</li><li>AI 主动识别不确定项并提问。</li><li>人类提供业务上下文和关键选择。</li><li>人类在 Stage Gate 审批。</li><li>需求、设计、代码、测试、部署和反馈保持追踪。</li><li>团队纠正通过 Learning Loop 形成下次可复用规则。</li></ul>
+<p>AWS 原始方法论强调两条轴：AI Powered Execution with Human Oversight，以及 Dynamic Team Collaboration。<a href="https://aws.amazon.com/blogs/devops/ai-driven-development-life-cycle/" target="_blank" rel="noopener noreferrer">AWS AI-DLC 方法论</a></p>
+<h3 id="superpowers-的目标"><a class="heading-anchor" href="#superpowers-的目标" aria-label="链接到本节">#</a>Superpowers 的目标</h3>
+<p>Superpowers 试图纠正 Coding Agent 的常见坏习惯：</p>
+<ul><li>未理解需求就开始编码。</li><li>未比较方案就采用第一个想法。</li><li>计划过于抽象，执行者需要自行猜测。</li><li>先写实现再补测试。</li><li>遇到 Bug 反复猜测式修改。</li><li>子 Agent 自报完成后直接相信。</li><li>没有新鲜验证证据就宣称成功。</li><li>在主分支直接修改，缺少隔离和安全收尾。</li></ul>
+<p>其哲学是 TDD、系统过程、降低复杂度和证据优先。<a href="https://github.com/obra/superpowers/blob/main/README.md#philosophy" target="_blank" rel="noopener noreferrer">Superpowers README</a></p>
+<h2 id="三总体工作流对照"><a class="heading-anchor" href="#三总体工作流对照" aria-label="链接到本节">#</a>三、总体工作流对照</h2>
+<h3 id="aidlc"><a class="heading-anchor" href="#aidlc" aria-label="链接到本节">#</a>AIDLC</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">Initialization
+  ↓
+Ideation
+  ↓ Verification Gate
+Inception
+  ↓ Verification Gate
+Construction
+  ├── Bolt 1: Walking Skeleton
+  ├── 选择 gated / autonomous
+  └── 其余 Bolt + Build/Test + CI
+  ↓ Verification Gate
+Operation
+  ↓
+Feedback Loop / Complete</code></pre></div>
+<p>AIDLC 当前实现拥有确定性 Orchestrator，负责 Scope、Stage 路由、状态、Gate、恢复和完成判断；Agent 负责当前 Stage 的概率性分析与执行。<a href="https://awslabs.github.io/aidlc-workflows/guide/04-phases-and-stages/" target="_blank" rel="noopener noreferrer">Phases and Stages</a></p>
+<h3 id="superpowers"><a class="heading-anchor" href="#superpowers" aria-label="链接到本节">#</a>Superpowers</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">Brainstorming
+  ↓ 用户批准设计
+Writing Plans
+  ↓
+Worktree Isolation
+  ↓
+每个实现 Task:
+  ├── 失败测试
+  ├── 最小实现
+  ├── 测试通过
+  ├── Spec Review
+  └── Code Quality Review
+  ↓
+完整验证
+  ↓
+Merge / PR / Keep / Discard</code></pre></div>
+<p>Superpowers 主要通过 Skill 触发和 Skill 中的强制规则来约束 Agent，不提供与 AIDLC 等价的全生命周期确定性状态机。</p>
+<h2 id="四核心差异总表"><a class="heading-anchor" href="#四核心差异总表" aria-label="链接到本节">#</a>四、核心差异总表</h2>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">比较维度</th><th style="text-align:left">AIDLC</th><th style="text-align:left">Superpowers</th><th style="text-align:left">影响</th></tr></thead><tbody><tr><td style="text-align:left">抽象层级</td><td style="text-align:left">完整生命周期/交付治理</td><td style="text-align:left">开发 Inner Loop/工程纪律</td><td style="text-align:left">不是同层替代品</td></tr><tr><td style="text-align:left">起始点</td><td style="text-align:left">业务 Intent，甚至市场与可行性</td><td style="text-align:left">一个想法、需求、Bug 或代码任务</td><td style="text-align:left">AIDLC 起点更早</td></tr><tr><td style="text-align:left">结束点</td><td style="text-align:left">部署、可观测、事件响应、反馈</td><td style="text-align:left">分支完成、合并或 PR</td><td style="text-align:left">AIDLC 终点更晚</td></tr><tr><td style="text-align:left">路由模型</td><td style="text-align:left">Scope + Stage Graph + 确定性 Orchestrator</td><td style="text-align:left">Agent 依据 Skill 描述选择流程</td><td style="text-align:left">AIDLC 更可预测</td></tr><tr><td style="text-align:left">自适应</td><td style="text-align:left">9 种 Scope、Composer、Depth、Test Strategy</td><td style="text-align:left">根据任务匹配不同 Skills</td><td style="text-align:left">AIDLC 是生命周期级自适应</td></tr><tr><td style="text-align:left">需求</td><td style="text-align:left">Requirements、Stories、Personas、Mockups</td><td style="text-align:left">Brainstorming 形成设计规格</td><td style="text-align:left">AIDLC 的产品产物更丰富</td></tr><tr><td style="text-align:left">架构</td><td style="text-align:left">Application、Functional、NFR、Infrastructure Design</td><td style="text-align:left">设计文档和实现计划</td><td style="text-align:left">AIDLC 覆盖更广</td></tr><tr><td style="text-align:left">工作分解</td><td style="text-align:left">Unit of Work、依赖 DAG、Bolt</td><td style="text-align:left">2～5 分钟计划 Task</td><td style="text-align:left">Superpowers 粒度更细</td></tr><tr><td style="text-align:left">第一个切片</td><td style="text-align:left">Walking Skeleton</td><td style="text-align:left">没有固定同名仪式</td><td style="text-align:left">AIDLC 更强调先证明端到端架构</td></tr><tr><td style="text-align:left">TDD</td><td style="text-align:left">Test Strategy 控制测试量和类型</td><td style="text-align:left">强制 Red-Green-Refactor</td><td style="text-align:left">Superpowers 更严格</td></tr><tr><td style="text-align:left">调试</td><td style="text-align:left">可作为 Bugfix Stage 执行</td><td style="text-align:left">四阶段根因分析，禁止猜修</td><td style="text-align:left">Superpowers 更完整</td></tr><tr><td style="text-align:left">审查</td><td style="text-align:left">Stage/Bolt Gate、Reviewer Agent</td><td style="text-align:left">每 Task 先 Spec Review，再 Quality Review</td><td style="text-align:left">Superpowers 代码审查更细</td></tr><tr><td style="text-align:left">Human-in-the-loop</td><td style="text-align:left">每 Stage/Bolt Gate</td><td style="text-align:left">设计批准、执行检查点、分支决策</td><td style="text-align:left">AIDLC Gate 更密集</td></tr><tr><td style="text-align:left">自主执行</td><td style="text-align:left">Skeleton 后选择 gated/autonomous</td><td style="text-align:left">计划批准后可连续执行 Tasks</td><td style="text-align:left">两者放权时点不同</td></tr><tr><td style="text-align:left">多 Agent</td><td style="text-align:left">11 Domain + 2 Reviewer + Composer，多拓扑</td><td style="text-align:left">Fresh implementer + spec reviewer + quality reviewer</td><td style="text-align:left">AIDLC 按角色，Superpowers 按任务/审查</td></tr><tr><td style="text-align:left">并行单位</td><td style="text-align:left">无依赖 Bolt Batch</td><td style="text-align:left">独立 Plan Tasks</td><td style="text-align:left">都要求独立边界</td></tr><tr><td style="text-align:left">状态</td><td style="text-align:left">每 Intent <code>aidlc-state.md</code></td><td style="text-align:left">通常依赖计划、Todo、Git 和会话</td><td style="text-align:left">AIDLC 恢复能力更强</td></tr><tr><td style="text-align:left">审计</td><td style="text-align:left">追加式 Audit Trail，当前 74 类事件</td><td style="text-align:left">Git、计划、审查结果，没有统一事件账本</td><td style="text-align:left">AIDLC 更适合监管</td></tr><tr><td style="text-align:left">多工作项</td><td style="text-align:left">Space + 多 Intent</td><td style="text-align:left">一个计划/分支为主</td><td style="text-align:left">AIDLC 更适合长期并行事务</td></tr><tr><td style="text-align:left">团队知识</td><td style="text-align:left">Org/Team/Project/Phase 规则和 Knowledge</td><td style="text-align:left">Skills + 项目 <code>AGENTS.md</code></td><td style="text-align:left">AIDLC 作用域更细</td></tr><tr><td style="text-align:left">自学习</td><td style="text-align:left">Gate 后将 Learning 写入规则</td><td style="text-align:left">无同等级内置 Learning Loop</td><td style="text-align:left">AIDLC 更适合组织演进</td></tr><tr><td style="text-align:left">Git 隔离</td><td style="text-align:left">Workshop/Swarm 和 Harness Git 机制</td><td style="text-align:left">明确 Worktree Skill 和基线测试</td><td style="text-align:left">Superpowers 对单任务隔离更直接</td></tr><tr><td style="text-align:left">Operation</td><td style="text-align:left">部署、环境、观测、事件、性能、反馈</td><td style="text-align:left">无完整 Operation Phase</td><td style="text-align:left">AIDLC 明显更完整</td></tr><tr><td style="text-align:left">合规</td><td style="text-align:left">Compliance/DevSecOps Agent、审计和 NFR</td><td style="text-align:left">依赖项目规格与外部 Skill</td><td style="text-align:left">AIDLC 默认覆盖更多</td></tr><tr><td style="text-align:left">完成声明</td><td style="text-align:left">Stage/Phase 验证与 Gate</td><td style="text-align:left">本轮必须运行完整验证命令</td><td style="text-align:left">Superpowers 的证据规则更尖锐</td></tr><tr><td style="text-align:left">安装复杂度</td><td style="text-align:left">Engine、Skills、Hooks、状态目录、信任配置</td><td style="text-align:left">Plugin/Skills 为主</td><td style="text-align:left">Superpowers 通常更轻</td></tr><tr><td style="text-align:left">版本迁移</td><td style="text-align:left">状态和 Harness 结构可能迁移</td><td style="text-align:left">Skill 行为与安装方式可能变化</td><td style="text-align:left">AIDLC 升级风险通常更高</td></tr></tbody></table></div>
+<h2 id="五控制流确定性引擎与-skill-纪律"><a class="heading-anchor" href="#五控制流确定性引擎与-skill-纪律" aria-label="链接到本节">#</a>五、控制流：确定性引擎与 Skill 纪律</h2>
+<p>这是两者最根本的技术差异。</p>
+<h3 id="aidlc引擎决定下一步是什么"><a class="heading-anchor" href="#aidlc引擎决定下一步是什么" aria-label="链接到本节">#</a>AIDLC：引擎决定“下一步是什么”</h3>
+<p>AIDLC 把以下判断交给确定性代码：</p>
+<ul><li>新建还是恢复 Intent。</li><li>当前 Scope 包含哪些 Stage。</li><li>当前 Stage 是否满足输入依赖。</li><li>Gate 是否打开、通过或要求修改。</li><li>哪些 Stage 被跳过。</li><li>Phase Boundary 是否可通过。</li><li>当前处于哪个 Bolt。</li><li>是否允许自主 Construction。</li><li>失败后 retry、skip 或 abort。</li><li>工作流何时完成。</li></ul>
+<p>Agent 的自由度集中在“怎样完成当前 Stage”，而不是“想不想执行下一 Stage”。</p>
+<p><strong>优势：</strong></p>
+<ul><li>不容易因为上下文压缩而忘记流程。</li><li>恢复和审计更可靠。</li><li>可以验证 Stage Graph 和状态一致性。</li><li>适合长任务和多人协作。</li></ul>
+<p><strong>代价：</strong></p>
+<ul><li>引擎、Hook、状态和目录较复杂。</li><li>自定义 Stage 需要理解依赖和 Artifact Contract。</li><li>流程变化需通过 Composer、Scope 或显式导航，临时自由度较低。</li></ul>
+<h3 id="superpowersskill-决定此时应遵守什么纪律"><a class="heading-anchor" href="#superpowersskill-决定此时应遵守什么纪律" aria-label="链接到本节">#</a>Superpowers：Skill 决定“此时应遵守什么纪律”</h3>
+<p>Superpowers 通过 Skill 的名称、描述、触发条件和强制步骤影响 Agent：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">“实现新功能” → brainstorming
+“已有规格，要实施” → writing-plans
+“出现失败” → systematic-debugging
+“准备说完成” → verification-before-completion</code></pre></div>
+<p>它的强制力来自：</p>
+<ul><li>入口 Skill 要求先检查相关 Skills。</li><li>每个 Skill 写有明确 Iron Law。</li><li>Skill 之间显式引用前置/后置流程。</li><li>实现 Task 后用独立 Reviewer 检查。</li></ul>
+<p><strong>优势：</strong></p>
+<ul><li>结构简单，容易理解和局部采用。</li><li>某个 Skill 可独立用于现有流程。</li><li>不需要完整生命周期状态机。</li><li>适合日常编码对话。</li></ul>
+<p><strong>代价：</strong></p>
+<ul><li>本质上仍依赖 Agent 正确触发、读取和遵守 Skill。</li><li>会话恢复更多依赖计划、Git 和 Agent 上下文。</li><li>缺少统一的 Stage 状态和审计事件。</li><li>多 Skill 同时命中时，可能发生优先级或流程解释问题。</li></ul>
+<h2 id="六需求与设计广度和深度不同"><a class="heading-anchor" href="#六需求与设计广度和深度不同" aria-label="链接到本节">#</a>六、需求与设计：广度和深度不同</h2>
+<h3 id="aidlc-的设计面更宽"><a class="heading-anchor" href="#aidlc-的设计面更宽" aria-label="链接到本节">#</a>AIDLC 的设计面更宽</h3>
+<p>AIDLC 在 Ideation 和 Inception 中可能覆盖：</p>
+<ul><li>Intent 和利益相关者。</li><li>市场研究与 Build vs Buy。</li><li>可行性、约束和 RAID。</li><li>Scope 和 Team Formation。</li><li>Rough/Refined Mockups。</li><li>Requirements、Stories 和 Personas。</li><li>Application Design、ADR、NFR。</li><li>Unit DAG 和 Delivery Plan。</li></ul>
+<p>它适合回答：</p>
+<blockquote><p>我们应该构建什么系统，它为什么值得做，它在组织和生产环境中怎样存在？</p></blockquote>
+<h3 id="superpowers-的设计更靠近实现"><a class="heading-anchor" href="#superpowers-的设计更靠近实现" aria-label="链接到本节">#</a>Superpowers 的设计更靠近实现</h3>
+<p><code>brainstorming</code> 主要：</p>
+<ul><li>调查现有项目。</li><li>每次提出一个澄清问题。</li><li>比较 2～3 个方案。</li><li>分段展示设计并由用户确认。</li><li>保存设计文档。</li><li>转入 <code>writing-plans</code>。</li></ul>
+<p><code>writing-plans</code> 再将设计拆成：</p>
+<ul><li>明确文件路径。</li><li>每个文件的责任。</li><li>失败测试。</li><li>最小实现。</li><li>验证命令。</li><li>小而可执行的 Tasks。</li></ul>
+<p>它更适合回答：</p>
+<blockquote><p>这个已经确定要做的功能，应该怎样设计和可靠实现？</p></blockquote>
+<h3 id="关键判断"><a class="heading-anchor" href="#关键判断" aria-label="链接到本节">#</a>关键判断</h3>
+<ul><li>需求尚不稳定、涉及多个利益相关者：AIDLC 更合适。</li><li>产品方向已确定，只需技术设计：Superpowers 更高效。</li><li>业务和技术都复杂：先 AIDLC Inception，再用 Superpowers 纪律实施。</li></ul>
+<h2 id="七工作分解unitbolt-与-task"><a class="heading-anchor" href="#七工作分解unitbolt-与-task" aria-label="链接到本节">#</a>七、工作分解：Unit/Bolt 与 Task</h2>
+<h3 id="aidlc-2"><a class="heading-anchor" href="#aidlc-2" aria-label="链接到本节">#</a>AIDLC</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">Intent
+  └── Units of Work
+        └── Bolt / Parallel Bolt Batch
+              └── Functional/NFR/Infra/Code Stage</code></pre></div>
+<p>Unit 是可以形成设计、依赖和验收的交付单元；Bolt 是小时或天级的端到端切片。</p>
+<h3 id="superpowers-2"><a class="heading-anchor" href="#superpowers-2" aria-label="链接到本节">#</a>Superpowers</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">Approved Design
+  └── Implementation Plan
+        └── Task 1（约 2～5 分钟）
+        └── Task 2
+        └── Task 3
+              ├── Test
+              ├── Implement
+              ├── Verify
+              └── Review</code></pre></div>
+<p>Superpowers Task 更接近具体代码动作，例如：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">Task 1：为 OrderCancellationPolicy 写失败单测
+Task 2：实现最小领域规则
+Task 3：为 Controller 写 MockMvc 失败测试
+Task 4：实现 API 和异常映射</code></pre></div>
+<h3 id="映射关系"><a class="heading-anchor" href="#映射关系" aria-label="链接到本节">#</a>映射关系</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">AIDLC Intent      ≈ 一个完整项目目标
+AIDLC Unit        ≈ 一个可独立交付的子系统/能力
+AIDLC Bolt        ≈ 一个可验证的端到端增量
+Superpowers Plan  ≈ 一个 Bolt 或 Unit 的详细施工图
+Superpowers Task  ≈ Bolt 内的单次工程动作</code></pre></div>
+<p>因此不要把一个 AIDLC Intent 直接压成一个 Superpowers Task，也不要为一个简单单测创建完整 AIDLC <code>feature</code> Intent。</p>
+<h2 id="八测试策略覆盖规划与执行纪律"><a class="heading-anchor" href="#八测试策略覆盖规划与执行纪律" aria-label="链接到本节">#</a>八、测试策略：覆盖规划与执行纪律</h2>
+<h3 id="aidlc-的测试视角"><a class="heading-anchor" href="#aidlc-的测试视角" aria-label="链接到本节">#</a>AIDLC 的测试视角</h3>
+<p>AIDLC 将测试量和类型作为项目配置：</p>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">Test Strategy</th><th style="text-align:left">重点</th></tr></thead><tbody><tr><td style="text-align:left">Minimal</td><td style="text-align:left">每项需求最少验证，主要单元测试</td></tr><tr><td style="text-align:left">Standard</td><td style="text-align:left">单元 + 集成，必要时 E2E/NFR</td></tr><tr><td style="text-align:left">Comprehensive</td><td style="text-align:left">单元、集成、契约、E2E、安全、性能等</td></tr></tbody></table></div>
+<p>它解决的是：</p>
+<blockquote><p>这次 Intent 需要多大范围的验证投资？</p></blockquote>
+<h3 id="superpowers-的测试视角"><a class="heading-anchor" href="#superpowers-的测试视角" aria-label="链接到本节">#</a>Superpowers 的测试视角</h3>
+<p>Superpowers 的 TDD Skill 有明确 Iron Law：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">NO PRODUCTION CODE WITHOUT A FAILING TEST FIRST</code></pre></div>
+<p>要求：</p>
+<ol><li>先写测试。</li><li>亲眼看到它因预期原因失败。</li><li>写最小实现。</li><li>看到测试通过。</li><li>Refactor 并保持通过。</li></ol>
+<p>如果先写了实现，规则要求删除后按测试重新实现。例外如 Throwaway Prototype、生成代码、配置文件，也需要向人类请求许可。<a href="https://github.com/obra/superpowers/blob/main/skills/test-driven-development/SKILL.md" target="_blank" rel="noopener noreferrer">test-driven-development</a></p>
+<p>它解决的是：</p>
+<blockquote><p>每一次行为实现，是否真的由失败测试驱动？</p></blockquote>
+<h3 id="谁更强"><a class="heading-anchor" href="#谁更强" aria-label="链接到本节">#</a>谁更强</h3>
+<ul><li><strong>测试范围与风险配置</strong>：AIDLC 更强。</li><li><strong>测试先后顺序与 Red-Green 证据</strong>：Superpowers 更强。</li><li><strong>最佳组合</strong>：AIDLC 决定测试策略，Superpowers 约束每个可测试行为的实现顺序。</li></ul>
+<h3 id="潜在冲突"><a class="heading-anchor" href="#潜在冲突" aria-label="链接到本节">#</a>潜在冲突</h3>
+<p>AIDLC 的 Code Generation Agent 可能一次生成实现和测试，但这不自动满足 Superpowers 的 TDD，因为没有证明测试先失败。若团队要求严格 TDD，应把以下规则写入 AIDLC Construction Memory：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">每个行为必须先创建失败测试并记录失败原因；
+未见预期失败不得创建生产实现；
+修复后运行相关测试与全量回归；
+完成声明必须附本轮命令输出。</code></pre></div>
+<p>这是组合建议，不是 AIDLC 官方默认行为。</p>
+<h2 id="九调试能力"><a class="heading-anchor" href="#九调试能力" aria-label="链接到本节">#</a>九、调试能力</h2>
+<h3 id="aidlc-3"><a class="heading-anchor" href="#aidlc-3" aria-label="链接到本节">#</a>AIDLC</h3>
+<p><code>bugfix</code> Scope 能缩短生命周期，通常保留 Reverse Engineering、Requirements、Code Generation 和 Build/Test。它善于：</p>
+<ul><li>建立 Bug Intent。</li><li>记录需求和修复标准。</li><li>分析 Brownfield。</li><li>保留状态与审计。</li><li>为高风险 Bug 调高 Test Strategy。</li></ul>
+<p>但当前核心方法没有像 Superpowers 那样把“根因调查必须先于修复”写成独立而强硬的四阶段调试流程。</p>
+<h3 id="superpowers-3"><a class="heading-anchor" href="#superpowers-3" aria-label="链接到本节">#</a>Superpowers</h3>
+<p><code>systematic-debugging</code> 明确规定：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST</code></pre></div>
+<p>四阶段为：</p>
+<ol><li>Root Cause Investigation。</li><li>Pattern Analysis。</li><li>Hypothesis and Testing。</li><li>Implementation and Verification。</li></ol>
+<p>它要求读完整错误、稳定复现、检查最近变更、跨组件采集证据、向上追溯错误值来源，并一次只验证一个假设。<a href="https://github.com/obra/superpowers/blob/main/skills/systematic-debugging/SKILL.md" target="_blank" rel="noopener noreferrer">systematic-debugging</a></p>
+<h3 id="结论"><a class="heading-anchor" href="#结论" aria-label="链接到本节">#</a>结论</h3>
+<p>对于“支付重复扣款”“偶发事务死锁”“测试污染”“CI 与本地不一致”等问题，Superpowers 的调试纪律明显更强。若 Bug 还涉及审计、合规、发布和事故复盘，则 AIDLC 提供更完整的外围治理。</p>
+<h2 id="十代码审查差异"><a class="heading-anchor" href="#十代码审查差异" aria-label="链接到本节">#</a>十、代码审查差异</h2>
+<h3 id="aidlc-审查"><a class="heading-anchor" href="#aidlc-审查" aria-label="链接到本节">#</a>AIDLC 审查</h3>
+<ul><li>人类审核每个 Stage/Bolt 的产物。</li><li>Phase Boundary 检查 Artifact、Traceability 和一致性。</li><li>Reviewer Agent 可做架构或质量审查。</li><li>审查对象包含需求、设计、代码、测试和运维产物。</li></ul>
+<h3 id="superpowers-审查"><a class="heading-anchor" href="#superpowers-审查" aria-label="链接到本节">#</a>Superpowers 审查</h3>
+<p>每个 Task 完成后执行两级独立审查：</p>
+<ol><li><strong>Spec Compliance Review</strong>：是否完全符合需求，有无遗漏或过度实现。</li><li><strong>Code Quality Review</strong>：代码、测试、可维护性和工程质量。</li></ol>
+<p>只有规格审查通过，才进入质量审查。问题修复后 Reviewer 重新检查，不是一次性建议。<a href="https://github.com/obra/superpowers/blob/main/skills/subagent-driven-development/SKILL.md" target="_blank" rel="noopener noreferrer">subagent-driven-development</a></p>
+<h3 id="结论-2"><a class="heading-anchor" href="#结论-2" aria-label="链接到本节">#</a>结论</h3>
+<ul><li>AIDLC 审查面更广，适合生命周期一致性。</li><li>Superpowers 审查粒度更细，适合阻止代码问题逐 Task 累积。</li><li>两级审查对简单 Task 也可能产生明显 Token 和时间成本。</li></ul>
+<h2 id="十一human-gate-与自主性"><a class="heading-anchor" href="#十一human-gate-与自主性" aria-label="链接到本节">#</a>十一、Human Gate 与自主性</h2>
+<h3 id="aidlc-的放权曲线"><a class="heading-anchor" href="#aidlc-的放权曲线" aria-label="链接到本节">#</a>AIDLC 的放权曲线</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">前期每 Stage 互动与审批
+→ Walking Skeleton 必须审批
+→ 用户选择 remaining Bolts:
+     gated / autonomous
+→ 失败始终停止</code></pre></div>
+<p>这是一种按架构证据逐步放权的模型。</p>
+<h3 id="superpowers-的放权曲线"><a class="heading-anchor" href="#superpowers-的放权曲线" aria-label="链接到本节">#</a>Superpowers 的放权曲线</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">Brainstorming 中高互动
+→ 用户批准设计
+→ 用户批准计划/开始执行
+→ subagent-driven-development 连续执行
+→ 每 Task 由两个 Agent 审查
+→ 仅在阻塞、关键歧义或全部完成时停下</code></pre></div>
+<p>官方 <code>subagent-driven-development</code> 明确要求不要在每个 Task 间打断人类，而是依赖 Reviewer 持续执行。<a href="https://github.com/obra/superpowers/blob/main/skills/subagent-driven-development/SKILL.md" target="_blank" rel="noopener noreferrer">subagent-driven-development</a></p>
+<h3 id="风险差异"><a class="heading-anchor" href="#风险差异" aria-label="链接到本节">#</a>风险差异</h3>
+<ul><li>AIDLC：Human Gate 多，可能形成“审批疲劳”。</li><li>Superpowers：人类批准计划后自主度高，如果计划本身有系统性错误，会被忠实放大。</li><li>AIDLC 依靠 Skeleton 降低架构风险。</li><li>Superpowers 依靠细任务、TDD 和双 Reviewer 降低实现风险。</li></ul>
+<h2 id="十二状态恢复和审计"><a class="heading-anchor" href="#十二状态恢复和审计" aria-label="链接到本节">#</a>十二、状态、恢复和审计</h2>
+<h3 id="aidlc-4"><a class="heading-anchor" href="#aidlc-4" aria-label="链接到本节">#</a>AIDLC</h3>
+<p>每个 Intent 包含：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">aidlc-state.md
+audit/
+ideation/
+inception/
+construction/
+operation/</code></pre></div>
+<p>它能回答：</p>
+<ul><li>当前 Scope 和 Depth 是什么？</li><li>哪些 Stage 完成、修改或跳过？</li><li>谁在什么时间批准了什么？</li><li>当前会话应从哪里恢复？</li><li>哪个 Artifact 支撑哪个下游决定？</li></ul>
+<h3 id="superpowers-4"><a class="heading-anchor" href="#superpowers-4" aria-label="链接到本节">#</a>Superpowers</h3>
+<p>持久信息主要在：</p>
+<ul><li>Design Doc。</li><li>Implementation Plan。</li><li>Git Branch/Worktree。</li><li>Commits 和 Diff。</li><li>Tests。</li><li>Review 反馈。</li><li>Agent Todo/Plan。</li></ul>
+<p>它能很好回答“这次分支做了什么”，但通常不能像 AIDLC 那样提供统一的跨 Phase 事件账本和多个 Intent 注册表。</p>
+<h3 id="结论-3"><a class="heading-anchor" href="#结论-3" aria-label="链接到本节">#</a>结论</h3>
+<ul><li>单人、单分支、短周期：Superpowers 的状态通常足够。</li><li>跨天、多团队、合规或多 Intent：AIDLC 更可靠。</li></ul>
+<h2 id="十三团队知识与学习机制"><a class="heading-anchor" href="#十三团队知识与学习机制" aria-label="链接到本节">#</a>十三、团队知识与学习机制</h2>
+<h3 id="aidlc-5"><a class="heading-anchor" href="#aidlc-5" aria-label="链接到本节">#</a>AIDLC</h3>
+<p>AIDLC 当前规则链：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">org → team → project → phase → stage</code></pre></div>
+<p>Stage 执行中的解释、偏差、权衡和开放问题写入 Memory Diary，Gate 后经人确认才提升为 Project 或 Team Rule；规则在下一工作流生效。<a href="https://awslabs.github.io/aidlc-workflows/guide/09-rules-and-the-learning-loop/" target="_blank" rel="noopener noreferrer">Rules and the Learning Loop</a></p>
+<p>优势：</p>
+<ul><li>规则有明确作用域。</li><li>人类确认后才沉淀。</li><li>可以跨 Intent 复用。</li><li>避免同一纠正重复发生。</li></ul>
+<p>风险：</p>
+<ul><li>规则会不断膨胀。</li><li>错误纠正也可能被永久化。</li><li>Org、Team 和 Project 的严格叠加可能产生冗余。</li><li>需要定期治理。</li></ul>
+<h3 id="superpowers-5"><a class="heading-anchor" href="#superpowers-5" aria-label="链接到本节">#</a>Superpowers</h3>
+<p>Superpowers 的知识主要是：</p>
+<ul><li>通用 Skills。</li><li>Skill 附带的参考和脚本。</li><li>项目 <code>AGENTS.md</code>。</li><li>Design/Plan。</li></ul>
+<p>它没有与 AIDLC 等价的自动 Learning Loop。要沉淀团队纠正，需要人工更新 <code>AGENTS.md</code>、项目 Skill 或其他知识文件。</p>
+<p>优势：</p>
+<ul><li>模型简单。</li><li>不容易自动积累大量规则。</li><li>可通过修改 Skill 精确演进。</li></ul>
+<p>风险：</p>
+<ul><li>本次纠正容易只留在聊天中。</li><li>个人经验不一定形成团队制度。</li><li>多项目作用域需要额外设计。</li></ul>
+<h2 id="十四gitworktree-与并行"><a class="heading-anchor" href="#十四gitworktree-与并行" aria-label="链接到本节">#</a>十四、Git、Worktree 与并行</h2>
+<h3 id="aidlc-6"><a class="heading-anchor" href="#aidlc-6" aria-label="链接到本节">#</a>AIDLC</h3>
+<ul><li>Unit 依赖 DAG 决定 Bolt 顺序。</li><li>无依赖 Bolt 可并行成 Batch。</li><li>Workshop/Swarm 支持多个参与者和 Worktree。</li><li>Audit 使用分片降低并行 Git 冲突。</li><li>Codex 下还要处理 Sandbox 对 <code>.git</code> 的保护。</li></ul>
+<p>适合按业务/架构边界并行。</p>
+<h3 id="superpowers-6"><a class="heading-anchor" href="#superpowers-6" aria-label="链接到本节">#</a>Superpowers</h3>
+<p><code>using-git-worktrees</code> 明确：</p>
+<ul><li>先检测是否已处于隔离环境。</li><li>优先使用 Harness 原生 Worktree。</li><li>没有原生能力再使用 Git Worktree。</li><li>创建前确认用户意愿。</li><li>验证 Worktree 目录被忽略。</li><li>完成依赖安装并运行干净基线测试。</li></ul>
+<p><a href="https://github.com/obra/superpowers/blob/main/skills/using-git-worktrees/SKILL.md" target="_blank" rel="noopener noreferrer">using-git-worktrees</a></p>
+<p>适合按实现 Task 或独立计划并行。</p>
+<h3 id="结论-4"><a class="heading-anchor" href="#结论-4" aria-label="链接到本节">#</a>结论</h3>
+<ul><li>Superpowers 的单分支隔离流程更直接、可立即复用。</li><li>AIDLC 的并行模型更理解 Unit 依赖和团队级记录。</li><li>同时启用两者的 Worktree 创建逻辑可能重复创建或造成 Harness 无法管理的“幽灵状态”。</li></ul>
+<h2 id="十五operation-与生产治理"><a class="heading-anchor" href="#十五operation-与生产治理" aria-label="链接到本节">#</a>十五、Operation 与生产治理</h2>
+<p>这是 AIDLC 对 Superpowers 最大的功能差异。</p>
+<p>AIDLC Operation 包括：</p>
+<ul><li>Deployment Pipeline。</li><li>Environment Provisioning。</li><li>Deployment Execution。</li><li>Observability Setup。</li><li>Incident Response。</li><li>Performance Validation。</li><li>Feedback &amp; Optimization。</li></ul>
+<p>Superpowers 在“分支如何结束”处完成：</p>
+<ul><li>验证测试。</li><li>选择 Merge、PR、Keep 或 Discard。</li><li>清理 Worktree。</li></ul>
+<p>它不负责：</p>
+<ul><li>环境供应。</li><li>发布策略。</li><li>生产 Smoke Test。</li><li>Dashboard、Alarm 和 SLO。</li><li>Incident Runbook。</li><li>生产性能验证。</li><li>成本和反馈闭环。</li></ul>
+<p>如果组织把“完成”定义为代码合并，Superpowers 足够；如果定义为“可运营的生产能力”，AIDLC 更匹配。</p>
+<h2 id="十六aidlc-的优点"><a class="heading-anchor" href="#十六aidlc-的优点" aria-label="链接到本节">#</a>十六、AIDLC 的优点</h2>
+<h3 id="1-生命周期完整"><a class="heading-anchor" href="#1-生命周期完整" aria-label="链接到本节">#</a>1. 生命周期完整</h3>
+<p>从 Intent、市场和可行性一直覆盖到部署、观测和反馈，避免“代码写完即交付完成”。</p>
+<h3 id="2-流程可按风险裁剪"><a class="heading-anchor" href="#2-流程可按风险裁剪" aria-label="链接到本节">#</a>2. 流程可按风险裁剪</h3>
+<p>Scope 决定 Stage，Depth 决定产物深度，Test Strategy 决定测试投入；Bugfix 不必经过完整市场研究。</p>
+<h3 id="3-状态和审计强"><a class="heading-anchor" href="#3-状态和审计强" aria-label="链接到本节">#</a>3. 状态和审计强</h3>
+<p>每个 Intent 有独立状态、恢复点和追加式 Audit Trail，适合长任务、多人、监管和复盘。</p>
+<h3 id="4-traceability-完整"><a class="heading-anchor" href="#4-traceability-完整" aria-label="链接到本节">#</a>4. Traceability 完整</h3>
+<p>Requirements、Stories、Design、Units、Code、Tests 和 Operation Artifacts 有显式依赖，Phase Boundary 能检查孤立或缺失链接。</p>
+<h3 id="5-human-in-the-loop-是一等机制"><a class="heading-anchor" href="#5-human-in-the-loop-是一等机制" aria-label="链接到本节">#</a>5. Human-in-the-loop 是一等机制</h3>
+<p>Gate 不是临时提醒，而是状态机的一部分；AI 不能仅凭自己的输出推进关键阶段。</p>
+<h3 id="6-walking-skeleton-降低架构风险"><a class="heading-anchor" href="#6-walking-skeleton-降低架构风险" aria-label="链接到本节">#</a>6. Walking Skeleton 降低架构风险</h3>
+<p>先证明最小真实端到端链路，再允许剩余 Bolt 自主执行。</p>
+<h3 id="7-适合组织知识治理"><a class="heading-anchor" href="#7-适合组织知识治理" aria-label="链接到本节">#</a>7. 适合组织知识治理</h3>
+<p>Org、Team、Project 和 Phase 规则具有明确作用域，Learning Loop 可将纠正转成下一轮默认行为。</p>
+<h3 id="8-多角色覆盖广"><a class="heading-anchor" href="#8-多角色覆盖广" aria-label="链接到本节">#</a>8. 多角色覆盖广</h3>
+<p>Product、Architecture、Compliance、DevSecOps、Quality、Platform、Operations 等角色减少了只从编码视角优化的风险。</p>
+<h2 id="十七aidlc-的缺点"><a class="heading-anchor" href="#十七aidlc-的缺点" aria-label="链接到本节">#</a>十七、AIDLC 的缺点</h2>
+<h3 id="1-仪式和产物较重"><a class="heading-anchor" href="#1-仪式和产物较重" aria-label="链接到本节">#</a>1. 仪式和产物较重</h3>
+<p>即使有 Scope 裁剪，完整 <code>feature</code> 仍可能运行 32 个 Stage。若团队不认真审查，最终只会生成大量 Markdown。</p>
+<h3 id="2-安装与运行复杂"><a class="heading-anchor" href="#2-安装与运行复杂" aria-label="链接到本节">#</a>2. 安装与运行复杂</h3>
+<p>当前多 Harness 实现涉及 <code>.codex/</code>、<code>.agents/</code>、<code>aidlc/</code>、Hooks、Bun、信任和 Sandbox 配置，学习成本显著高于单纯安装 Skills。</p>
+<h3 id="3-token时间和审查成本高"><a class="heading-anchor" href="#3-token时间和审查成本高" aria-label="链接到本节">#</a>3. Token、时间和审查成本高</h3>
+<p>多 Agent、丰富 Artifact、频繁 Gate 和 Comprehensive Depth 会增加费用，Human Gate 还可能造成审批疲劳。</p>
+<h3 id="4-tdd-和调试纪律不够强硬"><a class="heading-anchor" href="#4-tdd-和调试纪律不够强硬" aria-label="链接到本节">#</a>4. TDD 和调试纪律不够强硬</h3>
+<p>AIDLC 有 Build/Test 和测试策略，但默认不等于“每行生产行为都先看到失败测试”，也没有 Superpowers 同等级的根因调查 Iron Law。</p>
+<h3 id="5-版本表述存在迁移风险"><a class="heading-anchor" href="#5-版本表述存在迁移风险" aria-label="链接到本节">#</a>5. 版本表述存在迁移风险</h3>
+<p>官方最新可见 Release README 仍呈现三阶段 Rules 模型，而在线指南已描述五阶段、32 Stage 的新架构。安装方法、命令和目录不能混用。</p>
+<h3 id="6-官方实现带有-aws-first-色彩"><a class="heading-anchor" href="#6-官方实现带有-aws-first-色彩" aria-label="链接到本节">#</a>6. 官方实现带有 AWS-first 色彩</h3>
+<p>方法论本身可以跨平台，但当前 Agent 和 Operation 设计包含 AWS Platform、Bedrock 和 AWS 工具的默认路径。非 AWS 团队需要调整知识、Agent 和基础设施实践。</p>
+<h3 id="7-自定义需要理解框架模型"><a class="heading-anchor" href="#7-自定义需要理解框架模型" aria-label="链接到本节">#</a>7. 自定义需要理解框架模型</h3>
+<p>修改 Scope、Stage、Artifact Dependency、Sensor 和 Agent 比新增一条普通 Skill 更复杂。</p>
+<h3 id="8-形式正确不等于产品正确"><a class="heading-anchor" href="#8-形式正确不等于产品正确" aria-label="链接到本节">#</a>8. 形式正确不等于产品正确</h3>
+<p>完整状态、审计和文档只能证明流程发生过，不能自动证明需求、架构和代码是正确的。</p>
+<h2 id="十八superpowers-的优点"><a class="heading-anchor" href="#十八superpowers-的优点" aria-label="链接到本节">#</a>十八、Superpowers 的优点</h2>
+<h3 id="1-实现纪律非常明确"><a class="heading-anchor" href="#1-实现纪律非常明确" aria-label="链接到本节">#</a>1. 实现纪律非常明确</h3>
+<p>设计、计划、TDD、调试、Review 和完成验证都有具体流程和禁止项，能直接纠正 Agent 的常见坏习惯。</p>
+<h3 id="2-tdd-强度高"><a class="heading-anchor" href="#2-tdd-强度高" aria-label="链接到本节">#</a>2. TDD 强度高</h3>
+<p>不是“有测试就行”，而是要求看到失败测试，再写最小实现，最后 Refactor。</p>
+<h3 id="3-调试方法成熟"><a class="heading-anchor" href="#3-调试方法成熟" aria-label="链接到本节">#</a>3. 调试方法成熟</h3>
+<p>先复现、读错误、检查变更、采集证据、比较模式、提出单一假设，避免猜测式修复。</p>
+<h3 id="4-双阶段-reviewer"><a class="heading-anchor" href="#4-双阶段-reviewer" aria-label="链接到本节">#</a>4. 双阶段 Reviewer</h3>
+<p>先审规格符合性，再审代码质量，能捕获“代码写得很好但做错需求”这一常见问题。</p>
+<h3 id="5-evidence-over-claims"><a class="heading-anchor" href="#5-evidence-over-claims" aria-label="链接到本节">#</a>5. Evidence over Claims</h3>
+<p><code>verification-before-completion</code> 要求在当前回合运行完整验证命令，读取退出码和失败数后才能声明完成。<a href="https://github.com/obra/superpowers/blob/main/skills/verification-before-completion/SKILL.md" target="_blank" rel="noopener noreferrer">verification-before-completion</a></p>
+<h3 id="6-可组合可局部采用"><a class="heading-anchor" href="#6-可组合可局部采用" aria-label="链接到本节">#</a>6. 可组合、可局部采用</h3>
+<p>只需使用 <code>systematic-debugging</code> 或 <code>verification-before-completion</code>，不必引入完整生命周期。</p>
+<h3 id="7-git-隔离清晰"><a class="heading-anchor" href="#7-git-隔离清晰" aria-label="链接到本节">#</a>7. Git 隔离清晰</h3>
+<p>Worktree 创建、基线测试、分支完成和清理都有专用 Skill。</p>
+<h3 id="8-学习和维护门槛相对较低"><a class="heading-anchor" href="#8-学习和维护门槛相对较低" aria-label="链接到本节">#</a>8. 学习和维护门槛相对较低</h3>
+<p>核心是 Markdown Skills 和少量辅助资源，个人开发者能较快理解并使用。</p>
+<h2 id="十九superpowers-的缺点"><a class="heading-anchor" href="#十九superpowers-的缺点" aria-label="链接到本节">#</a>十九、Superpowers 的缺点</h2>
+<h3 id="1-生命周期覆盖不完整"><a class="heading-anchor" href="#1-生命周期覆盖不完整" aria-label="链接到本节">#</a>1. 生命周期覆盖不完整</h3>
+<p>缺少市场、可行性、组织 Scope、合规矩阵、部署、环境、可观测、事故和反馈闭环。</p>
+<h3 id="2-缺少确定性全局状态机"><a class="heading-anchor" href="#2-缺少确定性全局状态机" aria-label="链接到本节">#</a>2. 缺少确定性全局状态机</h3>
+<p>流程主要依赖 Agent 正确匹配和遵守 Skill。没有与 <code>aidlc-state.md</code> 和 Audit Trail 等价的全局控制面。</p>
+<h3 id="3-缺少多-intent-和-space-模型"><a class="heading-anchor" href="#3-缺少多-intent-和-space-模型" aria-label="链接到本节">#</a>3. 缺少多 Intent 和 Space 模型</h3>
+<p>适合围绕一个设计/计划/分支工作；多个团队、多个并行 Intent 和共享规则需要外部项目管理。</p>
+<h3 id="4-严格-tdd-并非所有工作都经济"><a class="heading-anchor" href="#4-严格-tdd-并非所有工作都经济" aria-label="链接到本节">#</a>4. 严格 TDD 并非所有工作都经济</h3>
+<p>UI 视觉探索、一次性迁移、生成代码、配置和 Throwaway PoC 可能不适合完整 Red-Green-Refactor。虽然 Skill 允许向人请求例外，但默认很严格。</p>
+<h3 id="5-细任务与双审查可能过度"><a class="heading-anchor" href="#5-细任务与双审查可能过度" aria-label="链接到本节">#</a>5. 细任务与双审查可能过度</h3>
+<p>2～5 分钟 Task 配上两次独立 Review，会增加大量 Agent 调用。对于简单、低风险、规格明确的改动，收益可能小于成本。</p>
+<h3 id="6-计划错误可能被高速放大"><a class="heading-anchor" href="#6-计划错误可能被高速放大" aria-label="链接到本节">#</a>6. 计划错误可能被高速放大</h3>
+<p>设计和计划一旦批准，Subagent 流程会持续执行。Reviewer 能发现局部不符，但未必能发现产品方向或架构假设本身错误。</p>
+<h3 id="7-没有内置-learning-loop"><a class="heading-anchor" href="#7-没有内置-learning-loop" aria-label="链接到本节">#</a>7. 没有内置 Learning Loop</h3>
+<p>一次有价值的纠正不会自动经过 Gate 提升为 Team/Project Rule，需要人工维护 <code>AGENTS.md</code> 或 Skills。</p>
+<h3 id="8-nfr-和合规依赖外部补充"><a class="heading-anchor" href="#8-nfr-和合规依赖外部补充" aria-label="链接到本节">#</a>8. NFR 和合规依赖外部补充</h3>
+<p>安全、性能、可靠性、隐私、成本和运维不是默认完整阶段，必须由需求、项目规则或额外 Skills 补充。</p>
+<h2 id="二十优缺点并排总结"><a class="heading-anchor" href="#二十优缺点并排总结" aria-label="链接到本节">#</a>二十、优缺点并排总结</h2>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">项目</th><th style="text-align:left">主要优点</th><th style="text-align:left">主要缺点</th></tr></thead><tbody><tr><td style="text-align:left">AIDLC</td><td style="text-align:left">生命周期完整；Scope 自适应；状态、审计和追踪强；Operation 完整；组织知识与 Learning Loop；Walking Skeleton</td><td style="text-align:left">重；安装复杂；成本高；审批疲劳；TDD/调试不够严格；版本迁移与 AWS-first 默认</td></tr><tr><td style="text-align:left">Superpowers</td><td style="text-align:left">严格 TDD；系统调试；细粒度计划；双 Review；验证证据；Worktree；易于局部采用</td><td style="text-align:left">缺少完整生命周期和 Operation；无统一状态/审计；无多 Intent/Learning Loop；严格流程对小任务可能过度</td></tr></tbody></table></div>
+<h2 id="二十一定性评分"><a class="heading-anchor" href="#二十一定性评分" aria-label="链接到本节">#</a>二十一、定性评分</h2>
+<p>以下为基于官方功能覆盖的选型辅助，不是跑分或客观质量排名。5 表示该项目对此维度提供较完整的一等机制。</p>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">维度</th><th style="text-align:right">AIDLC</th><th style="text-align:right">Superpowers</th><th style="text-align:left">说明</th></tr></thead><tbody><tr><td style="text-align:left">产品发现与立项</td><td style="text-align:right">5</td><td style="text-align:right">2</td><td style="text-align:left">AIDLC 有 Ideation</td></tr><tr><td style="text-align:left">需求与架构</td><td style="text-align:right">5</td><td style="text-align:right">4</td><td style="text-align:left">两者都强，AIDLC 范围更广</td></tr><tr><td style="text-align:left">实施计划</td><td style="text-align:right">4</td><td style="text-align:right">5</td><td style="text-align:left">Superpowers Task 更细</td></tr><tr><td style="text-align:left">严格 TDD</td><td style="text-align:right">3</td><td style="text-align:right">5</td><td style="text-align:left">Superpowers 有 Iron Law</td></tr><tr><td style="text-align:left">系统调试</td><td style="text-align:right">3</td><td style="text-align:right">5</td><td style="text-align:left">Superpowers 四阶段流程</td></tr><tr><td style="text-align:left">代码审查</td><td style="text-align:right">4</td><td style="text-align:right">5</td><td style="text-align:left">Superpowers 每 Task 双审查</td></tr><tr><td style="text-align:left">Human Gate</td><td style="text-align:right">5</td><td style="text-align:right">4</td><td style="text-align:left">AIDLC Gate 更密集和状态化</td></tr><tr><td style="text-align:left">状态恢复</td><td style="text-align:right">5</td><td style="text-align:right">3</td><td style="text-align:left">AIDLC 每 Intent 状态</td></tr><tr><td style="text-align:left">审计追踪</td><td style="text-align:right">5</td><td style="text-align:right">2</td><td style="text-align:left">AIDLC 有统一事件账本</td></tr><tr><td style="text-align:left">多团队治理</td><td style="text-align:right">5</td><td style="text-align:right">2</td><td style="text-align:left">AIDLC 有 Space/规则层</td></tr><tr><td style="text-align:left">部署与运维</td><td style="text-align:right">5</td><td style="text-align:right">1</td><td style="text-align:left">Superpowers 不覆盖完整 Operation</td></tr><tr><td style="text-align:left">低成本快速采用</td><td style="text-align:right">2</td><td style="text-align:right">4</td><td style="text-align:left">Superpowers 更轻</td></tr><tr><td style="text-align:left">小型 Bug/重构</td><td style="text-align:right">3</td><td style="text-align:right">5</td><td style="text-align:left">Superpowers 更聚焦</td></tr><tr><td style="text-align:left">受监管生产系统</td><td style="text-align:right">5</td><td style="text-align:right">3</td><td style="text-align:left">AIDLC 默认治理更强</td></tr><tr><td style="text-align:left">局部技能复用</td><td style="text-align:right">3</td><td style="text-align:right">5</td><td style="text-align:left">Superpowers Skills 可单独触发</td></tr></tbody></table></div>
+<h2 id="二十二场景选型矩阵"><a class="heading-anchor" href="#二十二场景选型矩阵" aria-label="链接到本节">#</a>二十二、场景选型矩阵</h2>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">场景</th><th style="text-align:left">推荐</th><th style="text-align:left">理由</th></tr></thead><tbody><tr><td style="text-align:left">一行 NullPointerException 修复</td><td style="text-align:left">Superpowers Debug + TDD</td><td style="text-align:left">AIDLC 完整 Intent 过重</td></tr><tr><td style="text-align:left">复杂并发 Bug</td><td style="text-align:left">Superpowers 主导</td><td style="text-align:left">根因调查和回归测试最重要</td></tr><tr><td style="text-align:left">跨前后端普通功能</td><td style="text-align:left">AIDLC 轻量 Scope + Superpowers Inner Loop</td><td style="text-align:left">需要端到端切片，也需要代码纪律</td></tr><tr><td style="text-align:left">新建微服务/MVP</td><td style="text-align:left">AIDLC <code>mvp</code></td><td style="text-align:left">需要需求、架构、Unit 和 Skeleton</td></tr><tr><td style="text-align:left">支付/账务系统功能</td><td style="text-align:left">AIDLC 主导 + Superpowers TDD</td><td style="text-align:left">审计、NFR、运维与测试都重要</td></tr><tr><td style="text-align:left">CVE 修复</td><td style="text-align:left">AIDLC <code>security-patch</code> + Superpowers Debug/TDD</td><td style="text-align:left">AIDLC 管审计发布，Superpowers 管根因和回归</td></tr><tr><td style="text-align:left">大型重构</td><td style="text-align:left">Superpowers；需审计时加 AIDLC <code>refactor</code></td><td style="text-align:left">行为保持和细任务更关键</td></tr><tr><td style="text-align:left">UI 视觉探索</td><td style="text-align:left">Vibe/Brainstorming，暂不跑完整 AIDLC</td><td style="text-align:left">先快速收敛体验</td></tr><tr><td style="text-align:left">一次性 PoC</td><td style="text-align:left">AIDLC <code>poc</code> 或 Superpowers Brainstorming</td><td style="text-align:left">取决于是否需要留存决策</td></tr><tr><td style="text-align:left">多团队长期产品</td><td style="text-align:left">AIDLC</td><td style="text-align:left">Space、Intent、规则和 Audit 更合适</td></tr><tr><td style="text-align:left">只想提升 Codex 代码可靠性</td><td style="text-align:left">Superpowers</td><td style="text-align:left">部署简单，直接作用于 Inner Loop</td></tr><tr><td style="text-align:left">需要从需求追踪到生产 SLO</td><td style="text-align:left">AIDLC</td><td style="text-align:left">Superpowers 覆盖不到终点</td></tr></tbody></table></div>
+<h2 id="二十三组合使用的正确架构"><a class="heading-anchor" href="#二十三组合使用的正确架构" aria-label="链接到本节">#</a>二十三、组合使用的正确架构</h2>
+<h3 id="原则只能有一个顶层-conductor"><a class="heading-anchor" href="#原则只能有一个顶层-conductor" aria-label="链接到本节">#</a>原则：只能有一个顶层 Conductor</h3>
+<p>错误组合：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">$aidlc 决定下一 Stage
+    ↕ 同时争夺控制
+Superpowers brainstorming/writing-plans 决定下一 Skill</code></pre></div>
+<p>可能产生：</p>
+<ul><li>两份设计。</li><li>两份计划。</li><li>AIDLC Unit/Bolt 与 Superpowers Task 相互重复。</li><li>两套审批门。</li><li>两套 Worktree。</li><li>两组 Subagent 同时修改相同文件。</li><li>一个系统认为 Stage 完成，另一个认为尚未验证。</li></ul>
+<h3 id="推荐方案-aaidlc-主导"><a class="heading-anchor" href="#推荐方案-aaidlc-主导" aria-label="链接到本节">#</a>推荐方案 A：AIDLC 主导</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">AIDLC
+  ├── Ideation
+  ├── Inception
+  ├── Unit/Bolt Plan
+  └── Construction 3.5
+         ├── Superpowers TDD 纪律
+         ├── Systematic Debugging
+         ├── Spec Review
+         ├── Code Quality Review
+         └── Verification Before Completion
+  └── AIDLC Operation</code></pre></div>
+<p>操作方式：</p>
+<ol><li><code>$aidlc</code> 是唯一决定下一 Stage 的入口。</li><li>不再启动 Superpowers 完整 Brainstorming → Plan 顶层流程。</li><li>将 TDD、Debug、Review、Verify 原则写入 AIDLC Construction Rules。</li><li>如 Harness 支持，可只显式调用对应 Superpowers 单项 Skill。</li><li>Superpowers 产出的测试和 Review 结果作为当前 Bolt 证据。</li><li>Gate 仍由 AIDLC 关闭。</li></ol>
+<p>适合：</p>
+<ul><li>企业和团队项目。</li><li>跨前后端、数据库、云和运维。</li><li>需要审计和恢复。</li></ul>
+<h3 id="推荐方案-bsuperpowers-主导"><a class="heading-anchor" href="#推荐方案-bsuperpowers-主导" aria-label="链接到本节">#</a>推荐方案 B：Superpowers 主导</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">人工/现有产品流程提供已批准需求
+  ↓
+Superpowers Brainstorming
+  ↓
+Design + Plan
+  ↓
+TDD + Subagents + Reviews
+  ↓
+Branch Finish
+  ↓
+团队现有 CI/CD 和运维流程</code></pre></div>
+<p>不启动 AIDLC Engine，只参考其方法补充：</p>
+<ul><li>NFR Checklist。</li><li>Walking Skeleton。</li><li>Operation Definition of Done。</li><li>需求到测试的 Traceability。</li></ul>
+<p>适合：</p>
+<ul><li>个人和小团队。</li><li>现有公司已拥有成熟产品、发布和运维系统。</li><li>只想提升编码 Agent 的工程质量。</li></ul>
+<h3 id="推荐方案-c顺序交接"><a class="heading-anchor" href="#推荐方案-c顺序交接" aria-label="链接到本节">#</a>推荐方案 C：顺序交接</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">AIDLC 完成 Inception
+→ 冻结 Requirements / Design / Units
+→ Superpowers 将一个 Bolt 转成详细 Plan 并实现
+→ 将验证证据回填 AIDLC
+→ AIDLC 继续 Operation</code></pre></div>
+<p>此方案有边界风险：</p>
+<ul><li>AIDLC Construction 状态如何记录外部实现。</li><li>两套 Artifact 如何避免漂移。</li><li>Git 和 Reviewer 结果如何回填。</li></ul>
+<p>它不是两项目官方共同定义的集成协议。采用前必须在团队规则中明确交接文件、完成条件和状态更新方式。</p>
+<h2 id="二十四冲突处理表"><a class="heading-anchor" href="#二十四冲突处理表" aria-label="链接到本节">#</a>二十四、冲突处理表</h2>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">冲突</th><th style="text-align:left">推荐责任方</th></tr></thead><tbody><tr><td style="text-align:left">谁决定下一 Phase/Stage</td><td style="text-align:left">顶层 AIDLC 或外部项目流程，只能一个</td></tr><tr><td style="text-align:left">谁维护需求和架构事实源</td><td style="text-align:left">AIDLC Artifacts 或 Superpowers Design，选一个</td></tr><tr><td style="text-align:left">谁拆 Unit/Bolt</td><td style="text-align:left">AIDLC</td></tr><tr><td style="text-align:left">谁拆代码 Task</td><td style="text-align:left">Superpowers</td></tr><tr><td style="text-align:left">谁创建 Worktree</td><td style="text-align:left">Harness 原生工具或一个指定框架</td></tr><tr><td style="text-align:left">谁安排并行</td><td style="text-align:left">顶层 Conductor</td></tr><tr><td style="text-align:left">谁决定测试范围</td><td style="text-align:left">AIDLC Test Strategy/项目质量策略</td></tr><tr><td style="text-align:left">谁约束 TDD 顺序</td><td style="text-align:left">Superpowers TDD</td></tr><tr><td style="text-align:left">谁处理 Bug 根因</td><td style="text-align:left">Superpowers Systematic Debugging</td></tr><tr><td style="text-align:left">谁确认 Task 规格与代码质量</td><td style="text-align:left">Superpowers Reviewers</td></tr><tr><td style="text-align:left">谁批准 Bolt/Stage</td><td style="text-align:left">AIDLC Gate</td></tr><tr><td style="text-align:left">谁保存组织学习</td><td style="text-align:left">AIDLC Learning Loop 或人工治理系统</td></tr><tr><td style="text-align:left">谁负责部署和 SLO</td><td style="text-align:left">AIDLC Operation/现有平台流程</td></tr><tr><td style="text-align:left">谁宣称完成</td><td style="text-align:left">必须基于最新验证证据，由顶层 Conductor 汇总</td></tr></tbody></table></div>
+<h2 id="二十五java-全栈示例"><a class="heading-anchor" href="#二十五java-全栈示例" aria-label="链接到本节">#</a>二十五、Java 全栈示例</h2>
+<p>任务：</p>
+<blockquote><p>在 Spring Boot + React 的订单系统增加取消与异步退款。</p></blockquote>
+<h3 id="只用-aidlc"><a class="heading-anchor" href="#只用-aidlc" aria-label="链接到本节">#</a>只用 AIDLC</h3>
+<p>优点：</p>
+<ul><li>能覆盖需求、用户故事、架构、事务、Outbox、UI、部署和观测。</li><li>能用 Walking Skeleton 先贯通浏览器 → API → PostgreSQL。</li><li>能记录合规、审批和运维 Artifacts。</li></ul>
+<p>缺点：</p>
+<ul><li>Code Generation 可能一次生成较大变更。</li><li>不保证每条业务规则都先看到失败测试。</li><li>如果 Scope 选择 <code>feature</code>，流程可能较重。</li></ul>
+<h3 id="只用-superpowers"><a class="heading-anchor" href="#只用-superpowers" aria-label="链接到本节">#</a>只用 Superpowers</h3>
+<p>优点：</p>
+<ul><li>会先批准设计和详细计划。</li><li>每条取消规则按 TDD 实现。</li><li>每个 Task 经过规格和质量审查。</li><li>遇到事务或幂等 Bug 会先查根因。</li></ul>
+<p>缺点：</p>
+<ul><li>不会默认建立市场/利益相关者/Operation Artifacts。</li><li>退款积压告警、SLO、Incident Runbook 需要在需求中主动补充。</li><li>跨会话、多团队的统一审计较弱。</li></ul>
+<h3 id="推荐组合"><a class="heading-anchor" href="#推荐组合" aria-label="链接到本节">#</a>推荐组合</h3>
+<p>AIDLC 创建：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">R1 仅未发货订单可取消
+R2 API 必须幂等
+R3 状态更新与 Outbox 同事务
+R4 退款失败不回滚订单取消，但必须可重试
+R5 前端显示最终一致状态
+R6 退款积压必须告警</code></pre></div>
+<p>Unit/Bolt：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">Bolt 1 Walking Skeleton:
+React → Cancellation API → Domain → PostgreSQL/Outbox → UI State
+
+Bolt 2:
+退款消费者、重试和死信
+
+Bolt 3:
+管理端、权限和审计
+
+Bolt 4:
+Dashboard、Alarm、Runbook、Performance</code></pre></div>
+<p>每个 Bolt 内使用 Superpowers 纪律：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">失败 JUnit/MockMvc/Testcontainers/Playwright 测试
+→ 最小实现
+→ Spec Review
+→ Code Quality Review
+→ Maven/npm/E2E 新鲜证据
+→ AIDLC Bolt Gate</code></pre></div>
+<p>这样 AIDLC 保证“做的是完整生产能力”，Superpowers 保证“代码不是凭感觉写出来的”。</p>
+<h2 id="二十六落地建议"><a class="heading-anchor" href="#二十六落地建议" aria-label="链接到本节">#</a>二十六、落地建议</h2>
+<h3 id="个人-java-开发者"><a class="heading-anchor" href="#个人-java-开发者" aria-label="链接到本节">#</a>个人 Java 开发者</h3>
+<p>先安装 Superpowers，重点使用：</p>
+<ul><li>brainstorming。</li><li>writing-plans。</li><li>test-driven-development。</li><li>systematic-debugging。</li><li>verification-before-completion。</li></ul>
+<p>当项目开始跨团队、跨环境、需要多个 Intent 或生产治理时，再评估 AIDLC。</p>
+<h3 id="小型团队"><a class="heading-anchor" href="#小型团队" aria-label="链接到本节">#</a>小型团队</h3>
+<h4 id="典型场景2-人团队每人主要负责一个项目"><a class="heading-anchor" href="#典型场景2-人团队每人主要负责一个项目" aria-label="链接到本节">#</a>典型场景：2 人团队，每人主要负责一个项目</h4>
+<p>假设团队结构如下：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">开发者 A ── 主要负责项目 A
+开发者 B ── 主要负责项目 B
+
+两人：
+  ├── 偶尔协助对方排查问题
+  ├── 在高风险变更和发布前互审
+  ├── 共享 Java/Spring 工程规范
+  └── 不需要每天共同开发同一个功能</code></pre></div>
+<p>这种团队的主要风险不是多人同时修改同一文件，而是：</p>
+<ul><li>每个项目形成只有负责人知道的隐性知识。</li><li>一人请假后，另一人难以接手。</li><li>两个项目逐渐采用不同的构建、测试和发布习惯。</li><li>没有足够人力逐个审批完整 AIDLC 的所有 Gate。</li><li>项目负责人既实现又验收，容易出现自我确认偏差。</li></ul>
+<p>因此，推荐采用：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">Superpowers 作为每个项目的默认开发 Inner Loop
+          +
+轻量共享 Harness 统一团队底线
+          +
+AIDLC 只用于新项目、重大功能和高风险发布</code></pre></div>
+<p>不推荐让两个项目的所有日常任务都运行完整 AIDLC <code>feature</code> Scope。两个人需要分别审批大量 Stage，容易产生仪式负担和形式化通过。</p>
+<h4 id="默认工具选择"><a class="heading-anchor" href="#默认工具选择" aria-label="链接到本节">#</a>默认工具选择</h4>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">工作类型</th><th style="text-align:left">默认方法</th><th style="text-align:left">是否需要另一人参与</th></tr></thead><tbody><tr><td style="text-align:left">日常小功能</td><td style="text-align:left">Superpowers</td><td style="text-align:left">普通变更可异步 PR 审查</td></tr><tr><td style="text-align:left">普通 Bug</td><td style="text-align:left"><code>systematic-debugging</code> + TDD</td><td style="text-align:left">高风险 Bug 需要互审</td></tr><tr><td style="text-align:left">小型重构</td><td style="text-align:left">Superpowers</td><td style="text-align:left">涉及公共接口时互审</td></tr><tr><td style="text-align:left">新项目启动</td><td style="text-align:left">AIDLC <code>mvp</code></td><td style="text-align:left">另一人审 Requirements、Skeleton、Release</td></tr><tr><td style="text-align:left">大型生产功能</td><td style="text-align:left">AIDLC <code>feature</code> 或 Composer 裁剪</td><td style="text-align:left">三个关键 Gate 互审</td></tr><tr><td style="text-align:left">安全补丁</td><td style="text-align:left">AIDLC <code>security-patch</code> + Superpowers Debug/TDD</td><td style="text-align:left">必须互审</td></tr><tr><td style="text-align:left">基础设施/发布变更</td><td style="text-align:left">AIDLC <code>infra</code> 或发布 Checklist</td><td style="text-align:left">必须互审和验证回滚</td></tr><tr><td style="text-align:left">一次性 PoC</td><td style="text-align:left">AIDLC <code>poc</code> 或 Brainstorming</td><td style="text-align:left">通常不需要逐步互审</td></tr></tbody></table></div>
+<h4 id="推荐的职责分配"><a class="heading-anchor" href="#推荐的职责分配" aria-label="链接到本节">#</a>推荐的职责分配</h4>
+<p>每个项目设两个角色，但不要求两人共同完成所有操作：</p>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">角色</th><th style="text-align:left">人员</th><th style="text-align:left">责任</th></tr></thead><tbody><tr><td style="text-align:left">Project Owner</td><td style="text-align:left">项目主要负责人</td><td style="text-align:left">需求澄清、设计、实现、日常 Gate、发布准备</td></tr><tr><td style="text-align:left">Peer Reviewer</td><td style="text-align:left">另一名开发者</td><td style="text-align:left">高风险设计、Walking Skeleton、关键 PR、发布和事故复盘</td></tr></tbody></table></div>
+<p>以项目 A 为例：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">开发者 A：
+  Owner
+  ├── 维护项目 A 的 AGENTS.md
+  ├── 执行 Brainstorming、Plan、TDD、Debug
+  ├── 维护 ADR、测试和发布证据
+  └── 负责日常 AIDLC Gate
+
+开发者 B：
+  Peer Reviewer
+  ├── 审查关键需求和架构
+  ├── 审查 API/Schema/安全/迁移变更
+  ├── 验证 Walking Skeleton
+  └── 在发布前进行独立检查</code></pre></div>
+<p>项目 B 的角色反转。</p>
+<p>这样既保持明确所有权，也避免“项目完全属于一个人”。</p>
+<h4 id="三层知识结构"><a class="heading-anchor" href="#三层知识结构" aria-label="链接到本节">#</a>三层知识结构</h4>
+<p>两人不需要搭建复杂知识平台，但必须区分共享规则和项目事实。</p>
+<h5 id="第一层团队共享底线"><a class="heading-anchor" href="#第一层团队共享底线" aria-label="链接到本节">#</a>第一层：团队共享底线</h5>
+<p>建议放在共享模板仓库，或复制到每个项目的根 <code>AGENTS.md</code>：</p>
+<ul><li>支持的 Java/JDK 和 Spring Boot 版本。</li><li>Maven/Gradle 标准命令。</li><li>测试先行和完成前验证要求。</li><li>Checkstyle、SpotBugs、Sonar 或其他质量门。</li><li>API、异常、日志和 Trace ID 规范。</li><li>密钥、权限、依赖漏洞和数据脱敏规则。</li><li>PR 与发布最低检查项。</li><li>禁止在无验证证据时宣称完成。</li></ul>
+<h5 id="第二层项目专属事实"><a class="heading-anchor" href="#第二层项目专属事实" aria-label="链接到本节">#</a>第二层：项目专属事实</h5>
+<p>保存在各项目自己的 <code>AGENTS.md</code>、ADR 或 AIDLC Knowledge：</p>
+<ul><li>业务领域词汇。</li><li>模块和包边界。</li><li>数据库与消息 Schema。</li><li>本地运行方式。</li><li>特定测试数据。</li><li>部署环境与回滚方式。</li><li>项目已知限制。</li></ul>
+<h5 id="第三层一次任务的短期上下文"><a class="heading-anchor" href="#第三层一次任务的短期上下文" aria-label="链接到本节">#</a>第三层：一次任务的短期上下文</h5>
+<p>保存在：</p>
+<ul><li>Issue。</li><li>Superpowers Design/Plan。</li><li>AIDLC Intent Artifacts。</li><li>PR 描述和测试证据。</li></ul>
+<p>不要把一次任务的全部讨论永久写进团队级 <code>AGENTS.md</code>。</p>
+<h4 id="每个项目建议的最小目录"><a class="heading-anchor" href="#每个项目建议的最小目录" aria-label="链接到本节">#</a>每个项目建议的最小目录</h4>
+<p>不使用完整 AIDLC 时：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">project-a/
+├── AGENTS.md
+├── docs/
+│   ├── adr/
+│   └── superpowers/
+│       ├── specs/
+│       └── plans/
+├── src/
+├── pom.xml
+└── .github/workflows/ 或其他 CI 配置</code></pre></div>
+<p>选择性启用 AIDLC 后：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">project-a/
+├── AGENTS.md
+├── .agents/skills/
+├── .codex/
+├── aidlc/
+│   └── spaces/default/
+├── docs/
+│   ├── adr/
+│   └── superpowers/
+└── ...</code></pre></div>
+<p>必须为每个项目分别保存领域知识、命令和部署约束，不要让项目 A 读取项目 B 的专属规则。</p>
+<h4 id="日常工作流"><a class="heading-anchor" href="#日常工作流" aria-label="链接到本节">#</a>日常工作流</h4>
+<h5 id="场景-1一到两小时的小功能"><a class="heading-anchor" href="#场景-1一到两小时的小功能" aria-label="链接到本节">#</a>场景 1：一到两小时的小功能</h5>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">Owner 明确验收条件
+→ Superpowers Brainstorming（必要时简化）
+→ 写失败测试
+→ 最小实现
+→ 运行相关测试
+→ Agent Spec/Quality Review
+→ 运行完整项目验证
+→ 创建 PR
+→ Peer 异步检查关键 Diff</code></pre></div>
+<p>不需要建立完整 AIDLC Intent，除非涉及高风险边界。</p>
+<h5 id="场景-2普通-bug"><a class="heading-anchor" href="#场景-2普通-bug" aria-label="链接到本节">#</a>场景 2：普通 Bug</h5>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">稳定复现
+→ Systematic Debugging 查根因
+→ 写能复现 Bug 的失败测试
+→ 最小修复
+→ 相关回归 + 全量验证
+→ 在 PR 中记录根因、影响和证据</code></pre></div>
+<p>出现以下情况时，另一人必须参与：</p>
+<ul><li>生产事故。</li><li>数据错误或丢失。</li><li>权限和安全问题。</li><li>并发、事务或幂等问题。</li><li>修复需要绕开原架构。</li><li>已经连续两次修复失败。</li></ul>
+<h5 id="场景-3持续一周以上的功能"><a class="heading-anchor" href="#场景-3持续一周以上的功能" aria-label="链接到本节">#</a>场景 3：持续一周以上的功能</h5>
+<p>推荐使用轻量 AIDLC：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">$aidlc compose &quot;为当前功能保留需求分析、应用设计、
+Unit/Bolt 规划、代码生成、构建测试和必要的 Operation；
+跳过已由业务确认的市场研究和团队组建。&quot;</code></pre></div>
+<p>由 Owner 处理日常 Stage，Peer 只参加三个关键 Gate：</p>
+<ol><li><strong>Requirements/Application Design Gate</strong>：确认没有方向错误。</li><li><strong>Walking Skeleton Gate</strong>：确认端到端架构真实可行。</li><li><strong>Release/Operation Gate</strong>：确认发布、回滚和观测准备完成。</li></ol>
+<h5 id="场景-4新项目"><a class="heading-anchor" href="#场景-4新项目" aria-label="链接到本节">#</a>场景 4：新项目</h5>
+<p>使用 AIDLC <code>mvp</code>，但两人不必同时参加每个问题：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">Owner：
+  驱动 Intent、需求、设计和实现
+
+Peer：
+  审核 API/数据边界
+  验证 Skeleton
+  检查运行手册和接手资料</code></pre></div>
+<p>新项目完成 Walking Skeleton 后，应安排一次由 Peer 独立完成的“接手演练”：</p>
+<ol><li>只阅读仓库文档。</li><li>从零启动项目。</li><li>运行测试。</li><li>定位一个核心调用链。</li><li>完成一次非生产环境部署或 Smoke Test。</li></ol>
+<p>如果 Peer 无法完成，说明项目知识仍然只存在 Owner 脑中。</p>
+<h4 id="哪些变更必须人工互审"><a class="heading-anchor" href="#哪些变更必须人工互审" aria-label="链接到本节">#</a>哪些变更必须人工互审</h4>
+<p>不必规定所有 PR 都进行长时间同步评审。以下风险触发器更适合 2 人团队：</p>
+<ul><li>对外 API 或事件 Schema。</li><li>数据库迁移、数据修复脚本。</li><li>Spring Security、认证、授权和密钥。</li><li>金额、账务、库存和幂等。</li><li>跨服务事务或消息一致性。</li><li>公共依赖和版本升级。</li><li>CI/CD、生产配置和基础设施。</li><li>删除、批量更新或不可逆操作。</li><li>性能关键路径。</li><li>Agent 生成的大范围重构。</li></ul>
+<p>低风险文档、测试补充和局部实现可以由 Owner + Agent Reviewer 完成，再由 Peer 抽查。</p>
+<h4 id="推荐的人类检查点"><a class="heading-anchor" href="#推荐的人类检查点" aria-label="链接到本节">#</a>推荐的人类检查点</h4>
+<p>为了避免另一人被频繁打断，可采用异步三检查点：</p>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">检查点</th><th style="text-align:left">Peer 重点检查</th><th style="text-align:left">目标时间</th></tr></thead><tbody><tr><td style="text-align:left">设计前</td><td style="text-align:left">范围、接口、数据、风险和非目标</td><td style="text-align:left">15～30 分钟</td></tr><tr><td style="text-align:left">Skeleton 后</td><td style="text-align:left">真实链路、测试、错误处理和可观测性</td><td style="text-align:left">20～40 分钟</td></tr><tr><td style="text-align:left">发布前</td><td style="text-align:left">Diff、迁移、回滚、告警和验证证据</td><td style="text-align:left">20～40 分钟</td></tr></tbody></table></div>
+<p>时间只是团队排期参考，不是硬性限制。关键是减少无价值的逐 Stage 同步等待，同时保留独立判断。</p>
+<h4 id="pr交接模板"><a class="heading-anchor" href="#pr交接模板" aria-label="链接到本节">#</a>PR/交接模板</h4>
+<p>每次需要另一人审查时，Owner 应提供：</p>
+<div class="code-block"><div class="code-toolbar"><span>markdown</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-markdown">## 目标
+
+## 不在范围内
+
+## 关键设计决定
+
+## 风险
+
+## 修改范围
+
+## 数据库/API/事件兼容性
+
+## 验证证据
+
+- 后端测试：
+- 前端测试：
+- E2E：
+- 手工验证：
+
+## 发布与回滚
+
+## 希望 Reviewer 重点检查</code></pre></div>
+<p>这样 Reviewer 不需要重新阅读整个 Agent 会话。</p>
+<h4 id="建议的协作节奏"><a class="heading-anchor" href="#建议的协作节奏" aria-label="链接到本节">#</a>建议的协作节奏</h4>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">周期</th><th style="text-align:left">活动</th></tr></thead><tbody><tr><td style="text-align:left">每个任务</td><td style="text-align:left">Owner 执行 Superpowers Inner Loop</td></tr><tr><td style="text-align:left">高风险 PR</td><td style="text-align:left">Peer 异步互审</td></tr><tr><td style="text-align:left">每周一次</td><td style="text-align:left">30 分钟交换两个项目的进展、风险和设计变化</td></tr><tr><td style="text-align:left">每个重大版本</td><td style="text-align:left">Peer 做一次运行/发布/回滚验证</td></tr><tr><td style="text-align:left">每月一次</td><td style="text-align:left">清理共享规则、依赖版本和重复文档</td></tr><tr><td style="text-align:left">每季度一次</td><td style="text-align:left">交换维护一个小任务，检验项目可接手性</td></tr></tbody></table></div>
+<h4 id="什么时候升级为完整-aidlc"><a class="heading-anchor" href="#什么时候升级为完整-aidlc" aria-label="链接到本节">#</a>什么时候升级为完整 AIDLC</h4>
+<p>满足多个条件时，再从“Superpowers + 轻量文档”升级：</p>
+<ul><li>一个功能持续两周以上。</li><li>一个项目同时存在多个独立 Intent。</li><li>两人开始共同修改同一项目。</li><li>接入多个外部系统。</li><li>出现合规、审计或正式审批要求。</li><li>需求、设计、测试和发布信息开始分散。</li><li>项目负责人休假时无法接手。</li><li>发布需要复杂迁移、灰度、回滚和 SLO。</li><li>Agent 多次因上下文丢失重复分析。</li></ul>
+<h4 id="不建议的做法"><a class="heading-anchor" href="#不建议的做法" aria-label="链接到本节">#</a>不建议的做法</h4>
+<ul><li>两个项目的每个小任务都运行 AIDLC <code>feature</code>。</li><li>要求另一人参加所有 Stage Gate。</li><li>用 Agent Review 完全取代人类高风险审查。</li><li>两个项目共用一份包含业务细节的全局 <code>AGENTS.md</code>。</li><li>同时让 AIDLC 和 Superpowers 创建 Worktree。</li><li>把聊天记录当作项目文档。</li><li>只有 Owner 能运行、测试或发布自己的项目。</li></ul>
+<h4 id="2-人团队最终推荐"><a class="heading-anchor" href="#2-人团队最终推荐" aria-label="链接到本节">#</a>2 人团队最终推荐</h4>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">默认：
+  Superpowers
+  ├── Brainstorming
+  ├── Plan
+  ├── TDD
+  ├── Systematic Debugging
+  ├── Agent Review
+  └── Fresh Verification
+
+共享：
+  轻量 AGENTS.md 模板
+  + CI 质量门
+  + ADR
+  + PR/发布 Checklist
+
+选择性：
+  AIDLC
+  ├── 新项目用 mvp
+  ├── 大功能用 compose/feature
+  ├── 安全问题用 security-patch
+  └── 基础设施用 infra
+
+人类协作：
+  各自拥有一个项目
+  + 高风险变更互审
+  + Requirements/Skeleton/Release 三检查点
+  + 定期交叉接手演练</code></pre></div>
+<p>这能在不增加过多流程成本的情况下，兼顾个人效率、代码质量和项目可接手性。</p>
+<h3 id="中大型团队"><a class="heading-anchor" href="#中大型团队" aria-label="链接到本节">#</a>中大型团队</h3>
+<p>建议：</p>
+<ol><li>AIDLC 管 Intent、Scope、Requirements、Architecture、Units、Operation。</li><li>把 Superpowers 的 TDD/Debug/Review/Verify 写入 Construction Rules。</li><li>统一 Artifact 和 Git 事实源。</li><li>设定 Gate Owner，避免所有人都以为别人会审。</li><li>测量每类 Scope 的平均 Token、等待时间和返工率。</li><li>每月治理 Learning Rules。</li></ol>
+<h3 id="受监管团队"><a class="heading-anchor" href="#受监管团队" aria-label="链接到本节">#</a>受监管团队</h3>
+<p>建议以 AIDLC 为主，但不能只依赖其生成文档：</p>
+<ul><li>人类签署风险与合规决定。</li><li>测试证据进入可审计 CI。</li><li>生产权限与职责分离。</li><li>Artifact 与真实代码/部署保持校验。</li><li>Superpowers 的新鲜验证原则用于每次完成声明。</li></ul>
+<h2 id="二十七最终决策树"><a class="heading-anchor" href="#二十七最终决策树" aria-label="链接到本节">#</a>二十七、最终决策树</h2>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">是否需要产品发现、多个利益相关者或完整生产运维？
+├── 是 → AIDLC
+│       └── 是否要求严格 TDD/调试/细粒度审查？
+│           ├── 是 → AIDLC 主导 + Superpowers Inner Loop
+│           └── 否 → AIDLC
+│
+└── 否 → 是否主要是代码实现、Bug 或重构？
+        ├── 是 → Superpowers
+        └── 否 → 是否只是快速探索/Throwaway PoC？
+                ├── 是 → Vibe/Brainstorming 或 AIDLC poc
+                └── 否 → 先明确 Intent，再选择</code></pre></div>
+<h2 id="延伸阅读"><a class="heading-anchor" href="#延伸阅读" aria-label="链接到本节">#</a>延伸阅读</h2>
+<ul><li><a href="2026-07-24-AI开发工作流选型与小团队沉淀指南.html">AI 开发工作流选型与小团队沉淀指南</a> — 对比 BMAD、GSD、Spec Kit、OpenSpec、Kiro Specs 和 Ralph，并给出 2 人团队的风险分级落地方案。</li></ul>
+<h2 id="参考资料"><a class="heading-anchor" href="#参考资料" aria-label="链接到本节">#</a>参考资料</h2>
+<ul><li><a href="https://aws.amazon.com/blogs/devops/ai-driven-development-life-cycle/" target="_blank" rel="noopener noreferrer">AWS：AI-Driven Development Life Cycle</a> — AI 执行、人类监督、三阶段与 Bolt 方法论，访问日期：2026-07-24。</li><li><a href="https://aws.amazon.com/blogs/devops/open-sourcing-adaptive-workflows-for-ai-driven-development-life-cycle-ai-dlc/" target="_blank" rel="noopener noreferrer">AWS：Open-Sourcing Adaptive Workflows for AI-DLC</a> — 自适应流程、深度和 Human-in-the-loop，访问日期：2026-07-24。</li><li><a href="https://github.com/awslabs/aidlc-workflows" target="_blank" rel="noopener noreferrer">AIDLC 官方仓库</a> — 发布包、Rules 实现和风险提醒，访问日期：2026-07-24。</li><li><a href="https://awslabs.github.io/aidlc-workflows/guide/00-introduction/" target="_blank" rel="noopener noreferrer">AIDLC Introduction</a> — 五阶段、32 Stage、Agent、Scope 和 Audit 概览，访问日期：2026-07-24。</li><li><a href="https://awslabs.github.io/aidlc-workflows/guide/04-phases-and-stages/" target="_blank" rel="noopener noreferrer">AIDLC Phases and Stages</a> — 生命周期、Bolt、Walking Skeleton 和执行拓扑，访问日期：2026-07-24。</li><li><a href="https://awslabs.github.io/aidlc-workflows/guide/05-scopes-and-depth/" target="_blank" rel="noopener noreferrer">AIDLC Scopes, Depth, and Test Strategy</a> — 自适应路由和测试投入，访问日期：2026-07-24。</li><li><a href="https://awslabs.github.io/aidlc-workflows/guide/10-state-and-audit/" target="_blank" rel="noopener noreferrer">AIDLC State and Audit</a> — Intent 状态和审计机制，访问日期：2026-07-24。</li><li><a href="https://awslabs.github.io/aidlc-workflows/guide/09-rules-and-the-learning-loop/" target="_blank" rel="noopener noreferrer">AIDLC Rules and Learning Loop</a> — 多层规则和学习提升机制，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/README.md" target="_blank" rel="noopener noreferrer">Superpowers README</a> — 定位、基础工作流、Skills 和哲学，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/skills/brainstorming/SKILL.md" target="_blank" rel="noopener noreferrer">Superpowers Brainstorming</a> — 设计澄清与批准，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/skills/writing-plans/SKILL.md" target="_blank" rel="noopener noreferrer">Superpowers Writing Plans</a> — 文件级细粒度计划与 TDD Tasks，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/skills/test-driven-development/SKILL.md" target="_blank" rel="noopener noreferrer">Superpowers TDD</a> — Red-Green-Refactor 和失败测试要求，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/skills/systematic-debugging/SKILL.md" target="_blank" rel="noopener noreferrer">Superpowers Systematic Debugging</a> — 四阶段根因调试，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/skills/subagent-driven-development/SKILL.md" target="_blank" rel="noopener noreferrer">Superpowers Subagent-Driven Development</a> — Fresh Subagent 和双阶段 Review，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/skills/requesting-code-review/SKILL.md" target="_blank" rel="noopener noreferrer">Superpowers Requesting Code Review</a> — 任务、重大功能和合并前审查，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/skills/verification-before-completion/SKILL.md" target="_blank" rel="noopener noreferrer">Superpowers Verification Before Completion</a> — 新鲜证据优先于完成声明，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/skills/using-git-worktrees/SKILL.md" target="_blank" rel="noopener noreferrer">Superpowers Using Git Worktrees</a> — Harness 原生隔离、Worktree 和基线验证，访问日期：2026-07-24。</li></ul>
+    </article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/codex/2026-07-24-AIDLC与Superpowers差异分析.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="2026-07-24-AIDLC详细介绍.html"><small>上一篇</small><span>AIDLC 详细介绍：从 AI 辅助编码到可审计的软件交付生命周期</span></a>
+        <a class="pager-link next" href="2026-07-24-Codex全栈开发最佳实践.html"><small>下一篇</small><span>Codex 全栈开发最佳实践：Vibe Coding、Harness 与 Loop</span></a>
+      </nav>
+    </footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-3"><a href="#一句话区别">一句话区别</a></li><li class="toc-level-3"><a href="#选型结论">选型结论</a></li><li class="toc-level-2"><a href="#一为什么不能简单问谁更好">一、为什么不能简单问“谁更好”</a></li><li class="toc-level-2"><a href="#二定位与目标差异">二、定位与目标差异</a></li><li class="toc-level-3"><a href="#aidlc-的目标">AIDLC 的目标</a></li><li class="toc-level-3"><a href="#superpowers-的目标">Superpowers 的目标</a></li><li class="toc-level-2"><a href="#三总体工作流对照">三、总体工作流对照</a></li><li class="toc-level-3"><a href="#aidlc">AIDLC</a></li><li class="toc-level-3"><a href="#superpowers">Superpowers</a></li><li class="toc-level-2"><a href="#四核心差异总表">四、核心差异总表</a></li><li class="toc-level-2"><a href="#五控制流确定性引擎与-skill-纪律">五、控制流：确定性引擎与 Skill 纪律</a></li><li class="toc-level-3"><a href="#aidlc引擎决定下一步是什么">AIDLC：引擎决定“下一步是什么”</a></li><li class="toc-level-3"><a href="#superpowersskill-决定此时应遵守什么纪律">Superpowers：Skill 决定“此时应遵守什么纪律”</a></li><li class="toc-level-2"><a href="#六需求与设计广度和深度不同">六、需求与设计：广度和深度不同</a></li><li class="toc-level-3"><a href="#aidlc-的设计面更宽">AIDLC 的设计面更宽</a></li><li class="toc-level-3"><a href="#superpowers-的设计更靠近实现">Superpowers 的设计更靠近实现</a></li><li class="toc-level-3"><a href="#关键判断">关键判断</a></li><li class="toc-level-2"><a href="#七工作分解unitbolt-与-task">七、工作分解：Unit/Bolt 与 Task</a></li><li class="toc-level-3"><a href="#aidlc-2">AIDLC</a></li><li class="toc-level-3"><a href="#superpowers-2">Superpowers</a></li><li class="toc-level-3"><a href="#映射关系">映射关系</a></li><li class="toc-level-2"><a href="#八测试策略覆盖规划与执行纪律">八、测试策略：覆盖规划与执行纪律</a></li><li class="toc-level-3"><a href="#aidlc-的测试视角">AIDLC 的测试视角</a></li><li class="toc-level-3"><a href="#superpowers-的测试视角">Superpowers 的测试视角</a></li><li class="toc-level-3"><a href="#谁更强">谁更强</a></li><li class="toc-level-3"><a href="#潜在冲突">潜在冲突</a></li><li class="toc-level-2"><a href="#九调试能力">九、调试能力</a></li><li class="toc-level-3"><a href="#aidlc-3">AIDLC</a></li><li class="toc-level-3"><a href="#superpowers-3">Superpowers</a></li><li class="toc-level-3"><a href="#结论">结论</a></li><li class="toc-level-2"><a href="#十代码审查差异">十、代码审查差异</a></li><li class="toc-level-3"><a href="#aidlc-审查">AIDLC 审查</a></li><li class="toc-level-3"><a href="#superpowers-审查">Superpowers 审查</a></li><li class="toc-level-3"><a href="#结论-2">结论</a></li><li class="toc-level-2"><a href="#十一human-gate-与自主性">十一、Human Gate 与自主性</a></li><li class="toc-level-3"><a href="#aidlc-的放权曲线">AIDLC 的放权曲线</a></li><li class="toc-level-3"><a href="#superpowers-的放权曲线">Superpowers 的放权曲线</a></li><li class="toc-level-3"><a href="#风险差异">风险差异</a></li><li class="toc-level-2"><a href="#十二状态恢复和审计">十二、状态、恢复和审计</a></li><li class="toc-level-3"><a href="#aidlc-4">AIDLC</a></li><li class="toc-level-3"><a href="#superpowers-4">Superpowers</a></li><li class="toc-level-3"><a href="#结论-3">结论</a></li><li class="toc-level-2"><a href="#十三团队知识与学习机制">十三、团队知识与学习机制</a></li><li class="toc-level-3"><a href="#aidlc-5">AIDLC</a></li><li class="toc-level-3"><a href="#superpowers-5">Superpowers</a></li><li class="toc-level-2"><a href="#十四gitworktree-与并行">十四、Git、Worktree 与并行</a></li><li class="toc-level-3"><a href="#aidlc-6">AIDLC</a></li><li class="toc-level-3"><a href="#superpowers-6">Superpowers</a></li><li class="toc-level-3"><a href="#结论-4">结论</a></li><li class="toc-level-2"><a href="#十五operation-与生产治理">十五、Operation 与生产治理</a></li><li class="toc-level-2"><a href="#十六aidlc-的优点">十六、AIDLC 的优点</a></li><li class="toc-level-3"><a href="#1-生命周期完整">1. 生命周期完整</a></li><li class="toc-level-3"><a href="#2-流程可按风险裁剪">2. 流程可按风险裁剪</a></li><li class="toc-level-3"><a href="#3-状态和审计强">3. 状态和审计强</a></li><li class="toc-level-3"><a href="#4-traceability-完整">4. Traceability 完整</a></li><li class="toc-level-3"><a href="#5-human-in-the-loop-是一等机制">5. Human-in-the-loop 是一等机制</a></li><li class="toc-level-3"><a href="#6-walking-skeleton-降低架构风险">6. Walking Skeleton 降低架构风险</a></li><li class="toc-level-3"><a href="#7-适合组织知识治理">7. 适合组织知识治理</a></li><li class="toc-level-3"><a href="#8-多角色覆盖广">8. 多角色覆盖广</a></li><li class="toc-level-2"><a href="#十七aidlc-的缺点">十七、AIDLC 的缺点</a></li><li class="toc-level-3"><a href="#1-仪式和产物较重">1. 仪式和产物较重</a></li><li class="toc-level-3"><a href="#2-安装与运行复杂">2. 安装与运行复杂</a></li><li class="toc-level-3"><a href="#3-token时间和审查成本高">3. Token、时间和审查成本高</a></li><li class="toc-level-3"><a href="#4-tdd-和调试纪律不够强硬">4. TDD 和调试纪律不够强硬</a></li><li class="toc-level-3"><a href="#5-版本表述存在迁移风险">5. 版本表述存在迁移风险</a></li><li class="toc-level-3"><a href="#6-官方实现带有-aws-first-色彩">6. 官方实现带有 AWS-first 色彩</a></li><li class="toc-level-3"><a href="#7-自定义需要理解框架模型">7. 自定义需要理解框架模型</a></li><li class="toc-level-3"><a href="#8-形式正确不等于产品正确">8. 形式正确不等于产品正确</a></li><li class="toc-level-2"><a href="#十八superpowers-的优点">十八、Superpowers 的优点</a></li><li class="toc-level-3"><a href="#1-实现纪律非常明确">1. 实现纪律非常明确</a></li><li class="toc-level-3"><a href="#2-tdd-强度高">2. TDD 强度高</a></li><li class="toc-level-3"><a href="#3-调试方法成熟">3. 调试方法成熟</a></li><li class="toc-level-3"><a href="#4-双阶段-reviewer">4. 双阶段 Reviewer</a></li><li class="toc-level-3"><a href="#5-evidence-over-claims">5. Evidence over Claims</a></li><li class="toc-level-3"><a href="#6-可组合可局部采用">6. 可组合、可局部采用</a></li><li class="toc-level-3"><a href="#7-git-隔离清晰">7. Git 隔离清晰</a></li><li class="toc-level-3"><a href="#8-学习和维护门槛相对较低">8. 学习和维护门槛相对较低</a></li><li class="toc-level-2"><a href="#十九superpowers-的缺点">十九、Superpowers 的缺点</a></li><li class="toc-level-3"><a href="#1-生命周期覆盖不完整">1. 生命周期覆盖不完整</a></li><li class="toc-level-3"><a href="#2-缺少确定性全局状态机">2. 缺少确定性全局状态机</a></li><li class="toc-level-3"><a href="#3-缺少多-intent-和-space-模型">3. 缺少多 Intent 和 Space 模型</a></li><li class="toc-level-3"><a href="#4-严格-tdd-并非所有工作都经济">4. 严格 TDD 并非所有工作都经济</a></li><li class="toc-level-3"><a href="#5-细任务与双审查可能过度">5. 细任务与双审查可能过度</a></li><li class="toc-level-3"><a href="#6-计划错误可能被高速放大">6. 计划错误可能被高速放大</a></li><li class="toc-level-3"><a href="#7-没有内置-learning-loop">7. 没有内置 Learning Loop</a></li><li class="toc-level-3"><a href="#8-nfr-和合规依赖外部补充">8. NFR 和合规依赖外部补充</a></li><li class="toc-level-2"><a href="#二十优缺点并排总结">二十、优缺点并排总结</a></li><li class="toc-level-2"><a href="#二十一定性评分">二十一、定性评分</a></li><li class="toc-level-2"><a href="#二十二场景选型矩阵">二十二、场景选型矩阵</a></li><li class="toc-level-2"><a href="#二十三组合使用的正确架构">二十三、组合使用的正确架构</a></li><li class="toc-level-3"><a href="#原则只能有一个顶层-conductor">原则：只能有一个顶层 Conductor</a></li><li class="toc-level-3"><a href="#推荐方案-aaidlc-主导">推荐方案 A：AIDLC 主导</a></li><li class="toc-level-3"><a href="#推荐方案-bsuperpowers-主导">推荐方案 B：Superpowers 主导</a></li><li class="toc-level-3"><a href="#推荐方案-c顺序交接">推荐方案 C：顺序交接</a></li><li class="toc-level-2"><a href="#二十四冲突处理表">二十四、冲突处理表</a></li><li class="toc-level-2"><a href="#二十五java-全栈示例">二十五、Java 全栈示例</a></li><li class="toc-level-3"><a href="#只用-aidlc">只用 AIDLC</a></li><li class="toc-level-3"><a href="#只用-superpowers">只用 Superpowers</a></li><li class="toc-level-3"><a href="#推荐组合">推荐组合</a></li><li class="toc-level-2"><a href="#二十六落地建议">二十六、落地建议</a></li><li class="toc-level-3"><a href="#个人-java-开发者">个人 Java 开发者</a></li><li class="toc-level-3"><a href="#小型团队">小型团队</a></li><li class="toc-level-4"><a href="#典型场景2-人团队每人主要负责一个项目">典型场景：2 人团队，每人主要负责一个项目</a></li><li class="toc-level-4"><a href="#默认工具选择">默认工具选择</a></li><li class="toc-level-4"><a href="#推荐的职责分配">推荐的职责分配</a></li><li class="toc-level-4"><a href="#三层知识结构">三层知识结构</a></li><li class="toc-level-4"><a href="#每个项目建议的最小目录">每个项目建议的最小目录</a></li><li class="toc-level-4"><a href="#日常工作流">日常工作流</a></li><li class="toc-level-4"><a href="#哪些变更必须人工互审">哪些变更必须人工互审</a></li><li class="toc-level-4"><a href="#推荐的人类检查点">推荐的人类检查点</a></li><li class="toc-level-4"><a href="#pr交接模板">PR/交接模板</a></li><li class="toc-level-4"><a href="#建议的协作节奏">建议的协作节奏</a></li><li class="toc-level-4"><a href="#什么时候升级为完整-aidlc">什么时候升级为完整 AIDLC</a></li><li class="toc-level-4"><a href="#不建议的做法">不建议的做法</a></li><li class="toc-level-4"><a href="#2-人团队最终推荐">2 人团队最终推荐</a></li><li class="toc-level-3"><a href="#中大型团队">中大型团队</a></li><li class="toc-level-3"><a href="#受监管团队">受监管团队</a></li><li class="toc-level-2"><a href="#二十七最终决策树">二十七、最终决策树</a></li><li class="toc-level-2"><a href="#延伸阅读">延伸阅读</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+<div class="sidebar-scrim"></div>
+</body>
+</html>

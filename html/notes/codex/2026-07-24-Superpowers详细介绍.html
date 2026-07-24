@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Superpowers 不是一个更强的模型，也不是单纯的提示词合集。它是一套安装到编码智能体中的“可组合 Skills + 强制开发流程”，目标是让智能体遵守一套可复现的软件工程方法： 项目将自己定义为“面向编码智能体的完整软件开发方法论”。官方插件描述覆盖规划、TDD、调试、并行执行、代码审查和分">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="Codex 与 AI 工程">
+  <meta name="study-date" content="2026-07-24">
+  <title>Superpowers 详细介绍：Codex 的技能化软件开发方法｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a href="../../index.html">全部文档</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <label class="sidebar-search">
+      <span class="sr-only">筛选文档</span>
+      <input type="search" placeholder="筛选文档…" data-sidebar-search>
+    </label>
+    <nav class="doc-nav" aria-label="文档列表">
+      <a class="doc-nav-item" href="../../AGENTS.html"><span>Java 全栈 AI 学习助手</span><small>项目指南</small></a><a class="doc-nav-item" href="2026-07-24-AI开发工作流选型与小团队沉淀指南.html"><span>AI 开发工作流选型与小团队沉淀指南</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC详细介绍.html"><span>AIDLC 详细介绍：从 AI 辅助编码到可审计的软件交付生命周期</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC与Superpowers差异分析.html"><span>AIDLC 与 Superpowers 差异分析：生命周期治理与工程 Inner Loop</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-Codex全栈开发最佳实践.html"><span>Codex 全栈开发最佳实践：Vibe Coding、Harness 与 Loop</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item is-active" href="2026-07-24-Superpowers详细介绍.html"><span>Superpowers 详细介绍：Codex 的技能化软件开发方法</span><small>Codex 与 AI 工程</small></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta">
+      <a href="../../index.html">知识库首页</a>
+      <span>·</span>
+      <span>Codex 与 AI 工程</span>
+      <span>·</span><time>2026-07-24</time>
+    </div>
+    <article class="markdown-body">
+      <h1 id="superpowers-详细介绍codex-的技能化软件开发方法"><a class="heading-anchor" href="#superpowers-详细介绍codex-的技能化软件开发方法" aria-label="链接到本节">#</a>Superpowers 详细介绍：Codex 的技能化软件开发方法</h1>
+<blockquote><p>整理日期：2026-07-24<br> 适用对象：使用 Codex CLI 或 Codex App 的 Java 全栈开发者<br> 项目：<code>obra/superpowers</code><br> 当前资料基线：官方仓库 <code>main</code> 分支；最新可见发布说明为 v6.2.0（2026-07-23）</p>
+<p>相关笔记：<a href="2026-07-24-Codex全栈开发最佳实践.html">Codex 全栈开发最佳实践</a> · <a href="2026-07-24-AIDLC详细介绍.html">AIDLC 详细介绍</a> · <a href="2026-07-24-AIDLC与Superpowers差异分析.html">AIDLC 与 Superpowers 差异分析</a></p></blockquote>
+<h2 id="核心结论"><a class="heading-anchor" href="#核心结论" aria-label="链接到本节">#</a>核心结论</h2>
+<p>Superpowers 不是一个更强的模型，也不是单纯的提示词合集。它是一套安装到编码智能体中的“可组合 Skills + 强制开发流程”，目标是让智能体遵守一套可复现的软件工程方法：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">先理解需求
+→ 形成并批准设计
+→ 编写可执行计划
+→ 在隔离分支中按 TDD 实现
+→ 每个任务独立审查
+→ 系统化调试
+→ 用新鲜证据验证
+→ 决定合并、PR 或保留分支</code></pre></div>
+<p>项目将自己定义为“面向编码智能体的完整软件开发方法论”。官方插件描述覆盖规划、TDD、调试、并行执行、代码审查和分支收尾。<a href="https://github.com/obra/superpowers/blob/main/README.md" target="_blank" rel="noopener noreferrer">Superpowers README</a></p>
+<p>它最值得学习的地方不是某一个 Skill，而是把软件工程中的关键闸门强制串联：</p>
+<ul><li>未批准设计，不进入实现。</li><li>没有失败测试，不写生产代码。</li><li>未调查根因，不提出修复。</li><li>没有最新验证证据，不宣称完成。</li><li>Critical/Important 审查问题未解决，不进入下一任务或合并。</li></ul>
+<h2 id="一superpowers-解决什么问题"><a class="heading-anchor" href="#一superpowers-解决什么问题" aria-label="链接到本节">#</a>一、Superpowers 解决什么问题</h2>
+<p>普通 Vibe Coding 很容易形成以下路径：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">模糊需求 → 立即写代码 → 代码看起来合理 → 宣称完成</code></pre></div>
+<p>其中缺失了：</p>
+<ul><li>对真实目标的澄清。</li><li>方案比较和设计确认。</li><li>对现有代码与约束的调查。</li><li>可由其他执行者复现的计划。</li><li>失败测试和回归保护。</li><li>根因分析。</li><li>独立代码审查。</li><li>完成证据和安全的 Git 收尾。</li></ul>
+<p>Superpowers 将流程改为：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">需求
+  ↓
+brainstorming
+  ↓ 用户批准设计
+writing-plans
+  ↓
+using-git-worktrees
+  ↓
+subagent-driven-development / executing-plans
+  ├── test-driven-development
+  ├── systematic-debugging
+  ├── requesting-code-review
+  └── verification-before-completion
+  ↓
+finishing-a-development-branch</code></pre></div>
+<p>这套方法尤其适合：</p>
+<ul><li>需求包含多个步骤或多个模块。</li><li>Java 后端、前端、数据库和 API 契约需要共同修改。</li><li>Bug 已被尝试修复多次。</li><li>重构必须保持现有行为。</li><li>团队在意可审查性和长期维护。</li><li>希望 Codex 长时间执行但不偏离计划。</li></ul>
+<h2 id="二它与-skillpluginharness-的关系"><a class="heading-anchor" href="#二它与-skillpluginharness-的关系" aria-label="链接到本节">#</a>二、它与 Skill、Plugin、Harness 的关系</h2>
+<h3 id="1-skill"><a class="heading-anchor" href="#1-skill" aria-label="链接到本节">#</a>1. Skill</h3>
+<p>每个 Skill 是一个有触发条件和操作规则的开发流程，例如：</p>
+<ul><li><code>brainstorming</code>：从想法推导设计。</li><li><code>test-driven-development</code>：执行 Red-Green-Refactor。</li><li><code>systematic-debugging</code>：先调查根因再修复。</li><li><code>verification-before-completion</code>：用命令输出证明完成。</li></ul>
+<p>Skill 不是知识文章，而是对 Agent 行为的约束。</p>
+<h3 id="2-plugin"><a class="heading-anchor" href="#2-plugin" aria-label="链接到本节">#</a>2. Plugin</h3>
+<p>Superpowers Plugin 把整套 Skills 打包并暴露给 Codex。其插件元数据将能力描述为规划、TDD、调试、协作和交付工作流，并把 <code>skills/</code> 目录注册为技能来源。<a href="https://github.com/obra/superpowers/blob/main/.codex-plugin/plugin.json" target="_blank" rel="noopener noreferrer">Codex plugin manifest</a></p>
+<h3 id="3-harness"><a class="heading-anchor" href="#3-harness" aria-label="链接到本节">#</a>3. Harness</h3>
+<p>Harness 是 Codex 工作的外部工程环境，例如：</p>
+<ul><li><code>AGENTS.md</code></li><li>Maven、npm、Docker 和 Playwright 命令</li><li>测试、静态检查和 CI</li><li>Git 分支和 worktree</li><li>子智能体与审查器</li><li>文件、日志、接口契约和数据库</li><li>沙箱、权限和审批规则</li></ul>
+<p>Superpowers 提供方法论和流程；项目 Harness 提供事实、命令和反馈。没有可靠测试和构建命令，Superpowers 也无法凭空证明软件正确。</p>
+<h2 id="三四项核心哲学"><a class="heading-anchor" href="#三四项核心哲学" aria-label="链接到本节">#</a>三、四项核心哲学</h2>
+<p>官方 README 总结了四项理念：</p>
+<ol><li>Test-Driven Development：始终先写测试。</li><li>Systematic over ad-hoc：使用系统过程，不靠猜测。</li><li>Complexity reduction：把简单性作为主要目标。</li><li>Evidence over claims：以证据代替口头完成声明。<a href="https://github.com/obra/superpowers/blob/main/README.md#philosophy" target="_blank" rel="noopener noreferrer">Superpowers philosophy</a></li></ol>
+<p>它们可以映射到 Java 全栈开发：</p>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">理念</th><th style="text-align:left">Java 全栈实践</th></tr></thead><tbody><tr><td style="text-align:left">TDD</td><td style="text-align:left">JUnit/MockMvc/Testcontainers/Vitest/Playwright 先描述行为</td></tr><tr><td style="text-align:left">系统化</td><td style="text-align:left">先复现、查日志、跟踪请求与事务，再改代码</td></tr><tr><td style="text-align:left">降低复杂度</td><td style="text-align:left">小的领域边界、明确接口、YAGNI、避免无关抽象</td></tr><tr><td style="text-align:left">证据优先</td><td style="text-align:left">Maven/npm/浏览器/数据库验证结果，而非“应该可以”</td></tr></tbody></table></div>
+<h2 id="四完整基础工作流"><a class="heading-anchor" href="#四完整基础工作流" aria-label="链接到本节">#</a>四、完整基础工作流</h2>
+<p>官方基础工作流包括七个阶段：<a href="https://github.com/obra/superpowers/blob/main/README.md#the-basic-workflow" target="_blank" rel="noopener noreferrer">Basic Workflow</a></p>
+<h3 id="阶段-1brainstorming"><a class="heading-anchor" href="#阶段-1brainstorming" aria-label="链接到本节">#</a>阶段 1：Brainstorming</h3>
+<p>Agent 在任何创造性工作前先理解项目，逐个澄清问题，比较 2～3 个方案，并分段提交设计供用户确认。</p>
+<h3 id="阶段-2using-git-worktrees"><a class="heading-anchor" href="#阶段-2using-git-worktrees" aria-label="链接到本节">#</a>阶段 2：Using Git Worktrees</h3>
+<p>设计批准后，进入隔离工作区。Agent 应先检测自己是否已经位于 worktree 或外部管理的隔离环境，再选择平台原生工具或 Git worktree。</p>
+<h3 id="阶段-3writing-plans"><a class="heading-anchor" href="#阶段-3writing-plans" aria-label="链接到本节">#</a>阶段 3：Writing Plans</h3>
+<p>把批准的设计拆成可执行计划。任务包含准确路径、接口、测试、命令和验证步骤。</p>
+<h3 id="阶段-4执行计划"><a class="heading-anchor" href="#阶段-4执行计划" aria-label="链接到本节">#</a>阶段 4：执行计划</h3>
+<p>两种选择：</p>
+<ul><li><code>subagent-driven-development</code>：同一会话中，每个任务派发一个新实现子智能体，再由独立审查智能体检查。</li><li><code>executing-plans</code>：在单独会话按计划顺序执行，遇到阻塞或歧义时停止。</li></ul>
+<h3 id="阶段-5tdd"><a class="heading-anchor" href="#阶段-5tdd" aria-label="链接到本节">#</a>阶段 5：TDD</h3>
+<p>每个行为按 Red → Green → Refactor：</p>
+<ol><li>写失败测试。</li><li>亲眼看到它因预期原因失败。</li><li>写最小实现。</li><li>看到测试通过。</li><li>清理代码并保持测试通过。</li></ol>
+<h3 id="阶段-6code-review"><a class="heading-anchor" href="#阶段-6code-review" aria-label="链接到本节">#</a>阶段 6：Code Review</h3>
+<p>任务结束、重大功能完成及合并前进行审查。Critical 和 Important 问题必须处理。</p>
+<h3 id="阶段-7finish-branch"><a class="heading-anchor" href="#阶段-7finish-branch" aria-label="链接到本节">#</a>阶段 7：Finish Branch</h3>
+<p>完整测试通过后，根据环境提供合并、创建 PR 或保留分支等选项，由用户决定集成方式。</p>
+<h2 id="五主要-skills-详解"><a class="heading-anchor" href="#五主要-skills-详解" aria-label="链接到本节">#</a>五、主要 Skills 详解</h2>
+<h3 id="1-using-superpowers"><a class="heading-anchor" href="#1-using-superpowers" aria-label="链接到本节">#</a>1. <code>using-superpowers</code></h3>
+<p>这是整个系统的路由入口。它要求 Agent 在回答、澄清、检查文件或执行动作之前先判断是否存在相关 Skill；只要有可能适用，就先调用 Skill。流程型 Skill 优先于实现型 Skill：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">“实现功能” → brainstorming → 其他实现 Skill
+“修复 Bug” → systematic-debugging → 领域 Skill</code></pre></div>
+<p>用户的直接要求和 <code>AGENTS.md</code> 高于 Superpowers Skill，Skill 又高于 Agent 的默认习惯。因此用户仍然拥有最高任务控制权。<a href="https://github.com/obra/superpowers/blob/main/skills/using-superpowers/SKILL.md" target="_blank" rel="noopener noreferrer">using-superpowers</a></p>
+<p>实际影响：</p>
+<ul><li>Agent 不应在 Skill 检查前“先看一下文件”。</li><li>Agent 不应以“任务很简单”为由跳过流程。</li><li>Agent 需要读取当前版本的 Skill，不能凭记忆执行旧流程。</li><li>在进入计划模式前，如果尚未完成设计，应先执行 brainstorming。</li></ul>
+<h3 id="2-brainstorming"><a class="heading-anchor" href="#2-brainstorming" aria-label="链接到本节">#</a>2. <code>brainstorming</code></h3>
+<p>触发场景：</p>
+<ul><li>创建功能、组件、应用。</li><li>添加能力。</li><li>修改现有行为。</li><li>任何需要设计判断的创造性工作。</li></ul>
+<p>当前工作流：</p>
+<ol><li>调查项目文件、文档和近期提交。</li><li>必要时及时提供视觉伴侣选项。</li><li>每次只问一个澄清问题。</li><li>提供 2～3 个方案、权衡与推荐。</li><li>分段展示设计并获取批准。</li><li>写入设计文档。</li><li>检查占位符、矛盾、范围和歧义。</li><li>请用户审阅最终设计文档。</li><li>转入 <code>writing-plans</code>。</li></ol>
+<p>默认设计文档路径：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">docs/superpowers/specs/YYYY-MM-DD-&lt;topic&gt;-design.md</code></pre></div>
+<p>设计应覆盖：</p>
+<ul><li>架构与模块边界。</li><li>组件职责。</li><li>数据流。</li><li>错误处理。</li><li>测试策略。</li><li>对现有代码的必要、相关改进。</li></ul>
+<p>它会阻止 Agent 在设计批准前写代码或搭脚手架；即使是小功能，也至少需要一个简短设计。<a href="https://github.com/obra/superpowers/blob/main/skills/brainstorming/SKILL.md" target="_blank" rel="noopener noreferrer">brainstorming Skill</a></p>
+<p>对 Java 全栈需求，建议设计阶段额外明确：</p>
+<ul><li>Spring Boot 模块与领域边界。</li><li>OpenAPI 请求和响应。</li><li>事务、并发和幂等。</li><li>数据迁移。</li><li>React 页面状态。</li><li>权限与资源级授权。</li><li>观测和发布策略。</li></ul>
+<h3 id="3-using-git-worktrees"><a class="heading-anchor" href="#3-using-git-worktrees" aria-label="链接到本节">#</a>3. <code>using-git-worktrees</code></h3>
+<p>目标是让实现与用户当前分支隔离。</p>
+<p>关键顺序：</p>
+<ol><li>检查当前是否已处于隔离 worktree。</li><li>区分 worktree、submodule 和普通仓库。</li><li>已隔离时复用当前环境。</li><li>未隔离时先遵循用户偏好或取得同意。</li><li>优先使用当前平台原生 worktree 能力。</li><li>没有原生能力时再使用 <code>git worktree</code>。</li><li>初始化项目并确认测试基线。</li></ol>
+<p>它强调“不要和 Harness 对抗”：如果 Codex App 已经提供外部管理的 worktree，就不要再手动创建一个看不见的嵌套环境。<a href="https://github.com/obra/superpowers/blob/main/skills/using-git-worktrees/SKILL.md" target="_blank" rel="noopener noreferrer">using-git-worktrees</a></p>
+<p>适合：</p>
+<ul><li>大型功能。</li><li>多任务计划。</li><li>长时间执行。</li><li>与用户现有未提交修改隔离。</li></ul>
+<p>不应自行强制：</p>
+<ul><li>用户明确要求在当前分支修改。</li><li>当前不是 Git 仓库。</li><li>平台已在受管 detached HEAD 中运行。</li></ul>
+<h3 id="4-writing-plans"><a class="heading-anchor" href="#4-writing-plans" aria-label="链接到本节">#</a>4. <code>writing-plans</code></h3>
+<p>它假设执行计划的人：</p>
+<ul><li>会编程。</li><li>对当前仓库、工具和业务几乎没有上下文。</li><li>可能不擅长设计测试。</li></ul>
+<p>计划默认写入：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">docs/superpowers/plans/YYYY-MM-DD-&lt;feature-name&gt;.md</code></pre></div>
+<p>计划要求：</p>
+<ul><li>先检查范围是否包含多个独立系统。</li><li>先确定文件结构和职责。</li><li>每个任务产生可独立测试的交付。</li><li>每一步约为一个 2～5 分钟动作。</li><li>明确创建、修改和测试文件的路径。</li><li>写明任务的 Consumes/Produces 接口。</li><li>写出失败测试、执行命令、最小实现和提交步骤。</li><li>采用 TDD、DRY、YAGNI 和频繁提交。</li></ul>
+<p>典型任务：</p>
+<div class="code-block"><div class="code-toolbar"><span>markdown</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-markdown">### Task 2: 订单取消应用服务
+
+**Files**
+- Create: `backend/src/main/java/.../CancelOrderService.java`
+- Modify: `backend/src/main/java/.../OrderController.java`
+- Test: `backend/src/test/java/.../CancelOrderServiceTest.java`
+
+**Interfaces**
+- Consumes: `OrderRepository.findById(OrderId)`
+- Produces: `CancelOrderResult cancel(CancelOrderCommand)`
+
+- [ ] 写“已发货订单不可取消”的失败测试
+- [ ] 运行指定测试并确认因缺少规则失败
+- [ ] 实现最小领域规则
+- [ ] 再次运行测试并确认通过
+- [ ] 运行订单模块测试
+- [ ] 提交</code></pre></div>
+<p>当前 Skill 将“一个任务”定义为：带有自己的测试周期、值得独立审查的最小单元，而不是机械地把每个配置文件都拆成任务。<a href="https://github.com/obra/superpowers/blob/main/skills/writing-plans/SKILL.md" target="_blank" rel="noopener noreferrer">writing-plans</a></p>
+<h3 id="5-test-driven-development"><a class="heading-anchor" href="#5-test-driven-development" aria-label="链接到本节">#</a>5. <code>test-driven-development</code></h3>
+<p>这是最严格的 Skill 之一。</p>
+<p>核心规则：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">没有先看到失败测试，就不写生产代码。</code></pre></div>
+<p>适用：</p>
+<ul><li>新功能。</li><li>Bug 修复。</li><li>重构。</li><li>行为变化。</li></ul>
+<p>可能的例外需要用户同意：</p>
+<ul><li>一次性原型。</li><li>生成代码。</li><li>单纯配置文件。</li></ul>
+<p>为什么一定要先看到测试失败：</p>
+<ul><li>证明测试确实能感知缺失行为。</li><li>排除测试一开始就因为断言无效而“假绿”。</li><li>确认失败原因是目标行为，而非环境错误。</li><li>为后续回归提供可信基线。</li></ul>
+<p>完整周期：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">RED
+  写最小失败测试
+  → 运行并确认失败原因
+GREEN
+  写最小生产代码
+  → 运行并确认通过
+REFACTOR
+  清理命名、重复和结构
+  → 再次运行并保持通过</code></pre></div>
+<p>Superpowers 的立场非常强：如果先写了生产代码，默认应删除并从测试重新实现。<a href="https://github.com/obra/superpowers/blob/main/skills/test-driven-development/SKILL.md" target="_blank" rel="noopener noreferrer">test-driven-development</a></p>
+<p>在 Java 全栈项目中可分别应用：</p>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">层次</th><th style="text-align:left">推荐测试</th></tr></thead><tbody><tr><td style="text-align:left">Domain</td><td style="text-align:left">纯 JUnit，直接验证业务不变量</td></tr><tr><td style="text-align:left">Application</td><td style="text-align:left">JUnit + Fake/Mock 端口</td></tr><tr><td style="text-align:left">Web</td><td style="text-align:left">MockMvc/WebTestClient</td></tr><tr><td style="text-align:left">Persistence</td><td style="text-align:left">Testcontainers + 真实数据库</td></tr><tr><td style="text-align:left">Frontend logic</td><td style="text-align:left">Vitest</td></tr><tr><td style="text-align:left">UI component</td><td style="text-align:left">Testing Library</td></tr><tr><td style="text-align:left">User flow</td><td style="text-align:left">Playwright</td></tr></tbody></table></div>
+<p>注意：不要为了遵守 TDD 而写只检查字符串、实现细节或 Mock 调用次数的脆弱测试。测试应保护可观察行为。</p>
+<h3 id="6-subagent-driven-development"><a class="heading-anchor" href="#6-subagent-driven-development" aria-label="链接到本节">#</a>6. <code>subagent-driven-development</code></h3>
+<p>这是 Superpowers 的高自动化执行模式。</p>
+<p>每个计划任务使用新的实现子智能体，避免它继承控制器会话中的全部历史。实现完成后，再派发任务审查者检查：</p>
+<ol><li>是否符合规格。</li><li>代码质量是否合格。</li></ol>
+<p>所有任务完成后，再进行一次整个分支的宽范围审查。</p>
+<p>单任务循环：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">提取任务 brief
+→ 派发实现者
+→ 实现者按 TDD 实现、测试、提交、自查
+→ 生成 review package
+→ 派发任务审查者
+→ 规格与质量均通过？
+    ├── 否：派发修复 → 重新审查
+    └── 是：记录任务完成</code></pre></div>
+<p>它区分四种实现状态：</p>
+<ul><li><code>DONE</code></li><li><code>DONE_WITH_CONCERNS</code></li><li><code>NEEDS_CONTEXT</code></li><li><code>BLOCKED</code></li></ul>
+<p>不能对 <code>BLOCKED</code> 简单原样重试。应补充上下文、换更合适的模型、拆小任务，或将错误计划升级给用户。</p>
+<p>v6.2.0 对 SDD 做了两项重要调整：</p>
+<ul><li>按计划建立 <code>.superpowers/sdd/&lt;plan-basename&gt;/</code> 工作区，避免不同计划之间的进度污染。</li><li>修复轮次恢复原实现者，并设置五轮断路器，超出后由控制器判断。<a href="https://github.com/obra/superpowers/blob/main/RELEASE-NOTES.md#v620-2026-07-23" target="_blank" rel="noopener noreferrer">v6.2.0 release notes</a></li></ul>
+<p>它的优势：</p>
+<ul><li>新上下文更聚焦。</li><li>控制器保留全局计划和协调上下文。</li><li>每个任务都经过独立审查。</li><li>规格问题不会累积到最后。</li></ul>
+<p>它的成本：</p>
+<ul><li>子智能体调用次数多。</li><li>每个任务都有实现与审查开销。</li><li>计划质量差时，会稳定地执行错误计划。</li><li>高耦合任务不适合拆给独立子智能体。</li></ul>
+<p>官方 Skill 明确禁止同时并行派发多个会写同一工作区的实现者，以避免冲突；并行适合真正独立的问题，而不是同一功能的相互依赖任务。<a href="https://github.com/obra/superpowers/blob/main/skills/subagent-driven-development/SKILL.md" target="_blank" rel="noopener noreferrer">subagent-driven-development</a></p>
+<h3 id="7-executing-plans"><a class="heading-anchor" href="#7-executing-plans" aria-label="链接到本节">#</a>7. <code>executing-plans</code></h3>
+<p>这是较简单的顺序计划执行模式：</p>
+<ol><li>加载并批判性审查计划。</li><li>有问题先告知用户。</li><li>创建任务清单。</li><li>按计划逐项执行并验证。</li><li>全部完成后进入分支收尾。</li></ol>
+<p>在下列情况必须停止：</p>
+<ul><li>缺少依赖。</li><li>测试失败且无法解决。</li><li>指令含糊。</li><li>计划有阻断性缺口。</li><li>验证反复失败。</li></ul>
+<p>如果 Codex 环境提供子智能体，官方建议优先使用 <code>subagent-driven-development</code>；否则使用 <code>executing-plans</code>。<a href="https://github.com/obra/superpowers/blob/main/skills/executing-plans/SKILL.md" target="_blank" rel="noopener noreferrer">executing-plans</a></p>
+<h3 id="8-systematic-debugging"><a class="heading-anchor" href="#8-systematic-debugging" aria-label="链接到本节">#</a>8. <code>systematic-debugging</code></h3>
+<p>核心规则：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">没有完成根因调查，不提出修复。</code></pre></div>
+<p>适用于：</p>
+<ul><li>测试失败。</li><li>生产 Bug。</li><li>性能问题。</li><li>构建失败。</li><li>集成异常。</li><li>多次修复仍未解决的问题。</li></ul>
+<p>四阶段方法：</p>
+<h4 id="phase-1root-cause-investigation"><a class="heading-anchor" href="#phase-1root-cause-investigation" aria-label="链接到本节">#</a>Phase 1：Root Cause Investigation</h4>
+<ul><li>完整阅读错误和堆栈。</li><li>稳定复现。</li><li>检查近期 diff、依赖和环境变化。</li><li>在组件边界收集输入、输出、配置和状态。</li><li>从错误位置向上追踪异常数据来源。</li></ul>
+<h4 id="phase-2pattern-analysis"><a class="heading-anchor" href="#phase-2pattern-analysis" aria-label="链接到本节">#</a>Phase 2：Pattern Analysis</h4>
+<ul><li>找到仓库内相似的正常实现。</li><li>完整理解参考实现。</li><li>比较正常和异常路径的差异。</li></ul>
+<h4 id="phase-3hypothesis-and-testing"><a class="heading-anchor" href="#phase-3hypothesis-and-testing" aria-label="链接到本节">#</a>Phase 3：Hypothesis and Testing</h4>
+<ul><li>一次提出一个明确假设。</li><li>设计最小实验。</li><li>根据实验结果确认或否定。</li><li>不同时修改多个变量。</li></ul>
+<h4 id="phase-4implementation"><a class="heading-anchor" href="#phase-4implementation" aria-label="链接到本节">#</a>Phase 4：Implementation</h4>
+<ul><li>创建能重现问题的失败测试。</li><li>修复源头而非症状。</li><li>运行验证。</li><li>检查是否引入新问题。</li></ul>
+<p>对 Java 全栈故障，应特别检查边界：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">浏览器
+→ TypeScript Client
+→ 网关/Controller
+→ Service/Domain
+→ Transaction
+→ Repository/SQL
+→ 消息或外部服务</code></pre></div>
+<p>在每个边界记录请求 ID、关键输入输出、状态和耗时，先确定在哪一层失真，再调查具体组件。<a href="https://github.com/obra/superpowers/blob/main/skills/systematic-debugging/SKILL.md" target="_blank" rel="noopener noreferrer">systematic-debugging</a></p>
+<h3 id="9-requesting-code-review"><a class="heading-anchor" href="#9-requesting-code-review" aria-label="链接到本节">#</a>9. <code>requesting-code-review</code></h3>
+<p>强制审查时点：</p>
+<ul><li>SDD 中每个任务完成后。</li><li>重大功能完成后。</li><li>合并到主分支前。</li></ul>
+<p>审查者不应获得整个会话历史，而应获得精确的：</p>
+<ul><li>实现说明。</li><li>计划或需求。</li><li>基准 SHA。</li><li>结束 SHA。</li><li>相关 diff 或 review package。</li></ul>
+<p>问题分级：</p>
+<ul><li>Critical：立即修复，阻止继续。</li><li>Important：继续之前修复。</li><li>Minor：记录并在适当时处理。</li></ul>
+<p>审查者错误时可以反驳，但必须用代码、测试或明确技术理由证明，而不是因为“不想再改”。<a href="https://github.com/obra/superpowers/blob/main/skills/requesting-code-review/SKILL.md" target="_blank" rel="noopener noreferrer">requesting-code-review</a></p>
+<h3 id="10-verification-before-completion"><a class="heading-anchor" href="#10-verification-before-completion" aria-label="链接到本节">#</a>10. <code>verification-before-completion</code></h3>
+<p>核心规则：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">没有本轮新鲜验证证据，不宣称完成、修复或通过。</code></pre></div>
+<p>验证闸门：</p>
+<ol><li>Identify：什么命令能够证明这项声明？</li><li>Run：完整执行该命令。</li><li>Read：读取完整输出、退出码和失败数量。</li><li>Verify：输出是否确实支持声明？</li><li>Claim：只有这时才表述完成。</li></ol>
+<p>不同声明需要不同证据：</p>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">声明</th><th style="text-align:left">必要证据</th></tr></thead><tbody><tr><td style="text-align:left">测试通过</td><td style="text-align:left">测试命令显示 0 failures</td></tr><tr><td style="text-align:left">构建成功</td><td style="text-align:left">构建命令 exit 0</td></tr><tr><td style="text-align:left">Bug 已修复</td><td style="text-align:left">原始复现步骤或回归测试通过</td></tr><tr><td style="text-align:left">回归测试有效</td><td style="text-align:left">Red-Green 过程得到验证</td></tr><tr><td style="text-align:left">需求完成</td><td style="text-align:left">逐条对照计划和验收清单</td></tr><tr><td style="text-align:left">子智能体已完成</td><td style="text-align:left">检查 diff 并独立运行验证</td></tr></tbody></table></div>
+<p>“lint 通过”不能证明“编译成功”，“子智能体说成功”不能证明任务成功，“以前跑过测试”也不是当前提交的证据。<a href="https://github.com/obra/superpowers/blob/main/skills/verification-before-completion/SKILL.md" target="_blank" rel="noopener noreferrer">verification-before-completion</a></p>
+<h3 id="11-finishing-a-development-branch"><a class="heading-anchor" href="#11-finishing-a-development-branch" aria-label="链接到本节">#</a>11. <code>finishing-a-development-branch</code></h3>
+<p>收尾顺序：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">完整测试
+→ 检测 Git/Worktree 环境
+→ 确认基础分支
+→ 展示集成选项
+→ 执行用户选择
+→ 验证合并结果
+→ 安全清理</code></pre></div>
+<p>普通分支通常提供：</p>
+<ol><li>本地合并回基础分支。</li><li>推送并创建 PR。</li><li>保留当前分支，稍后处理。</li></ol>
+<p>在外部管理的 detached HEAD 环境中，不能假定本地合并能力；应提供创建新分支/PR或保留工作区的选项。删除完成成果不再作为普通菜单项，只在用户明确提出时处理。<a href="https://github.com/obra/superpowers/blob/main/skills/finishing-a-development-branch/SKILL.md" target="_blank" rel="noopener noreferrer">finishing-a-development-branch</a></p>
+<h2 id="六codex-中的安装和启用"><a class="heading-anchor" href="#六codex-中的安装和启用" aria-label="链接到本节">#</a>六、Codex 中的安装和启用</h2>
+<h3 id="codex-app"><a class="heading-anchor" href="#codex-app" aria-label="链接到本节">#</a>Codex App</h3>
+<ol><li>打开侧边栏的 Plugins。</li><li>在 Coding 分类找到 <code>Superpowers</code>。</li><li>点击 <code>+</code>。</li><li>按界面完成安装。</li><li>新建会话进行验证。</li></ol>
+<h3 id="codex-cli"><a class="heading-anchor" href="#codex-cli" aria-label="链接到本节">#</a>Codex CLI</h3>
+<p>在 Codex 交互界面：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">/plugins</code></pre></div>
+<p>搜索：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">superpowers</code></pre></div>
+<p>然后选择安装。官方 README 已将 Codex App 和 CLI 都列为 Codex 插件市场支持的 Harness。<a href="https://github.com/obra/superpowers/blob/main/README.md#installation" target="_blank" rel="noopener noreferrer">Installation</a></p>
+<h3 id="启用多智能体支持"><a class="heading-anchor" href="#启用多智能体支持" aria-label="链接到本节">#</a>启用多智能体支持</h3>
+<p><code>subagent-driven-development</code> 和 <code>dispatching-parallel-agents</code> 需要 Codex 多智能体支持。项目当前 Codex 参考建议在 <code>~/.codex/config.toml</code> 配置：</p>
+<div class="code-block"><div class="code-toolbar"><span>toml</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-toml">[features]
+multi_agent = true</code></pre></div>
+<p>然后重新启动或新建会话，使配置生效。<a href="https://github.com/obra/superpowers/blob/main/skills/using-superpowers/references/codex-tools.md" target="_blank" rel="noopener noreferrer">Codex tool mapping</a></p>
+<h3 id="安装后的验证方式"><a class="heading-anchor" href="#安装后的验证方式" aria-label="链接到本节">#</a>安装后的验证方式</h3>
+<p>可以发起：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">我想给现有 Spring Boot 项目增加订单取消功能。
+先帮我明确需求和设计，不要直接写代码。</code></pre></div>
+<p>预期行为：</p>
+<ul><li>Agent 识别 <code>brainstorming</code>。</li><li>先调查项目。</li><li>一次问一个问题。</li><li>提供多个方案和推荐。</li><li>得到设计批准后写 spec。</li><li>再进入 plan，而不是立即实现。</li></ul>
+<p>在 Codex 中它主要表现为 Skills 自动路由，不应把每个 Skill 都误解为独立斜杠命令。需要强制使用时，可以在提示中明确写出 Skill 名称。</p>
+<h2 id="七一个-java-全栈实际示例"><a class="heading-anchor" href="#七一个-java-全栈实际示例" aria-label="链接到本节">#</a>七、一个 Java 全栈实际示例</h2>
+<p>需求：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">为订单系统增加“取消订单”功能。
+前端使用 React + TypeScript，后端使用 Java 21 + Spring Boot，
+数据库使用 PostgreSQL。</code></pre></div>
+<h3 id="1-brainstorming-输出"><a class="heading-anchor" href="#1-brainstorming-输出" aria-label="链接到本节">#</a>1. Brainstorming 输出</h3>
+<p>需要澄清：</p>
+<ul><li>哪些状态允许取消？</li><li>谁可以取消？</li><li>是否需要退款？</li><li>是否存在并发发货？</li><li>是否发送领域事件？</li><li>是否允许重复请求？</li><li>UI 是列表直接取消还是详情页操作？</li></ul>
+<p>方案比较：</p>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">方案</th><th style="text-align:left">优点</th><th style="text-align:left">风险</th></tr></thead><tbody><tr><td style="text-align:left">同步事务内取消</td><td style="text-align:left">简单、即时反馈</td><td style="text-align:left">外部退款不适合长事务</td></tr><tr><td style="text-align:left">订单取消 + Outbox 事件</td><td style="text-align:left">一致性好、适合异步退款</td><td style="text-align:left">组件更多</td></tr><tr><td style="text-align:left">Saga/流程编排</td><td style="text-align:left">适合复杂跨服务流程</td><td style="text-align:left">对简单系统可能过度设计</td></tr></tbody></table></div>
+<p>设计文档：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">docs/superpowers/specs/2026-07-24-order-cancellation-design.md</code></pre></div>
+<h3 id="2-writing-plans-输出"><a class="heading-anchor" href="#2-writing-plans-输出" aria-label="链接到本节">#</a>2. Writing Plans 输出</h3>
+<p>可以拆为：</p>
+<ol><li>领域取消规则与单元测试。</li><li>应用服务、幂等与事务。</li><li>数据库状态/版本字段迁移。</li><li>REST API 与错误映射。</li><li>OpenAPI 和 TypeScript Client。</li><li>前端取消交互与状态。</li><li>Testcontainers 集成测试。</li><li>Playwright 用户流程。</li></ol>
+<h3 id="3-tdd-示例"><a class="heading-anchor" href="#3-tdd-示例" aria-label="链接到本节">#</a>3. TDD 示例</h3>
+<p>后端 RED：</p>
+<div class="code-block"><div class="code-toolbar"><span>java</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-java">@Test
+void shippedOrderCannotBeCancelled() {
+    Order order = Order.shipped(anOrderId());
+
+    assertThatThrownBy(() -&gt; order.cancel(aCustomerId()))
+        .isInstanceOf(OrderCannotBeCancelledException.class);
+}</code></pre></div>
+<p>运行并确认因为领域规则尚不存在而失败，再写最小实现。</p>
+<p>前端 RED：</p>
+<div class="code-block"><div class="code-toolbar"><span>ts</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-ts">it(&quot;disables cancel while the request is pending&quot;, async () =&gt; {
+  // arrange
+  // click cancel
+  // assert the action is disabled until request completes
+});</code></pre></div>
+<h3 id="4-systematic-debugging-示例"><a class="heading-anchor" href="#4-systematic-debugging-示例" aria-label="链接到本节">#</a>4. Systematic Debugging 示例</h3>
+<p>如果双击取消会返回 500：</p>
+<ol><li>浏览器确认是否发出两个请求。</li><li>检查后端请求 ID 和响应。</li><li>检查两个事务读取的订单版本。</li><li>查看唯一约束或乐观锁异常。</li><li>确认异常是否映射为幂等成功或 409。</li><li>用并发集成测试稳定复现。</li><li>修复源头，而不只是在前端添加 debounce。</li></ol>
+<h3 id="5-verification-示例"><a class="heading-anchor" href="#5-verification-示例" aria-label="链接到本节">#</a>5. Verification 示例</h3>
+<div class="code-block"><div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-bash">./mvnw -pl backend -Dtest=OrderCancellationTest test
+./mvnw -pl backend verify
+npm --prefix frontend run lint
+npm --prefix frontend run typecheck
+npm --prefix frontend test -- --run
+npm --prefix frontend run build
+npm --prefix e2e test</code></pre></div>
+<p>Agent 需要报告每条命令是否实际执行、退出码、测试数和未验证内容。</p>
+<h2 id="八superpowers-与-vibe-codingharnessloop-的关系"><a class="heading-anchor" href="#八superpowers-与-vibe-codingharnessloop-的关系" aria-label="链接到本节">#</a>八、Superpowers 与 Vibe Coding、Harness、Loop 的关系</h2>
+<div class="table-wrap"><table><thead><tr><th style="text-align:left">模式</th><th style="text-align:left">Superpowers 的作用</th></tr></thead><tbody><tr><td style="text-align:left">Vibe Coding</td><td style="text-align:left">通过 brainstorming 给模糊想法增加设计闸门</td></tr><tr><td style="text-align:left">Harness</td><td style="text-align:left">通过 Skills、worktree、计划、测试和审查组织 Codex</td></tr><tr><td style="text-align:left">Loop</td><td style="text-align:left">通过 TDD、调试、review-fix-re-review 和验证形成闭环</td></tr></tbody></table></div>
+<p>Superpowers 更偏向“严谨工程”而非“完全自由的 Vibe Coding”。</p>
+<p>适合保留纯 Vibe 的场景：</p>
+<ul><li>一次性视觉探索。</li><li>用于讨论的 throwaway prototype。</li><li>快速验证库是否可行。</li></ul>
+<p>从 Vibe 切换到 Superpowers 完整流程的时点：</p>
+<ul><li>原型方向得到认可。</li><li>准备接真实 API、数据库或权限。</li><li>开始要求兼容、测试、部署和维护。</li></ul>
+<p>可以明确告诉 Agent：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">这一阶段是一次性原型，我批准跳过严格 TDD。
+原型确认后，再用 brainstorming → plan → TDD 重新实现生产版本。</code></pre></div>
+<h2 id="九优势成本和局限"><a class="heading-anchor" href="#九优势成本和局限" aria-label="链接到本节">#</a>九、优势、成本和局限</h2>
+<h3 id="优势"><a class="heading-anchor" href="#优势" aria-label="链接到本节">#</a>优势</h3>
+<ul><li>减少 Agent 未理解需求就开始编码。</li><li>设计和计划以文件形式沉淀。</li><li>TDD 和验证降低“看起来完成”的假成功。</li><li>系统调试减少随机修改。</li><li>Worktree 保护用户当前分支。</li><li>子智能体使用新鲜、有限上下文。</li><li>规格审查与代码质量审查分离。</li><li>关键决定保留人工批准权。</li></ul>
+<h3 id="成本"><a class="heading-anchor" href="#成本" aria-label="链接到本节">#</a>成本</h3>
+<ul><li>小任务也可能产生设计和计划开销。</li><li>严格 TDD 会增加早期步骤。</li><li>多智能体审查增加时间、Token 和模型调用。</li><li>需要 Git、稳定测试和清晰项目命令。</li><li>流程可能与团队现有研发规范冲突。</li><li>计划过细会变成低价值的机械清单。</li></ul>
+<h3 id="局限"><a class="heading-anchor" href="#局限" aria-label="链接到本节">#</a>局限</h3>
+<ul><li>它无法判断错误的业务规则是否“真实正确”。</li><li>测试本身可能错误或覆盖不完整。</li><li>不替代架构师、安全负责人和产品负责人。</li><li>不自动解决生产数据、权限和合规风险。</li><li>高耦合任务不适合强行拆为独立子智能体任务。</li><li>模型和 Skill 都可能犯错，最终 diff 和验证仍需检查。</li><li>项目快速演进，安装方式和 Skill 细节需要以当前仓库为准。</li></ul>
+<h2 id="十推荐的使用策略"><a class="heading-anchor" href="#十推荐的使用策略" aria-label="链接到本节">#</a>十、推荐的使用策略</h2>
+<h3 id="1-不要一开始启用所有复杂性"><a class="heading-anchor" href="#1-不要一开始启用所有复杂性" aria-label="链接到本节">#</a>1. 不要一开始启用所有复杂性</h3>
+<p>第一阶段可重点使用：</p>
+<ul><li><code>brainstorming</code></li><li><code>writing-plans</code></li><li><code>test-driven-development</code></li><li><code>systematic-debugging</code></li><li><code>verification-before-completion</code></li></ul>
+<p>项目变大后再引入：</p>
+<ul><li>Git worktrees</li><li>subagent-driven-development</li><li>parallel agents</li><li>task review + whole-branch review</li></ul>
+<h3 id="2-用-agentsmd-提供项目事实"><a class="heading-anchor" href="#2-用-agentsmd-提供项目事实" aria-label="链接到本节">#</a>2. 用 <code>AGENTS.md</code> 提供项目事实</h3>
+<p>Superpowers 告诉 Agent“应该按什么过程做”，<code>AGENTS.md</code> 应告诉它：</p>
+<ul><li>Java、Node、Maven/npm 版本。</li><li>模块结构。</li><li>构建和测试命令。</li><li>OpenAPI 路径。</li><li>数据迁移规则。</li><li>安全边界。</li><li>发布和验收要求。</li></ul>
+<h3 id="3-把测试命令做稳定"><a class="heading-anchor" href="#3-把测试命令做稳定" aria-label="链接到本节">#</a>3. 把测试命令做稳定</h3>
+<p>推荐项目提供：</p>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">./scripts/verify-fast.sh
+./scripts/verify-full.sh</code></pre></div>
+<p>这样 <code>verification-before-completion</code> 能直接获得明确证据。</p>
+<h3 id="4-控制子智能体任务边界"><a class="heading-anchor" href="#4-控制子智能体任务边界" aria-label="链接到本节">#</a>4. 控制子智能体任务边界</h3>
+<p>好的任务：</p>
+<ul><li>有精确输入、输出和文件范围。</li><li>能独立运行测试。</li><li>不与另一任务同时写相同文件。</li><li>审查者可以独立判断是否符合规格。</li></ul>
+<p>差的任务：</p>
+<ul><li>“完成整个订单模块”。</li><li>同时改变架构、API、数据库和前端。</li><li>依赖尚未决定的产品规则。</li><li>与多个并行任务共享大量可变状态。</li></ul>
+<h3 id="5-保留人工闸门"><a class="heading-anchor" href="#5-保留人工闸门" aria-label="链接到本节">#</a>5. 保留人工闸门</h3>
+<p>以下操作不应因为 Superpowers 自动化而省略批准：</p>
+<ul><li>破坏性数据库迁移。</li><li>修改公开 API。</li><li>部署生产。</li><li>删除数据或分支。</li><li>发送外部消息。</li><li>改变权限模型。</li><li>引入重要新依赖。</li><li>合并到受保护分支。</li></ul>
+<h2 id="十一常用提示词"><a class="heading-anchor" href="#十一常用提示词" aria-label="链接到本节">#</a>十一、常用提示词</h2>
+<h3 id="新功能"><a class="heading-anchor" href="#新功能" aria-label="链接到本节">#</a>新功能</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">使用 Superpowers 工作流设计并实现该功能。
+先执行 brainstorming，设计得到我批准后再写计划。
+后端使用 Java 21 + Spring Boot，前端使用 React + TypeScript。
+API 以 OpenAPI 为契约，数据库迁移使用 Flyway。
+实现阶段使用 TDD，并在完成前运行全栈验证。</code></pre></div>
+<h3 id="bug-修复"><a class="heading-anchor" href="#bug-修复" aria-label="链接到本节">#</a>Bug 修复</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">使用 systematic-debugging 调查这个问题。
+先稳定复现和定位根因，不要直接猜修复方案。
+确认根因后写失败回归测试，再做最小修复。
+完成前使用 verification-before-completion 提供实际命令和结果。</code></pre></div>
+<h3 id="执行已有设计"><a class="heading-anchor" href="#执行已有设计" aria-label="链接到本节">#</a>执行已有设计</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">设计文档位于 `docs/superpowers/specs/...`。
+使用 writing-plans 创建实施计划。
+计划必须包含准确文件路径、接口、TDD 步骤和验证命令。
+我批准计划后，使用 subagent-driven-development 执行。</code></pre></div>
+<h3 id="跳过原型阶段的严格流程"><a class="heading-anchor" href="#跳过原型阶段的严格流程" aria-label="链接到本节">#</a>跳过原型阶段的严格流程</h3>
+<div class="code-block"><div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-text">这是一次性 UI 原型，我明确批准不使用严格 TDD。
+仍需限制修改范围，并在浏览器中验证。
+不要接入真实生产数据或执行部署。
+原型确认后再使用完整 Superpowers 流程实现生产版本。</code></pre></div>
+<h2 id="十二排查-superpowers-未生效"><a class="heading-anchor" href="#十二排查-superpowers-未生效" aria-label="链接到本节">#</a>十二、排查 Superpowers 未生效</h2>
+<h3 id="现象agent-直接编码没有-brainstorming"><a class="heading-anchor" href="#现象agent-直接编码没有-brainstorming" aria-label="链接到本节">#</a>现象：Agent 直接编码，没有 brainstorming</h3>
+<p>检查：</p>
+<ol><li>Plugin 是否已安装并启用。</li><li>是否在安装后新建了会话。</li><li>当前任务是否明确被描述为新功能或行为修改。</li><li>是否有更高优先级用户指令要求跳过。</li><li>显式要求使用 <code>superpowers:brainstorming</code>。</li></ol>
+<h3 id="现象没有使用子智能体"><a class="heading-anchor" href="#现象没有使用子智能体" aria-label="链接到本节">#</a>现象：没有使用子智能体</h3>
+<p>检查：</p>
+<ol><li>Codex 是否启用 <code>multi_agent</code>。</li><li>当前环境是否提供子智能体工具。</li><li>任务是否已有详细计划。</li><li>任务之间是否足够独立。</li><li>并发槽位和平台政策是否允许。</li></ol>
+<h3 id="现象流程太重"><a class="heading-anchor" href="#现象流程太重" aria-label="链接到本节">#</a>现象：流程太重</h3>
+<p>不要直接删除所有闸门，可先：</p>
+<ul><li>缩小 brainstorming 设计篇幅。</li><li>把需求拆小。</li><li>对一次性原型明确批准 TDD 例外。</li><li>使用顺序 <code>executing-plans</code>。</li><li>只对高风险任务启用多阶段审查。</li><li>将机械检查自动化到脚本和 CI。</li></ul>
+<h3 id="现象计划和代码不一致"><a class="heading-anchor" href="#现象计划和代码不一致" aria-label="链接到本节">#</a>现象：计划和代码不一致</h3>
+<ul><li>停止实现。</li><li>回到设计或计划进行修订。</li><li>明确哪份文档是当前事实。</li><li>重新生成受影响任务。</li><li>不要让 Agent 私自选择违反计划或违反审查意见。</li></ul>
+<h2 id="十三隐私与安全注意事项"><a class="heading-anchor" href="#十三隐私与安全注意事项" aria-label="链接到本节">#</a>十三、隐私与安全注意事项</h2>
+<p>仓库说明中提到：brainstorming 的可选视觉伴侣默认可能从 Prime Radiant 网站加载 Logo，并携带 Superpowers 版本信息；项目称不包含项目、提示或智能体详情。可通过下列环境变量禁用：</p>
+<div class="code-block"><div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div><pre><code class="language-bash">SUPERPOWERS_DISABLE_TELEMETRY=1</code></pre></div>
+<p>它也声明遵循部分 Harness 的禁用遥测变量。企业或敏感项目应自行检查网络策略、插件代码和版本后再启用。<a href="https://github.com/obra/superpowers/blob/main/README.md#visual-companion-telemetry" target="_blank" rel="noopener noreferrer">Visual companion telemetry</a></p>
+<p>还应遵循：</p>
+<ul><li>不把生产密钥放进提示或测试。</li><li>限制网络和文件权限。</li><li>使用假数据或脱敏数据。</li><li>检查 Plugin/Skill 更新带来的行为变化。</li><li>在受管工作区遵循组织策略。</li></ul>
+<h2 id="易错点与局限"><a class="heading-anchor" href="#易错点与局限" aria-label="链接到本节">#</a>易错点与局限</h2>
+<ol><li>不要把旧版 <code>.codex/INSTALL.md</code>、<code>superpowers-codex</code> CLI 或手动 Skill 链接方式当作当前首选；当前 README 已指向 Codex 插件市场。</li><li>Superpowers Skill 在 Codex 中主要通过原生技能发现和自动路由工作，不等同于一组固定斜杠命令。</li><li><code>brainstorming</code> 的强制设计批准会降低 one-shot 速度，这是它主动选择的质量权衡。</li><li><code>subagent-driven-development</code> 的价值依赖清晰计划、独立任务和可靠审查；不满足这些条件时可能更贵而非更快。</li><li>“测试先行”不等于“测试必然正确”。仍需检查测试是否验证真实行为。</li><li>Superpowers 的发布迭代较快，涉及安装、版本和工具映射时应重新查看官方仓库。</li></ol>
+<h2 id="下一步学习建议"><a class="heading-anchor" href="#下一步学习建议" aria-label="链接到本节">#</a>下一步学习建议</h2>
+<ol><li>安装后先用一个小型 Spring Boot 功能体验完整流程。</li><li>比较普通 Codex 与 Superpowers 在需求澄清、diff 大小和测试质量上的差异。</li><li>为项目补齐 <code>AGENTS.md</code>、<code>verify-fast</code> 和 <code>verify-full</code>。</li><li>用一个真实 Bug 练习 systematic-debugging。</li><li>最后再尝试 subagent-driven-development，观察任务拆分和审查成本。</li></ol>
+<h2 id="参考资料"><a class="heading-anchor" href="#参考资料" aria-label="链接到本节">#</a>参考资料</h2>
+<ul><li><a href="https://github.com/obra/superpowers" target="_blank" rel="noopener noreferrer">Superpowers 官方仓库</a> — 项目主页、理念、安装和基础工作流，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/README.md" target="_blank" rel="noopener noreferrer">README</a> — Codex 安装、Skills 清单、工作流、遥测和许可证，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/RELEASE-NOTES.md" target="_blank" rel="noopener noreferrer">Release Notes</a> — v6.2.0 与历史演进，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/.codex-plugin/plugin.json" target="_blank" rel="noopener noreferrer">Codex Plugin Manifest</a> — Plugin 能力、Skill 路径和元数据，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/skills/using-superpowers/SKILL.md" target="_blank" rel="noopener noreferrer">using-superpowers</a> — Skill 路由规则与优先级，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/skills/using-superpowers/references/codex-tools.md" target="_blank" rel="noopener noreferrer">Codex tools reference</a> — Codex 多智能体与环境适配，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/skills/brainstorming/SKILL.md" target="_blank" rel="noopener noreferrer">brainstorming</a> — 设计澄清、方案比较、Spec 和用户闸门，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/skills/writing-plans/SKILL.md" target="_blank" rel="noopener noreferrer">writing-plans</a> — 计划粒度、任务结构和 TDD 步骤，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/skills/test-driven-development/SKILL.md" target="_blank" rel="noopener noreferrer">test-driven-development</a> — Red-Green-Refactor 强制规则，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/skills/systematic-debugging/SKILL.md" target="_blank" rel="noopener noreferrer">systematic-debugging</a> — 四阶段根因调试流程，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/skills/verification-before-completion/SKILL.md" target="_blank" rel="noopener noreferrer">verification-before-completion</a> — 新鲜验证证据与完成闸门，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/skills/using-git-worktrees/SKILL.md" target="_blank" rel="noopener noreferrer">using-git-worktrees</a> — 环境检测、原生隔离与 Git fallback，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/skills/subagent-driven-development/SKILL.md" target="_blank" rel="noopener noreferrer">subagent-driven-development</a> — 子智能体执行、任务审查、进度账本和修复循环，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/skills/executing-plans/SKILL.md" target="_blank" rel="noopener noreferrer">executing-plans</a> — 顺序计划执行和阻塞处理，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/skills/requesting-code-review/SKILL.md" target="_blank" rel="noopener noreferrer">requesting-code-review</a> — 审查时机、输入和问题分级，访问日期：2026-07-24。</li><li><a href="https://github.com/obra/superpowers/blob/main/skills/finishing-a-development-branch/SKILL.md" target="_blank" rel="noopener noreferrer">finishing-a-development-branch</a> — 测试、集成选择和 worktree 收尾，访问日期：2026-07-24。</li></ul>
+    </article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/codex/2026-07-24-Superpowers详细介绍.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="2026-07-24-Codex全栈开发最佳实践.html"><small>上一篇</small><span>Codex 全栈开发最佳实践：Vibe Coding、Harness 与 Loop</span></a>
+        <span class="pager-spacer"></span>
+      </nav>
+    </footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#一superpowers-解决什么问题">一、Superpowers 解决什么问题</a></li><li class="toc-level-2"><a href="#二它与-skillpluginharness-的关系">二、它与 Skill、Plugin、Harness 的关系</a></li><li class="toc-level-3"><a href="#1-skill">1. Skill</a></li><li class="toc-level-3"><a href="#2-plugin">2. Plugin</a></li><li class="toc-level-3"><a href="#3-harness">3. Harness</a></li><li class="toc-level-2"><a href="#三四项核心哲学">三、四项核心哲学</a></li><li class="toc-level-2"><a href="#四完整基础工作流">四、完整基础工作流</a></li><li class="toc-level-3"><a href="#阶段-1brainstorming">阶段 1：Brainstorming</a></li><li class="toc-level-3"><a href="#阶段-2using-git-worktrees">阶段 2：Using Git Worktrees</a></li><li class="toc-level-3"><a href="#阶段-3writing-plans">阶段 3：Writing Plans</a></li><li class="toc-level-3"><a href="#阶段-4执行计划">阶段 4：执行计划</a></li><li class="toc-level-3"><a href="#阶段-5tdd">阶段 5：TDD</a></li><li class="toc-level-3"><a href="#阶段-6code-review">阶段 6：Code Review</a></li><li class="toc-level-3"><a href="#阶段-7finish-branch">阶段 7：Finish Branch</a></li><li class="toc-level-2"><a href="#五主要-skills-详解">五、主要 Skills 详解</a></li><li class="toc-level-3"><a href="#1-using-superpowers">1. using-superpowers</a></li><li class="toc-level-3"><a href="#2-brainstorming">2. brainstorming</a></li><li class="toc-level-3"><a href="#3-using-git-worktrees">3. using-git-worktrees</a></li><li class="toc-level-3"><a href="#4-writing-plans">4. writing-plans</a></li><li class="toc-level-3"><a href="#5-test-driven-development">5. test-driven-development</a></li><li class="toc-level-3"><a href="#6-subagent-driven-development">6. subagent-driven-development</a></li><li class="toc-level-3"><a href="#7-executing-plans">7. executing-plans</a></li><li class="toc-level-3"><a href="#8-systematic-debugging">8. systematic-debugging</a></li><li class="toc-level-4"><a href="#phase-1root-cause-investigation">Phase 1：Root Cause Investigation</a></li><li class="toc-level-4"><a href="#phase-2pattern-analysis">Phase 2：Pattern Analysis</a></li><li class="toc-level-4"><a href="#phase-3hypothesis-and-testing">Phase 3：Hypothesis and Testing</a></li><li class="toc-level-4"><a href="#phase-4implementation">Phase 4：Implementation</a></li><li class="toc-level-3"><a href="#9-requesting-code-review">9. requesting-code-review</a></li><li class="toc-level-3"><a href="#10-verification-before-completion">10. verification-before-completion</a></li><li class="toc-level-3"><a href="#11-finishing-a-development-branch">11. finishing-a-development-branch</a></li><li class="toc-level-2"><a href="#六codex-中的安装和启用">六、Codex 中的安装和启用</a></li><li class="toc-level-3"><a href="#codex-app">Codex App</a></li><li class="toc-level-3"><a href="#codex-cli">Codex CLI</a></li><li class="toc-level-3"><a href="#启用多智能体支持">启用多智能体支持</a></li><li class="toc-level-3"><a href="#安装后的验证方式">安装后的验证方式</a></li><li class="toc-level-2"><a href="#七一个-java-全栈实际示例">七、一个 Java 全栈实际示例</a></li><li class="toc-level-3"><a href="#1-brainstorming-输出">1. Brainstorming 输出</a></li><li class="toc-level-3"><a href="#2-writing-plans-输出">2. Writing Plans 输出</a></li><li class="toc-level-3"><a href="#3-tdd-示例">3. TDD 示例</a></li><li class="toc-level-3"><a href="#4-systematic-debugging-示例">4. Systematic Debugging 示例</a></li><li class="toc-level-3"><a href="#5-verification-示例">5. Verification 示例</a></li><li class="toc-level-2"><a href="#八superpowers-与-vibe-codingharnessloop-的关系">八、Superpowers 与 Vibe Coding、Harness、Loop 的关系</a></li><li class="toc-level-2"><a href="#九优势成本和局限">九、优势、成本和局限</a></li><li class="toc-level-3"><a href="#优势">优势</a></li><li class="toc-level-3"><a href="#成本">成本</a></li><li class="toc-level-3"><a href="#局限">局限</a></li><li class="toc-level-2"><a href="#十推荐的使用策略">十、推荐的使用策略</a></li><li class="toc-level-3"><a href="#1-不要一开始启用所有复杂性">1. 不要一开始启用所有复杂性</a></li><li class="toc-level-3"><a href="#2-用-agentsmd-提供项目事实">2. 用 AGENTS.md 提供项目事实</a></li><li class="toc-level-3"><a href="#3-把测试命令做稳定">3. 把测试命令做稳定</a></li><li class="toc-level-3"><a href="#4-控制子智能体任务边界">4. 控制子智能体任务边界</a></li><li class="toc-level-3"><a href="#5-保留人工闸门">5. 保留人工闸门</a></li><li class="toc-level-2"><a href="#十一常用提示词">十一、常用提示词</a></li><li class="toc-level-3"><a href="#新功能">新功能</a></li><li class="toc-level-3"><a href="#bug-修复">Bug 修复</a></li><li class="toc-level-3"><a href="#执行已有设计">执行已有设计</a></li><li class="toc-level-3"><a href="#跳过原型阶段的严格流程">跳过原型阶段的严格流程</a></li><li class="toc-level-2"><a href="#十二排查-superpowers-未生效">十二、排查 Superpowers 未生效</a></li><li class="toc-level-3"><a href="#现象agent-直接编码没有-brainstorming">现象：Agent 直接编码，没有 brainstorming</a></li><li class="toc-level-3"><a href="#现象没有使用子智能体">现象：没有使用子智能体</a></li><li class="toc-level-3"><a href="#现象流程太重">现象：流程太重</a></li><li class="toc-level-3"><a href="#现象计划和代码不一致">现象：计划和代码不一致</a></li><li class="toc-level-2"><a href="#十三隐私与安全注意事项">十三、隐私与安全注意事项</a></li><li class="toc-level-2"><a href="#易错点与局限">易错点与局限</a></li><li class="toc-level-2"><a href="#下一步学习建议">下一步学习建议</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+<div class="sidebar-scrim"></div>
+</body>
+</html>
