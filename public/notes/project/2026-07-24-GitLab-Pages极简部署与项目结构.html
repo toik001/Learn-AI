@@ -116,6 +116,72 @@ node --check public/assets/app.js</code></pre>
       <h2 id="自建-gitlab-前置条件"><a class="heading-anchor" href="#自建-gitlab-前置条件" aria-label="链接到本节">#</a>自建 GitLab 前置条件</h2>
       <p>代码推送成功不代表 Pages 一定已经启用。自建 GitLab 还需要管理员配置 Pages 域名，并为项目提供可运行 CI 的 GitLab Runner。若流水线成功但没有 Pages 地址，应先检查实例和项目的 Pages 设置。<a href="https://docs.gitlab.com/user/project/pages/introduction/" target="_blank" rel="noopener noreferrer">GitLab Pages settings</a></p>
 
+      <h2 id="部署位置与工作原理"><a class="heading-anchor" href="#部署位置与工作原理" aria-label="链接到本节">#</a>部署位置与工作原理</h2>
+      <h3 id="先回答部署到哪里"><a class="heading-anchor" href="#先回答部署到哪里" aria-label="链接到本节">#</a>先回答：部署到哪里</h3>
+      <p>Pages 不会把整个 Git 仓库检出后长期放在 Runner 上，也通常不会复制到普通 Nginx 的 <code>/var/www</code>。当前项目真正被发布的是 <code>public/</code> 目录，它先作为 CI job artifact 上传给 GitLab，再由 GitLab 建立 Pages deployment。当前 GitLab Pages 的底层发布格式是“每个部署一个 ZIP 归档”，每次更新站点都会产生一个新归档。<a href="https://docs.gitlab.com/administration/pages/#zip-storage" target="_blank" rel="noopener noreferrer">GitLab Pages：ZIP storage</a></p>
+      <table>
+        <thead>
+          <tr><th>对象</th><th>典型位置</th><th>作用</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Git 仓库</td><td>Gitaly repository storage</td><td>保存源码和提交历史，不直接作为网站目录</td></tr>
+          <tr><td>Runner 工作目录</td><td>Runner 主机、容器或 Pod 的临时构建目录</td><td>检出代码并运行 <code>test -s public/index.html</code>；作业结束后不承担网站访问</td></tr>
+          <tr><td>CI job artifact</td><td>Linux package 默认 <code>/var/opt/gitlab/gitlab-rails/shared/artifacts</code>，或 S3 兼容对象存储</td><td>保存 Runner 上传的 <code>public/</code> 归档</td></tr>
+          <tr><td>Pages deployment</td><td>Linux package 通常位于 <code>/var/opt/gitlab/gitlab-rails/shared/pages</code>，也可以位于对象存储或共享网络存储</td><td>保存 Pages 服务实际读取的站点 ZIP</td></tr>
+          <tr><td>对外服务</td><td>GitLab Pages daemon，可与 GitLab 同机或独立部署</td><td>根据域名和路径找到部署并返回 HTML、CSS、JavaScript 等静态文件</td></tr>
+        </tbody>
+      </table>
+      <p>上表中的路径是 Linux package 的常见默认值，不等于当前 <code>code.dding.net</code> 实例一定采用这些路径。如果 GitLab 使用 Docker，宿主机位置由 volume 映射决定；如果启用了对象存储，文件可能在 MinIO、AWS S3 或其他 S3 兼容 bucket 中；如果 Pages 独立部署，还可能通过共享卷或对象存储访问归档。</p>
+
+      <h3 id="从-git-push-到浏览器的完整链路"><a class="heading-anchor" href="#从-git-push-到浏览器的完整链路" aria-label="链接到本节">#</a>从 git push 到浏览器的完整链路</h3>
+      <ol>
+        <li><strong>推送源码：</strong><code>git push</code> 把提交写入 GitLab 的 Git 仓库；这时还没有新网站部署。</li>
+        <li><strong>创建流水线：</strong>GitLab 解析 <code>.gitlab-ci.yml</code>，发现名为 <code>pages</code> 的旧式 Pages job，并把它放入调度队列。</li>
+        <li><strong>Runner 执行：</strong>拥有 <code>page-build-zhao</code> 标签的 Runner 领取作业，在临时工作目录检出仓库并验证 <code>public/index.html</code>。</li>
+        <li><strong>上传 artifact：</strong>Runner 根据 <code>artifacts.paths: public</code> 压缩并上传整个 <code>public/</code>。官方说明，大部分 artifact 都由 Runner 压缩后发送给 GitLab coordinator。<a href="https://docs.gitlab.com/administration/cicd/job_artifacts/#storing-job-artifacts" target="_blank" rel="noopener noreferrer">GitLab：Storing job artifacts</a></li>
+        <li><strong>建立 Pages deployment：</strong>GitLab 后台识别成功的 Pages job，记录部署元数据并保存新的 Pages ZIP。新部署就绪后成为当前站点版本，旧部署按实例和版本策略保留或清理。</li>
+        <li><strong>域名路由：</strong>浏览器请求 Pages 域名；DNS 将请求导向 Pages 入口，通常先经过 Pages NGINX，再转给 GitLab Pages daemon。</li>
+        <li><strong>定位项目：</strong>Pages daemon 根据 Host、namespace 和 project slug 查询 GitLab 内部 API，确定应读取哪个项目、哪个部署以及它位于本地还是对象存储。域名信息会被缓存。<a href="https://docs.gitlab.com/administration/pages/#domain-source-configuration" target="_blank" rel="noopener noreferrer">GitLab Pages：Domain source configuration</a></li>
+        <li><strong>返回静态文件：</strong>Pages daemon 从部署 ZIP 中读取对应的 <code>index.html</code>、CSS 或 JavaScript 并返回。对象存储场景下，Pages 可以直接从 ZIP 提供内容，并使用内存缓存提高访问性能。</li>
+      </ol>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">git push
+   │
+   ▼
+GitLab 仓库（Gitaly）
+   │ 创建 pipeline
+   ▼
+page-build-zhao Runner（临时检出与校验）
+   │ 上传 public/ artifact
+   ▼
+GitLab Rails / Workhorse / Sidekiq
+   │ 创建 Pages deployment ZIP
+   ▼
+本地 pages_path / 共享存储 / S3 兼容对象存储
+   ▲
+   │ 按域名和路径读取
+GitLab Pages daemon ◀── Pages NGINX / DNS ◀── 浏览器</code></pre>
+      </div>
+
+      <h3 id="artifact-与-pages-deployment-的区别"><a class="heading-anchor" href="#artifact-与-pages-deployment-的区别" aria-label="链接到本节">#</a>Artifact 与 Pages deployment 的区别</h3>
+      <p>两者相关但不是同一个概念：</p>
+      <ul>
+        <li><strong>Job artifact</strong> 属于某次 CI job，可以在 <strong>Build → Artifacts</strong> 查看或下载，保留时间受 artifact 策略控制。</li>
+        <li><strong>Pages deployment</strong> 属于站点发布记录，可以在 <strong>Deploy → Pages</strong> 查看；Pages daemon 服务的是部署归档，而不是 Runner 的工作目录。</li>
+        <li>GitLab 版本不同，artifact 到 Pages deployment 的内部转换细节可能不同，但“Runner 生产并上传，GitLab 保存部署，Pages daemon 对外服务”的职责边界不变。</li>
+      </ul>
+
+      <h3 id="管理员如何确认当前实例的真实位置"><a class="heading-anchor" href="#管理员如何确认当前实例的真实位置" aria-label="链接到本节">#</a>管理员如何确认当前实例的真实位置</h3>
+      <p>仅凭仓库配置无法得知 <code>code.dding.net</code> 的宿主机路径。管理员应查看 <code>/etc/gitlab/gitlab.rb</code> 或实际部署清单中的以下设置：</p>
+      <ul>
+        <li><code>gitlab_rails['artifacts_path']</code>：CI artifact 的本地路径。</li>
+        <li><code>gitlab_rails['pages_path']</code>：Pages 本地或网络存储路径。</li>
+        <li><code>gitlab_rails['pages_object_store_enabled']</code> 以及 Pages object-store 配置：是否写入对象存储及对应 bucket。</li>
+        <li><code>pages_external_url</code>：对外 Pages 根域名，不是文件存储位置。</li>
+      </ul>
+      <p>在 Linux package 默认配置下，job artifacts 位于 <code>/var/opt/gitlab/gitlab-rails/shared/artifacts</code>；GitLab 官方也明确 Pages deployment ZIP 可以位于本地或对象存储。管理员可以查询 <code>pages_deployments.file_store</code>，其中 <code>1</code> 表示文件系统，<code>2</code> 表示对象存储。<a href="https://docs.gitlab.com/administration/pages/#migrate-pages-deployments-to-object-storage" target="_blank" rel="noopener noreferrer">Pages deployment storage verification</a></p>
+
       <h2 id="ci-长期-in-progress-排查"><a class="heading-anchor" href="#ci-长期-in-progress-排查" aria-label="链接到本节">#</a>CI 长期 In progress 排查</h2>
       <h3 id="当前项目的判断"><a class="heading-anchor" href="#当前项目的判断" aria-label="链接到本节">#</a>当前项目的判断</h3>
       <p>当前流水线只有一个 <code>pages</code> 作业，使用 <code>page-build-zhao</code> 标签匹配 Runner，实际脚本只有 <code>test -s public/index.html</code>。入口文件已经存在，该命令正常情况下会在一秒内结束；没有依赖下载、页面构建、网络访问或循环。因此，流水线长时间显示 <em>In progress</em> 时，优先检查该 Runner 是否在线、是否拥有同名标签以及是否允许当前分支作业，而不是怀疑知识库代码卡住。</p>
@@ -197,6 +263,8 @@ sudo gitlab-ctl tail gitlab-rails</code></pre>
         <li><a href="https://docs.gitlab.com/api/jobs/#job-status-values" target="_blank" rel="noopener noreferrer">Jobs API：Job status values</a> — <code>pending</code>、<code>preparing</code> 和 <code>running</code> 等状态含义，访问日期：2026-07-24。</li>
         <li><a href="https://docs.gitlab.com/ci/runners/" target="_blank" rel="noopener noreferrer">GitLab Runners</a> — Runner 的调度条件、类型和执行流程，访问日期：2026-07-24。</li>
         <li><a href="https://docs.gitlab.com/ci/runners/runners_scope/#runner-statuses" target="_blank" rel="noopener noreferrer">Runner statuses</a> — Runner 在线、离线和失联状态，访问日期：2026-07-24。</li>
+        <li><a href="https://docs.gitlab.com/administration/cicd/job_artifacts/" target="_blank" rel="noopener noreferrer">Jobs artifacts administration</a> — Runner 上传 artifact、本地默认路径和对象存储方式，访问日期：2026-07-24。</li>
+        <li><a href="https://docs.gitlab.com/administration/pages/" target="_blank" rel="noopener noreferrer">GitLab Pages administration</a> — Pages daemon、域名路由、ZIP 存储、本地与对象存储架构，访问日期：2026-07-24。</li>
         <li><a href="https://docs.gitlab.com/administration/pages/troubleshooting/" target="_blank" rel="noopener noreferrer">Troubleshooting GitLab Pages administration</a> — 自建 Pages 服务日志与存储排查，访问日期：2026-07-24。</li>
       </ul>
     </article>
@@ -218,6 +286,11 @@ sudo gitlab-ctl tail gitlab-rails</code></pre>
         <li class="toc-level-2"><a href="#后续文档生成规则">后续文档生成规则</a></li>
         <li class="toc-level-2"><a href="#本地验证">本地验证</a></li>
         <li class="toc-level-2"><a href="#自建-gitlab-前置条件">自建 GitLab 前置条件</a></li>
+        <li class="toc-level-2"><a href="#部署位置与工作原理">部署位置与工作原理</a></li>
+        <li class="toc-level-3"><a href="#先回答部署到哪里">先回答：部署到哪里</a></li>
+        <li class="toc-level-3"><a href="#从-git-push-到浏览器的完整链路">从 git push 到浏览器的完整链路</a></li>
+        <li class="toc-level-3"><a href="#artifact-与-pages-deployment-的区别">Artifact 与 Pages deployment 的区别</a></li>
+        <li class="toc-level-3"><a href="#管理员如何确认当前实例的真实位置">管理员如何确认当前实例的真实位置</a></li>
         <li class="toc-level-2"><a href="#ci-长期-in-progress-排查">CI 长期 In progress 排查</a></li>
         <li class="toc-level-3"><a href="#当前项目的判断">当前项目的判断</a></li>
         <li class="toc-level-3"><a href="#先看-pages-作业的精确状态">先看 pages 作业的精确状态</a></li>
