@@ -5,7 +5,7 @@ import path from "node:path";
 import process from "node:process";
 
 const rootDir = process.cwd();
-const htmlDir = path.join(rootDir, "html");
+const publicDir = path.join(rootDir, "public");
 
 const posixPath = (value) => value.split(path.sep).join("/");
 
@@ -44,7 +44,7 @@ const relativeUrl = (fromFile, toFile) => {
   return result || path.basename(toFile);
 };
 
-async function collectHtmlFiles(directory = htmlDir) {
+async function collectHtmlFiles(directory = publicDir) {
   const entries = await fs.readdir(directory, { withFileTypes: true });
   const files = [];
 
@@ -56,7 +56,7 @@ async function collectHtmlFiles(directory = htmlDir) {
     } else if (
       entry.isFile() &&
       entry.name.toLowerCase().endsWith(".html") &&
-      absolutePath !== path.join(htmlDir, "index.html")
+      absolutePath !== path.join(publicDir, "index.html")
     ) {
       files.push(absolutePath);
     }
@@ -83,7 +83,7 @@ function metaContent(html, name) {
 }
 
 function fallbackCategory(outputPath) {
-  const relative = posixPath(path.relative(htmlDir, outputPath));
+  const relative = posixPath(path.relative(publicDir, outputPath));
   const segments = relative.split("/");
   if (relative === "AGENTS.html") return "项目指南";
   if (segments[0] === "notes" && segments[1]) {
@@ -128,7 +128,7 @@ function extractDocument(outputPath, html) {
 
   return {
     outputPath,
-    relativePath: posixPath(path.relative(htmlDir, outputPath)),
+    relativePath: posixPath(path.relative(publicDir, outputPath)),
     html,
     title,
     category,
@@ -230,7 +230,7 @@ function renderIndex(documents) {
   <div class="document-grid">
     ${categoryDocuments
       .map((document) => {
-        const href = relativeUrl(path.join(htmlDir, "index.html"), document.outputPath);
+        const href = relativeUrl(path.join(publicDir, "index.html"), document.outputPath);
         const searchText = [
           document.title,
           document.description,
@@ -313,7 +313,7 @@ function renderIndex(documents) {
 async function main() {
   const outputPaths = await collectHtmlFiles();
   if (outputPaths.length === 0) {
-    throw new Error("html/ 中没有找到知识页面。");
+    throw new Error("public/ 中没有找到知识页面。");
   }
 
   const documents = [];
@@ -331,7 +331,7 @@ async function main() {
   }
 
   await fs.writeFile(
-    path.join(htmlDir, "index.html"),
+    path.join(publicDir, "index.html"),
     renderIndex(documents),
     "utf8",
   );
@@ -348,13 +348,13 @@ async function main() {
     })),
   };
   await fs.writeFile(
-    path.join(htmlDir, "manifest.json"),
+    path.join(publicDir, "manifest.json"),
     `${JSON.stringify(manifest, null, 2)}\n`,
     "utf8",
   );
 
   console.log(`已索引 ${documents.length} 篇 HTML 文档。`);
-  console.log(`入口：${path.join(htmlDir, "index.html")}`);
+  console.log(`入口：${path.join(publicDir, "index.html")}`);
 }
 
 main().catch((error) => {

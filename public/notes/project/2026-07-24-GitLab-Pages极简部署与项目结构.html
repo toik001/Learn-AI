@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="说明本知识库采用 public 目录直接发布到 GitLab Pages 的极简项目结构、CI 配置和后续文档维护规则。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="项目维护">
+  <meta name="study-date" content="2026-07-24">
+  <title>GitLab Pages 极简部署与项目结构｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a href="../../index.html">全部文档</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <label class="sidebar-search">
+      <span class="sr-only">筛选文档</span>
+      <input type="search" placeholder="筛选文档…" data-sidebar-search>
+    </label>
+    <nav class="doc-nav" aria-label="文档列表">
+      <a class="doc-nav-item" href="../codex/2026-07-24-AI开发工作流选型与小团队沉淀指南.html"><span>AI 开发工作流选型与小团队沉淀指南</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="../codex/2026-07-24-AIDLC详细介绍.html"><span>AIDLC 详细介绍：从 AI 辅助编码到可审计的软件交付生命周期</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="../codex/2026-07-24-AIDLC与Superpowers差异分析.html"><span>AIDLC 与 Superpowers 差异分析：生命周期治理与工程 Inner Loop</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="../codex/2026-07-24-Codex全栈开发最佳实践.html"><span>Codex 全栈开发最佳实践：Vibe Coding、Harness 与 Loop</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="../codex/2026-07-24-Superpowers详细介绍.html"><span>Superpowers 详细介绍：Codex 的技能化软件开发方法</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item is-active" href="2026-07-24-GitLab-Pages极简部署与项目结构.html"><span>GitLab Pages 极简部署与项目结构</span><small>项目维护</small></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta">
+      <a href="../../index.html">知识库首页</a>
+      <span>·</span>
+      <span>项目维护</span>
+      <span>·</span>
+      <time>2026-07-24</time>
+    </div>
+    <article class="markdown-body">
+      <h1 id="gitlab-pages-极简部署与项目结构"><a class="heading-anchor" href="#gitlab-pages-极简部署与项目结构" aria-label="链接到本节">#</a>GitLab Pages 极简部署与项目结构</h1>
+      <blockquote>
+        <p>整理日期：2026-07-24<br>主题：使用零依赖、无构建步骤的纯静态结构部署学习知识库，并规定后续 HTML 文档的固定位置和发布流程。</p>
+      </blockquote>
+
+      <h2 id="核心结论"><a class="heading-anchor" href="#核心结论" aria-label="链接到本节">#</a>核心结论</h2>
+      <p>本项目直接把可发布网站提交到 <code>public/</code>。GitLab CI 不生成页面、不安装依赖，只确认入口存在，然后将整个目录交给 GitLab Pages。</p>
+      <p>GitLab 官方文档说明，Pages 支持纯 HTML、CSS 和 JavaScript，默认发布目录是 <code>public</code>，发布目录根部必须包含非空 <code>index.html</code>。<a href="https://docs.gitlab.com/user/project/pages/" target="_blank" rel="noopener noreferrer">GitLab Pages</a></p>
+
+      <h2 id="项目结构"><a class="heading-anchor" href="#项目结构" aria-label="链接到本节">#</a>项目结构</h2>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">.
+├── .gitlab-ci.yml             # GitLab Pages 部署
+├── .gitignore
+├── AGENTS.md                  # Codex 持久规则，不对外发布
+├── public/                    # GitLab Pages 网站根目录
+│   ├── index.html             # 知识库总入口
+│   ├── manifest.json          # 页面清单
+│   ├── assets/
+│   │   ├── style.css
+│   │   └── app.js
+│   └── notes/
+│       ├── codex/
+│       ├── project/
+│       ├── llm/
+│       ├── papers/
+│       └── tools/
+└── scripts/
+    └── build-html-index.mjs   # 重建入口和站内导航</code></pre>
+      </div>
+      <p><code>public/</code> 之外的内容不会被 Pages 发布。这样可以让规则、脚本和 CI 配置留在仓库中，同时只公开真正需要浏览的静态文件。</p>
+
+      <h2 id="极简-ci-配置"><a class="heading-anchor" href="#极简-ci-配置" aria-label="链接到本节">#</a>极简 CI 配置</h2>
+      <div class="code-block">
+        <div class="code-toolbar"><span>yaml</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-yaml">create-pages:
+  stage: deploy
+  script:
+    - test -s public/index.html
+  pages: true
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'</code></pre>
+      </div>
+      <p><code>pages: true</code> 声明这是 Pages 发布任务；显式保留 <code>artifacts.paths: public</code> 可兼顾 GitLab 17.10 自动添加发布目录之前的版本。使用自定义 job 名称而不是把 job 直接命名为 <code>pages</code>，符合当前官方推荐。<a href="https://docs.gitlab.com/ci/yaml/#pages" target="_blank" rel="noopener noreferrer">GitLab CI/CD YAML：pages</a></p>
+      <p><code>rules</code> 只允许默认分支触发生产 Pages。当前仓库默认分支为 <code>main</code>，但配置不把分支名写死。</p>
+
+      <h2 id="后续文档生成规则"><a class="heading-anchor" href="#后续文档生成规则" aria-label="链接到本节">#</a>后续文档生成规则</h2>
+      <ol>
+        <li>直接创建 <code>public/notes/&lt;category&gt;/YYYY-MM-DD-主题关键词.html</code>。</li>
+        <li>页面使用共享的 <code>public/assets/style.css</code> 和 <code>public/assets/app.js</code>。</li>
+        <li>页面必须提供摘要、分类、整理日期、稳定标题锚点、页内目录和参考资料。</li>
+        <li>所有站内链接和资源使用相对路径，避免部署在 GitLab 项目子路径后失效。</li>
+        <li>完成页面后运行 <code>node scripts/build-html-index.mjs</code>，自动更新首页、侧栏、上一篇/下一篇和清单。</li>
+        <li>提交并推送默认分支，由 GitLab CI 自动发布。</li>
+      </ol>
+
+      <h2 id="本地验证"><a class="heading-anchor" href="#本地验证" aria-label="链接到本节">#</a>本地验证</h2>
+      <div class="code-block">
+        <div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-bash">node scripts/build-html-index.mjs
+test -s public/index.html
+node --check scripts/build-html-index.mjs
+node --check public/assets/app.js</code></pre>
+      </div>
+      <p>知识库没有 npm、Java 或静态站点生成器依赖，可以直接双击 <code>public/index.html</code> 离线浏览。</p>
+
+      <h2 id="自建-gitlab-前置条件"><a class="heading-anchor" href="#自建-gitlab-前置条件" aria-label="链接到本节">#</a>自建 GitLab 前置条件</h2>
+      <p>代码推送成功不代表 Pages 一定已经启用。自建 GitLab 还需要管理员配置 Pages 域名，并为项目提供可运行 CI 的 GitLab Runner。若流水线成功但没有 Pages 地址，应先检查实例和项目的 Pages 设置。<a href="https://docs.gitlab.com/user/project/pages/introduction/" target="_blank" rel="noopener noreferrer">GitLab Pages settings</a></p>
+
+      <h2 id="易错点与局限"><a class="heading-anchor" href="#易错点与局限" aria-label="链接到本节">#</a>易错点与局限</h2>
+      <ul>
+        <li>不要把密钥、内部配置或不希望公开的文件放进 <code>public/</code>。</li>
+        <li>不要使用以 <code>/</code> 开头的站内绝对路径，否则项目级 Pages 子路径可能加载失败。</li>
+        <li>GitLab Pages 只能提供静态内容，不能运行 Java、PHP 或其他服务端程序。</li>
+        <li>知识库首页由索引脚本维护，不应手工复制页面卡片。</li>
+        <li>如果自建 GitLab 版本过旧而不识别 <code>pages: true</code>，需要根据管理员提供的版本切换到旧式 Pages job 语法。</li>
+      </ul>
+
+      <h2 id="参考资料"><a class="heading-anchor" href="#参考资料" aria-label="链接到本节">#</a>参考资料</h2>
+      <ul>
+        <li><a href="https://docs.gitlab.com/user/project/pages/" target="_blank" rel="noopener noreferrer">GitLab Pages</a> — 静态内容能力、默认 <code>public</code> 目录和整体工作方式，访问日期：2026-07-24。</li>
+        <li><a href="https://docs.gitlab.com/ci/yaml/#pages" target="_blank" rel="noopener noreferrer">CI/CD YAML syntax：pages</a> — <code>pages: true</code>、<code>pages.publish</code> 和版本演进，访问日期：2026-07-24。</li>
+        <li><a href="https://docs.gitlab.com/user/project/pages/introduction/" target="_blank" rel="noopener noreferrer">GitLab Pages settings</a> — 纯 HTML 示例、自建实例前置条件和非空入口要求，访问日期：2026-07-24。</li>
+      </ul>
+    </article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/project/2026-07-24-GitLab-Pages极简部署与项目结构.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="../codex/2026-07-24-Superpowers详细介绍.html"><small>上一篇</small><span>Superpowers 详细介绍：Codex 的技能化软件开发方法</span></a>
+        <span class="pager-spacer"></span>
+      </nav>
+    </footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list">
+        <li class="toc-level-2"><a href="#核心结论">核心结论</a></li>
+        <li class="toc-level-2"><a href="#项目结构">项目结构</a></li>
+        <li class="toc-level-2"><a href="#极简-ci-配置">极简 CI 配置</a></li>
+        <li class="toc-level-2"><a href="#后续文档生成规则">后续文档生成规则</a></li>
+        <li class="toc-level-2"><a href="#本地验证">本地验证</a></li>
+        <li class="toc-level-2"><a href="#自建-gitlab-前置条件">自建 GitLab 前置条件</a></li>
+        <li class="toc-level-2"><a href="#易错点与局限">易错点与局限</a></li>
+        <li class="toc-level-2"><a href="#参考资料">参考资料</a></li>
+      </ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+<div class="sidebar-scrim"></div>
+</body>
+</html>

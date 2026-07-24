@@ -64,12 +64,12 @@
 
 ### 保存位置与命名
 
-- 默认保存目录：`html/notes/`
+- 默认保存目录：`public/notes/`
 - 默认文件名：`YYYY-MM-DD-主题关键词.html`
 - 文件名使用简洁、可读的中文或英文，避免无意义编号。
 - 同一主题已有页面时，优先更新原 HTML；若内容是独立调研或版本差异明显，则创建新页面。
-- 必要时可按主题建立子目录，例如 `html/notes/llm/`、`html/notes/papers/`、`html/notes/tools/`。
-- `html/index.html` 是知识库总入口。
+- 必要时可按主题建立子目录，例如 `public/notes/llm/`、`public/notes/papers/`、`public/notes/tools/`。
+- `public/index.html` 是知识库总入口，也是 GitLab Pages 发布入口。
 
 ### HTML 页面要求
 
@@ -85,7 +85,7 @@
    - `study-date` 整理日期。
 3. 正文保留“核心结论”和“参考资料”；其他章节可按主题调整。
 4. 根据 `h2`～`h4` 自动或手工维护页内目录，标题必须有稳定且唯一的 `id`。
-5. 使用共享样式 `html/assets/style.css` 和交互脚本 `html/assets/app.js`，保持电脑和手机均可阅读。
+5. 使用共享样式 `public/assets/style.css` 和交互脚本 `public/assets/app.js`，保持电脑和手机均可阅读。
 6. 本地知识页之间使用相对 HTML 链接，不再链接 `.md` 文件。
 7. 外部来源链接使用 `target="_blank"` 和 `rel="noopener noreferrer"`。
 8. 完成后运行 `node scripts/build-html-index.mjs`，更新入口列表、文档侧栏、上一篇/下一篇和 `manifest.json`。
@@ -110,11 +110,47 @@ HTML 页面可参考以下元数据：
 
 ## 本地知识整理
 
-- 非联网学习内容也直接保存到 `html/notes/`，形成持续维护的个人 AI 知识库。
+- 非联网学习内容也直接保存到 `public/notes/`，形成持续维护的个人 AI 知识库。
 - 新页面应尽量链接已有相关页面，避免知识孤岛。
 - 若主题较大，先创建总览 HTML，再拆分子主题；总览中维护学习顺序和链接。
 - 用户要求制定学习计划时，将计划保存为 HTML，并包含目标、周期、每日或每周任务、练习和验收标准。
 - HTML 页面是学习资料的唯一内容真相源，不再从 Markdown 生成。
+
+## GitLab Pages 项目结构
+
+本项目采用纯静态 GitLab Pages 极简部署，固定结构如下：
+
+```text
+.
+├── .gitlab-ci.yml
+├── .gitignore
+├── AGENTS.md
+├── public/
+│   ├── index.html
+│   ├── manifest.json
+│   ├── assets/
+│   │   ├── style.css
+│   │   └── app.js
+│   └── notes/
+│       └── <category>/
+│           └── YYYY-MM-DD-主题关键词.html
+└── scripts/
+    └── build-html-index.mjs
+```
+
+约束：
+
+1. `public/` 是可直接部署的网站根目录，只放允许发布的静态文件。
+2. 所有学习页面直接写入 `public/notes/<category>/`，不建立 `src/`、`dist/` 或 Markdown 中间层。
+3. 页面内资源和站内链接必须使用相对路径，确保 GitLab Pages 部署在项目子路径时仍可访问。
+4. `AGENTS.md`、脚本、CI 配置和其他内部工程文件不得复制到 `public/`。
+5. `.gitlab-ci.yml` 只校验并发布已提交的 `public/`，不在 CI 中重新生成内容。
+6. 新建、移动、重命名或删除知识页面后，运行 `node scripts/build-html-index.mjs`。
+7. 提交前至少检查：
+   - `test -s public/index.html`
+   - `node --check scripts/build-html-index.mjs`
+   - `node --check public/assets/app.js`
+   - 本地 HTML 链接和标题锚点有效。
 
 ## 每次任务的交付要求
 
@@ -122,7 +158,7 @@ HTML 页面可参考以下元数据：
 
 1. 得到了什么结论或完成了什么学习材料。
 2. 新建或更新了哪些 HTML 页面，并提供可点击的文件路径。
-3. 提供更新后的知识库入口 `html/index.html`。
+3. 提供更新后的知识库入口 `public/index.html`。
 4. 使用了网上资料时，说明资料截至或检索于哪一天。
 5. 若仍有不确定项、前置条件或推荐的下一步，明确列出。
 

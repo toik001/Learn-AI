@@ -1,14 +1,7 @@
 {
-  "generatedAt": "2026-07-24T06:31:18.062Z",
+  "generatedAt": "2026-07-24T06:40:27.042Z",
   "documentCount": 6,
   "documents": [
-    {
-      "output": "AGENTS.html",
-      "title": "Java 全栈 AI 学习助手",
-      "category": "项目指南",
-      "date": "",
-      "sections": 10
-    },
     {
       "output": "notes/codex/2026-07-24-AI开发工作流选型与小团队沉淀指南.html",
       "title": "AI 开发工作流选型与小团队沉淀指南",
@@ -43,6 +36,13 @@
       "category": "Codex 与 AI 工程",
       "date": "2026-07-24",
       "sections": 67
+    },
+    {
+      "output": "notes/project/2026-07-24-GitLab-Pages极简部署与项目结构.html",
+      "title": "GitLab Pages 极简部署与项目结构",
+      "category": "项目维护",
+      "date": "2026-07-24",
+      "sections": 8
     }
   ]
 }
