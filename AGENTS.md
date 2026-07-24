@@ -145,8 +145,9 @@ HTML 页面可参考以下元数据：
 3. 页面内资源和站内链接必须使用相对路径，确保 GitLab Pages 部署在项目子路径时仍可访问。
 4. `AGENTS.md`、脚本、CI 配置和其他内部工程文件不得复制到 `public/`。
 5. `.gitlab-ci.yml` 只校验并发布已提交的 `public/`，不在 CI 中重新生成内容。
-6. 新建、移动、重命名或删除知识页面后，运行 `node scripts/build-html-index.mjs`。
-7. 提交前至少检查：
+6. 当前自建 GitLab 使用旧式 Pages 语法：CI job 必须命名为 `pages`，通过 `artifacts.paths: public` 发布；不要添加该实例不支持的 job 级 `pages: true` 或 `pages.publish`。
+7. 新建、移动、重命名或删除知识页面后，运行 `node scripts/build-html-index.mjs`。
+8. 提交前至少检查：
    - `test -s public/index.html`
    - `node --check scripts/build-html-index.mjs`
    - `node --check public/assets/app.js`

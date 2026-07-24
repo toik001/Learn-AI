@@ -1,10 +1,9 @@
-create-pages:
+pages:
   stage: deploy
   script:
     - test -s public/index.html
-  pages: true
   artifacts:
     paths:
       - public
-  rules:
-    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+  only:
+    - main
