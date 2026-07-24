@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="面向 Java 全栈团队的 OpenSpec、Superpowers、Codex CLI 与 GitLab CI 组合教程，包含安装、项目接入、统一工作流及四类完整实战。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="Codex 与 AI 工程">
+  <meta name="study-date" content="2026-07-24">
+  <title>OpenSpec + Superpowers + CI：Codex CLI 全栈实战教程｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a href="../../index.html">全部文档</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <label class="sidebar-search">
+      <span class="sr-only">筛选文档</span>
+      <input type="search" placeholder="筛选文档…" data-sidebar-search>
+    </label>
+    <nav class="doc-nav" aria-label="文档列表">
+      <a class="doc-nav-item" href="2026-07-24-AI开发工作流选型与小团队沉淀指南.html"><span>AI 开发工作流选型与小团队沉淀指南</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC详细介绍.html"><span>AIDLC 详细介绍：从 AI 辅助编码到可审计的软件交付生命周期</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC与Superpowers差异分析.html"><span>AIDLC 与 Superpowers 差异分析：生命周期治理与工程 Inner Loop</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-Codex全栈开发最佳实践.html"><span>Codex 全栈开发最佳实践：Vibe Coding、Harness 与 Loop</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item is-active" href="2026-07-24-OpenSpec-Superpowers-CI-Codex-CLI实战教程.html"><span>OpenSpec + Superpowers + CI：Codex CLI 全栈实战教程</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="2026-07-24-Superpowers详细介绍.html"><span>Superpowers 详细介绍：Codex 的技能化软件开发方法</span><small>Codex 与 AI 工程</small></a><a class="doc-nav-item" href="../project/2026-07-24-GitLab-Pages极简部署与项目结构.html"><span>GitLab Pages 极简部署与项目结构</span><small>项目维护</small></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta">
+      <a href="../../index.html">知识库首页</a>
+      <span>·</span>
+      <span>Codex 与 AI 工程</span>
+      <span>·</span>
+      <time>2026-07-24</time>
+    </div>
+    <article class="markdown-body">
+      <h1 id="openspec-superpowers-ci-codex-cli-实战教程"><a class="heading-anchor" href="#openspec-superpowers-ci-codex-cli-实战教程" aria-label="链接到本节">#</a>OpenSpec + Superpowers + CI：Codex CLI 全栈实战教程</h1>
+      <blockquote>
+        <p>整理日期：2026-07-24<br>适用对象：以 Java 21、Spring Boot、TypeScript 前端和 GitLab 为主的小团队。<br>目标：把“让 AI 写代码”升级为一条有规格、有实现纪律、有机器证据的可复用交付链路。</p>
+      </blockquote>
+
+      <h2 id="核心结论"><a class="heading-anchor" href="#核心结论" aria-label="链接到本节">#</a>核心结论</h2>
+      <p>推荐的职责分工只有一句话：<strong>OpenSpec 管“要改什么”，Superpowers 管“怎样可靠地改”，CI 管“改完是否真的成立”</strong>。Codex CLI 是执行这些约束的开发入口，人仍负责范围、架构、风险和最终合并决策。</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">需求或问题
+   │
+   ├─ 不确定：OpenSpec Explore + Superpowers Brainstorming
+   │
+   └─ 已确定：OpenSpec Propose
+                 │
+                 ▼
+     proposal → specs → design → tasks
+                 │ 人工确认
+                 ▼
+           OpenSpec Apply
+                 │
+                 ├─ Superpowers TDD
+                 ├─ Superpowers Systematic Debugging
+                 ├─ Superpowers Code Review
+                 └─ Superpowers Verification
+                 │
+                 ▼
+        本地验证 → CI → 人工 Review
+                 │
+                 ▼
+          OpenSpec Archive</code></pre>
+      </div>
+      <p>最关键的组合原则是：<strong>一个顶层真相源、多个局部能力</strong>。本方案以 OpenSpec 的 <code>proposal/specs/design/tasks</code> 为唯一计划，不再让 Superpowers 另起一套互相竞争的需求和任务清单；Superpowers 只承担设计讨论、TDD、调试、评审和完成前验证等实现内循环。</p>
+
+      <h2 id="三层职责与边界"><a class="heading-anchor" href="#三层职责与边界" aria-label="链接到本节">#</a>三层职责与边界</h2>
+      <table>
+        <thead>
+          <tr><th>层</th><th>负责内容</th><th>产物</th><th>不应该替代</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>OpenSpec</td><td>问题、范围、行为要求、技术设计、实施任务、变更状态</td><td><code>openspec/specs/</code>、<code>openspec/changes/</code></td><td>测试框架、代码质量工具和流水线</td></tr>
+          <tr><td>Superpowers</td><td>脑暴、工作树、TDD、系统调试、代码评审、完成前验证</td><td>实现过程、测试、评审发现和验证证据</td><td>OpenSpec 的规格真相源</td></tr>
+          <tr><td>CI</td><td>可重复运行的规格校验、编译、测试、静态检查、构建和安全门禁</td><td>日志、报告、制品、通过或失败状态</td><td>需求判断和人工验收</td></tr>
+          <tr><td>人</td><td>优先级、边界、风险、架构取舍、数据迁移、发布与合并决策</td><td>确认、审批和业务验收</td><td>所有高影响决定都交给模型</td></tr>
+        </tbody>
+      </table>
+      <p>OpenSpec 官方将 <code>openspec/specs/</code> 定义为当前行为真相，将每次变更放在 <code>openspec/changes/&lt;change-id&gt;/</code>；归档时，delta spec 合并回主规格，变更目录带日期移入归档。<a href="https://openspec.dev/docs/overview" target="_blank" rel="noopener noreferrer">OpenSpec Core Concepts</a></p>
+
+      <h2 id="环境与版本基线"><a class="heading-anchor" href="#环境与版本基线" aria-label="链接到本节">#</a>环境与版本基线</h2>
+      <ul>
+        <li>Git 2.x，并已配置 GitLab SSH 或 HTTPS 凭据。</li>
+        <li>Java 21 LTS；Spring Boot 项目提交 Maven Wrapper，统一使用 <code>./mvnw</code>。</li>
+        <li>Node.js 22 LTS。OpenSpec 当前要求 Node.js 20.19.0 或更高版本。</li>
+        <li>npm 10+；前端依赖和 OpenSpec CI 依赖都提交 lockfile。</li>
+        <li>GitLab Runner 能执行项目所需的容器镜像或 Shell 命令。</li>
+      </ul>
+      <p>本页检索时的本机验证版本是 <code>codex-cli 0.145.0</code>。工具版本会继续变化，因此安装命令使用官方稳定入口，项目可复现性则依靠 lockfile、Wrapper 和 CI 镜像版本。</p>
+
+      <h2 id="安装-codex-cli"><a class="heading-anchor" href="#安装-codex-cli" aria-label="链接到本节">#</a>安装 Codex CLI</h2>
+      <h3 id="官方安装方式"><a class="heading-anchor" href="#官方安装方式" aria-label="链接到本节">#</a>官方安装方式</h3>
+      <p>macOS 或 Linux 首选官方独立安装器：</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-bash">curl -fsSL https://chatgpt.com/codex/install.sh | sh</code></pre>
+      </div>
+      <p>Windows PowerShell：</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>powershell</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-powershell">powershell -ExecutionPolicy ByPass -c "irm https://chatgpt.com/codex/install.ps1 | iex"</code></pre>
+      </div>
+      <p>也可以根据团队现有包管理方式选择 npm 或 Homebrew：</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-bash"># npm
+npm install -g @openai/codex
+
+# macOS Homebrew
+brew install --cask codex
+
+# 检查
+codex --version
+codex doctor</code></pre>
+      </div>
+      <p>以上安装入口、平台二进制和登录建议均来自 OpenAI 官方仓库。官方还提供 GitHub Release 的 macOS/Linux 架构包。<a href="https://github.com/openai/codex#installing-and-running-codex-cli" target="_blank" rel="noopener noreferrer">OpenAI Codex README</a></p>
+
+      <h3 id="登录与凭据"><a class="heading-anchor" href="#登录与凭据" aria-label="链接到本节">#</a>登录与凭据</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-bash"># 推荐：打开交互登录，选择 Sign in with ChatGPT
+codex login
+
+# 无浏览器环境可使用设备授权
+codex login --device-auth
+
+# API Key 从标准输入传入，不写进 shell 历史或仓库
+printenv OPENAI_API_KEY | codex login --with-api-key
+
+# 查看登录状态
+codex login status</code></pre>
+      </div>
+      <p>不要把 API Key 写入 <code>AGENTS.md</code>、<code>.codex/config.toml</code>、OpenSpec 文件、GitLab YAML 或聊天提示词。CI 需要密钥时，应使用 GitLab masked/protected variable；本方案默认也<strong>不在 CI 中运行 Codex</strong>。</p>
+
+      <h3 id="更新与故障诊断"><a class="heading-anchor" href="#更新与故障诊断" aria-label="链接到本节">#</a>更新与故障诊断</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-bash"># 支持自更新的安装包
+codex update
+
+# npm 安装方式也可显式升级
+npm install -g @openai/codex@latest
+
+# 收集安装、配置、认证、Git 和运行时诊断
+codex doctor</code></pre>
+      </div>
+
+      <h2 id="codex-cli-在项目中的基本用法"><a class="heading-anchor" href="#codex-cli-在项目中的基本用法" aria-label="链接到本节">#</a>Codex CLI 在项目中的基本用法</h2>
+      <h3 id="交互式开发"><a class="heading-anchor" href="#交互式开发" aria-label="链接到本节">#</a>交互式开发</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-bash">cd your-project
+codex
+
+# 也可以在启动时给出目标
+codex "先读取 AGENTS.md 和 OpenSpec 状态，只汇报当前项目结构与可用技能，不修改文件"</code></pre>
+      </div>
+      <p>Codex 会从项目根目录到当前工作目录逐层加载 <code>AGENTS.md</code>，越靠近当前目录的规则优先级越高。因此可在仓库根目录定义通用工程规则，在 <code>backend/</code>、<code>frontend/</code> 下分别补充局部规则。<a href="https://learn.chatgpt.com/docs/agent-configuration/agents-md" target="_blank" rel="noopener noreferrer">AGENTS.md 官方说明</a></p>
+
+      <h3 id="非交互式任务与评审"><a class="heading-anchor" href="#非交互式任务与评审" aria-label="链接到本节">#</a>非交互式任务与评审</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-bash"># 一次性只读分析
+codex exec --sandbox read-only \
+  "读取 AGENTS.md 和 openspec/，列出当前活动变更、风险和下一步，不修改文件"
+
+# 评审本地所有未提交变更
+codex review --uncommitted
+
+# 以 main 为基线做 PR 风格评审
+codex review --base main
+
+# 评审一个提交
+codex review --commit &lt;sha&gt;</code></pre>
+      </div>
+      <p><code>codex exec</code> 适合脚本化的单次任务，<code>codex review</code> 只输出按优先级排序的评审发现，不修改工作区。对于写代码任务仍建议使用交互会话，以便在规格、测试失败和高风险操作处停下来确认。<a href="https://learn.chatgpt.com/docs/developer-commands#command-overview" target="_blank" rel="noopener noreferrer">Codex developer commands</a></p>
+
+      <h2 id="安装与初始化-openspec"><a class="heading-anchor" href="#安装与初始化-openspec" aria-label="链接到本节">#</a>安装与初始化 OpenSpec</h2>
+      <h3 id="开发机安装"><a class="heading-anchor" href="#开发机安装" aria-label="链接到本节">#</a>开发机安装</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-bash">node --version
+npm install -g @fission-ai/openspec@latest
+openspec --version
+
+cd your-project
+openspec init --tools codex
+
+# 升级 OpenSpec 后刷新项目里的技能
+npm install -g @fission-ai/openspec@latest
+openspec update</code></pre>
+      </div>
+      <p><code>--tools codex</code> 是可复现的非交互初始化方式。默认 core profile 会安装 propose、explore、apply、sync、archive 五类工作流。OpenSpec 生成的关键结构如下：</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">your-project/
+├── AGENTS.md
+├── .codex/
+│   └── skills/
+│       ├── openspec-propose/
+│       ├── openspec-explore/
+│       ├── openspec-apply-change/
+│       ├── openspec-sync-specs/
+│       └── openspec-archive-change/
+└── openspec/
+    ├── config.yaml
+    ├── specs/                 # 当前系统行为真相
+    └── changes/
+        ├── &lt;change-id&gt;/
+        │   ├── proposal.md    # 为什么改、范围是什么
+        │   ├── specs/         # ADDED/MODIFIED/REMOVED 行为增量
+        │   ├── design.md      # 技术方案
+        │   └── tasks.md       # 可验证任务
+        └── archive/</code></pre>
+      </div>
+      <p>OpenSpec 本身以 Markdown 保存规格，这是该框架的工程数据格式；它与本知识库“学习页面只写 HTML”的约束不是一回事。应用仓库应把 <code>openspec/</code> 和 <code>.codex/skills/openspec-*</code> 一起提交，让团队和 CI 共享同一份变更状态。</p>
+
+      <h3 id="codex-中的正确调用方式"><a class="heading-anchor" href="#codex-中的正确调用方式" aria-label="链接到本节">#</a>Codex 中的正确调用方式</h3>
+      <p><strong>Codex 是 skills-only 集成。</strong>OpenSpec 不会为 Codex 生成 <code>/opsx:propose</code> 等斜杠命令；它生成项目级 <code>.codex/skills/openspec-*</code>。因此在 Codex 中应通过技能名或自然语言调用：</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">使用 $openspec-explore 探索“订单重复提交”的根因和候选方案，只分析，不创建变更，不写代码。
+
+使用 $openspec-propose 为“订单取消”创建 change-id，
+要求包含后端 API、状态机、数据库并发、前端交互、测试和回滚策略。
+
+使用 $openspec-apply-change 实现 change-id=add-order-cancellation。
+以 tasks.md 为唯一任务清单，一次只推进一个任务。
+
+使用 $openspec-archive-change 归档 add-order-cancellation，
+归档前先验证任务、测试、CI 和实现与规格一致。</code></pre>
+      </div>
+      <p>如果 <code>$</code> 自动补全中看不到技能，先检查 <code>.codex/skills/openspec-*</code> 是否存在，执行 <code>openspec update</code>，然后重启 Codex。OpenSpec 官方支持表明确写了 Codex 不生成命令文件。<a href="https://github.com/Fission-AI/OpenSpec/blob/main/docs/supported-tools.md" target="_blank" rel="noopener noreferrer">OpenSpec Supported Tools</a></p>
+
+      <h3 id="openspec-终端检查命令"><a class="heading-anchor" href="#openspec-终端检查命令" aria-label="链接到本节">#</a>OpenSpec 终端检查命令</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-bash">openspec list
+openspec show add-order-cancellation
+openspec status --change add-order-cancellation
+openspec validate add-order-cancellation
+openspec validate --all --strict
+openspec view</code></pre>
+      </div>
+      <p>这些是终端中的检查命令；“提议和实现”发生在 Codex 会话中。不要把 <code>$openspec-propose</code> 当成 shell 命令执行。</p>
+
+      <h2 id="安装与使用-superpowers"><a class="heading-anchor" href="#安装与使用-superpowers" aria-label="链接到本节">#</a>安装与使用 Superpowers</h2>
+      <h3 id="codex-cli-插件安装"><a class="heading-anchor" href="#codex-cli-插件安装" aria-label="链接到本节">#</a>Codex CLI 插件安装</h3>
+      <p>Superpowers 已进入 Codex 官方 curated marketplace。最稳妥的交互安装方式是在 Codex 中输入：</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">/plugins
+
+搜索：superpowers
+选择：Install Plugin</code></pre>
+      </div>
+      <p>也可以在终端直接安装官方 marketplace 中的明确插件 ID：</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-bash">codex plugin add superpowers@openai-curated
+codex plugin list</code></pre>
+      </div>
+      <p>安装后启动一个新 Codex 会话，以便重新发现插件技能。Superpowers 官方 README 推荐从 <code>/plugins</code> 搜索安装；Codex 0.145.0 的插件目录也能解析到 <code>superpowers@openai-curated</code>。<a href="https://github.com/obra/superpowers#codex-cli" target="_blank" rel="noopener noreferrer">Superpowers Codex CLI installation</a></p>
+
+      <h3 id="组合时只使用局部技能"><a class="heading-anchor" href="#组合时只使用局部技能" aria-label="链接到本节">#</a>组合时只使用局部技能</h3>
+      <table>
+        <thead>
+          <tr><th>场景</th><th>推荐 Superpowers 能力</th><th>与 OpenSpec 的连接点</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>需求仍模糊</td><td><code>brainstorming</code></td><td>结论写回 proposal/design，不另建长期计划</td></tr>
+          <tr><td>实现一个任务</td><td><code>test-driven-development</code></td><td>输入是 <code>tasks.md</code> 当前任务和 spec 场景</td></tr>
+          <tr><td>Bug 不明原因</td><td><code>systematic-debugging</code></td><td>根因和正确行为写回 change artifact</td></tr>
+          <tr><td>任务完成</td><td><code>requesting-code-review</code></td><td>按规格、任务和 diff 评审</td></tr>
+          <tr><td>声称完成前</td><td><code>verification-before-completion</code></td><td>运行本地验证并记录证据</td></tr>
+          <tr><td>分支收尾</td><td><code>finishing-a-development-branch</code></td><td>CI 绿灯、人确认后才合并和归档</td></tr>
+        </tbody>
+      </table>
+      <p>Superpowers 在 Codex 中同样是技能，而不是 <code>/brainstorming</code> 斜杠命令。可直接说“使用 Superpowers 的 test-driven-development 技能完成当前 OpenSpec 任务”，或从技能补全中显式选择。其官方工作流强调 RED-GREEN-REFACTOR、系统调试、评审和证据优先。<a href="https://github.com/obra/superpowers#the-basic-workflow" target="_blank" rel="noopener noreferrer">Superpowers Basic Workflow</a></p>
+
+      <h2 id="项目级-agents-md"><a class="heading-anchor" href="#项目级-agents-md" aria-label="链接到本节">#</a>项目级 AGENTS.md</h2>
+      <p>OpenSpec 和 Superpowers解决的是“工作方式”，项目自己的 <code>AGENTS.md</code> 则告诉 Codex 什么是本仓库的正确实现。下面是 Java 全栈项目可直接裁剪的基线：</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>markdown</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-markdown"># Project Instructions
+
+## Stack
+- Backend: Java 21, Spring Boot, Maven Wrapper
+- Frontend: TypeScript, existing package manager and lockfile
+- Database changes require forward migration and rollback notes
+
+## Source of truth
+- Behavioral truth: openspec/specs/
+- Active change truth: openspec/changes/&lt;change-id&gt;/
+- During implementation, tasks.md is the only task list.
+- If code and artifacts diverge, stop and reconcile the artifacts first.
+
+## Workflow
+- Unknown problem: OpenSpec Explore; no production code.
+- Known change: OpenSpec Propose; human reviews artifacts before Apply.
+- During Apply, use Superpowers TDD/debug/review/verification skills as appropriate.
+- Never archive before local verification, CI success, and human acceptance.
+
+## Verification
+- Backend: ./mvnw -B -ntp verify
+- Frontend: cd frontend &amp;&amp; npm ci &amp;&amp; npm run lint &amp;&amp; npm run test:ci &amp;&amp; npm run build
+- Specs: npx openspec validate --all --strict
+
+## Safety
+- Never commit secrets, tokens, local credentials, generated binaries, or production data.
+- Do not change public API, database schema, auth, money, or permissions without explicit spec coverage.
+- Preserve existing user changes; keep diffs scoped to the active change.</code></pre>
+      </div>
+      <p>不要在 <code>AGENTS.md</code> 里重复几十页教程。它应该短、具体、可执行；格式化、静态检查和依赖策略等机械约束应尽量交给脚本和 CI。</p>
+
+      <h2 id="ci-作为确定性-harness"><a class="heading-anchor" href="#ci-作为确定性-harness" aria-label="链接到本节">#</a>CI 作为确定性 Harness</h2>
+      <p>这里的 Harness 是 AI 外部的执行环境和反馈装置：它把“完成”的定义变成机器命令，把失败日志反馈给 Codex，再进入下一轮修正。CI 不应只执行单元测试，还要覆盖规格结构、编译、静态检查、契约、集成和前端构建。</p>
+
+      <h3 id="固定-openspec-ci-版本"><a class="heading-anchor" href="#固定-openspec-ci-版本" aria-label="链接到本节">#</a>固定 OpenSpec CI 版本</h3>
+      <p>开发机可以全局安装最新版；CI 不要每次解析浮动的 <code>latest</code>。在项目根目录用精确版本写入 lockfile：</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-bash">npm install --save-dev --save-exact @fission-ai/openspec@latest
+git add package.json package-lock.json</code></pre>
+      </div>
+      <p>此命令执行当下会把具体版本写入 <code>package.json</code> 和 <code>package-lock.json</code>；之后 CI 使用 <code>npm ci</code>，不再随上游版本漂移。升级时由人显式执行并检查生成技能是否需要 <code>openspec update</code>。</p>
+
+      <h3 id="gitlab-ci-示例"><a class="heading-anchor" href="#gitlab-ci-示例" aria-label="链接到本节">#</a>GitLab CI 示例</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>yaml</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-yaml">stages:
+  - validate
+  - test
+  - build
+
+spec-validate:
+  stage: validate
+  image: node:22-alpine
+  script:
+    - npm ci
+    - npx openspec --no-color validate --all --strict
+
+backend-verify:
+  stage: test
+  image: maven:3.9-eclipse-temurin-21
+  cache:
+    key: maven-${CI_COMMIT_REF_SLUG}
+    paths:
+      - .m2/repository
+  variables:
+    MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  script:
+    - ./mvnw -B -ntp verify
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - "**/target/surefire-reports/TEST-*.xml"
+        - "**/target/failsafe-reports/TEST-*.xml"
+
+frontend-verify:
+  stage: test
+  image: node:22-alpine
+  before_script:
+    - cd frontend
+  script:
+    - npm ci
+    - npm run lint
+    - npm run test:ci
+    - npm run build
+  artifacts:
+    paths:
+      - frontend/dist/
+
+package-backend:
+  stage: build
+  image: maven:3.9-eclipse-temurin-21
+  script:
+    - ./mvnw -B -ntp -DskipTests package
+  artifacts:
+    paths:
+      - "**/target/*.jar"
+  needs:
+    - backend-verify</code></pre>
+      </div>
+      <p>示例中的镜像和脚本名应按仓库实际情况固定，例如前端可能使用 pnpm、Vitest 或 Playwright。数据库相关功能还应增加 Testcontainers 集成测试；接口变更增加 OpenAPI/契约检查；高风险项目再加 SAST、依赖和镜像扫描。</p>
+
+      <h3 id="门禁与完成定义"><a class="heading-anchor" href="#门禁与完成定义" aria-label="链接到本节">#</a>门禁与完成定义</h3>
+      <ol>
+        <li><code>openspec validate --all --strict</code> 通过，变更规格结构完整。</li>
+        <li>新增或修改行为都有先失败后通过的自动化测试。</li>
+        <li>Java <code>verify</code>、前端 lint/test/build、契约和迁移检查通过。</li>
+        <li><code>codex review --base main</code> 没有未处理的高优先级发现。</li>
+        <li>人工确认范围、用户体验、数据风险、可观测性和回滚方式。</li>
+        <li>合并后的默认分支 CI 通过，才执行 OpenSpec 归档或把归档放入同一合并请求。</li>
+      </ol>
+      <p>Codex 的评审是有价值的第二意见，但不应该成为唯一的阻塞门禁。真正阻塞流水线的检查应尽可能确定、快速、可复现。</p>
+
+      <h2 id="统一日常操作模式"><a class="heading-anchor" href="#统一日常操作模式" aria-label="链接到本节">#</a>统一日常操作模式</h2>
+      <ol>
+        <li><strong>同步与基线：</strong>更新 <code>main</code>，确认工作区干净，运行现有验证。</li>
+        <li><strong>识别工作类型：</strong>未知问题用 Explore；已知 bug/feature 用 Propose；极小机械修正可按团队规则走轻量路径。</li>
+        <li><strong>一变更一分支：</strong>change-id 与分支名保持可追踪，例如 <code>feature/add-order-cancellation</code>。</li>
+        <li><strong>人工审规格：</strong>重点审 proposal 的范围、spec 的 Given/When/Then、design 的边界和 tasks 的验收命令。</li>
+        <li><strong>逐任务实现：</strong>一次只选一个 OpenSpec task，调用 Superpowers 的 TDD 或 systematic-debugging。</li>
+        <li><strong>快速反馈：</strong>先跑最小相关测试，再跑模块测试，最后跑完整本地验证。</li>
+        <li><strong>独立评审：</strong>让 Codex 根据 spec、tasks 和 diff 做评审；修复后重新验证。</li>
+        <li><strong>CI 证据：</strong>推送分支，由 GitLab CI 重新从干净环境验证。</li>
+        <li><strong>合并与归档：</strong>人确认后合并；归档把 delta spec 变成当前真相。</li>
+      </ol>
+
+      <h2 id="示例一-新项目启动"><a class="heading-anchor" href="#示例一-新项目启动" aria-label="链接到本节">#</a>示例一：新项目启动</h2>
+      <p><strong>场景：</strong>启动一个“AI 学习计划”全栈系统，后端 Java 21 + Spring Boot，前端 TypeScript，第一条纵向切片是创建并查看学习计划。</p>
+      <h3 id="新项目-初始化"><a class="heading-anchor" href="#新项目-初始化" aria-label="链接到本节">#</a>1. 初始化仓库和工具</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-bash">mkdir ai-study-planner
+cd ai-study-planner
+git init -b main
+
+# 先创建后端、前端、Wrapper 和最小 README/AGENTS.md
+# 再初始化 OpenSpec
+openspec init --tools codex
+
+# 固定 CI 使用的 OpenSpec 版本
+npm install --save-dev --save-exact @fission-ai/openspec@latest
+
+git add .
+git commit -m "chore: initialize project harness"</code></pre>
+      </div>
+      <p>初始化阶段只建立能跑通的工程骨架：后端健康检查、前端空壳、基础测试和 CI。不要一次要求 Codex 生成完整产品。</p>
+      <h3 id="新项目-探索和提议"><a class="heading-anchor" href="#新项目-探索和提议" aria-label="链接到本节">#</a>2. 探索边界并创建首个变更</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">使用 $openspec-explore，并结合 Superpowers brainstorming，
+探索 AI 学习计划系统的第一条最小纵向切片。
+
+约束：
+- Java 21 + Spring Boot + PostgreSQL；
+- TypeScript 前端；
+- 第一版不做模型训练，只通过模型 API 生成建议；
+- 给出三种切片方案、推荐方案、暂不做事项和验收信号；
+- 只探索，不创建文件，不写代码。</code></pre>
+      </div>
+      <p>确认第一条切片后再输入：</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">使用 $openspec-propose 创建 change-id=bootstrap-study-plan-slice。
+
+范围：
+- POST /api/study-plans 创建计划；
+- GET /api/study-plans/{id} 查询计划；
+- PostgreSQL 持久化；
+- 前端创建表单与详情页；
+- 后端单元/集成测试、前端组件测试、OpenAPI 契约；
+- 明确错误处理、可观测性和回滚方式。
+
+不实现登录、支付、推荐系统和异步任务。
+创建后停止，等我审 proposal/specs/design/tasks。</code></pre>
+      </div>
+      <h3 id="新项目-实现与收尾"><a class="heading-anchor" href="#新项目-实现与收尾" aria-label="链接到本节">#</a>3. 实现与收尾</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">使用 $openspec-apply-change 实现 bootstrap-study-plan-slice。
+以 tasks.md 为唯一任务清单。
+每个任务使用 Superpowers test-driven-development：
+先写失败测试并展示 RED 证据，再做最小实现，最后重构。
+每完成一个任务运行最小相关测试并更新 tasks.md。
+遇到设计偏差先更新 OpenSpec artifact，不要静默扩大范围。</code></pre>
+      </div>
+      <div class="code-block">
+        <div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-bash">npx openspec validate --all --strict
+./mvnw -B -ntp verify
+cd frontend &amp;&amp; npm ci &amp;&amp; npm run lint &amp;&amp; npm run test:ci &amp;&amp; npm run build
+cd ..
+codex review --base main
+git push -u origin feature/bootstrap-study-plan-slice</code></pre>
+      </div>
+      <p>CI 和人工验收完成后，使用 <code>$openspec-archive-change</code> 归档。首个项目切片完成的标准不是“页面看起来能开”，而是规格、后端、前端、数据库、测试和流水线共同闭环。</p>
+
+      <h2 id="示例二-bugfix"><a class="heading-anchor" href="#示例二-bugfix" aria-label="链接到本节">#</a>示例二：Bugfix</h2>
+      <p><strong>场景：</strong>用户双击“提交订单”导致两笔订单。先找根因，再把正确行为变成回归规格和测试。</p>
+      <h3 id="bugfix-复现与根因"><a class="heading-anchor" href="#bugfix-复现与根因" aria-label="链接到本节">#</a>1. 只诊断，不抢修</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">使用 $openspec-explore 和 Superpowers systematic-debugging，
+诊断“相同用户快速双击提交会创建两笔订单”。
+
+要求：
+- 先稳定复现并定位请求、事务、唯一约束和前端按钮状态；
+- 区分症状、近因和根因；
+- 比较前端防抖、幂等键、数据库唯一约束三层方案；
+- 不修改生产代码；
+- 输出建议的正确行为和回归测试入口。</code></pre>
+      </div>
+      <p>仅做前端禁用按钮通常不能覆盖重试、网络超时和多端并发；若业务语义要求幂等，应由服务端和数据库共同保证，前端只改善体验。</p>
+      <h3 id="bugfix-规格与红灯测试"><a class="heading-anchor" href="#bugfix-规格与红灯测试" aria-label="链接到本节">#</a>2. 规格化正确行为</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">使用 $openspec-propose 创建 fix-duplicate-order-submit。
+把正确行为写成 MODIFIED requirement：
+GIVEN 同一用户和同一 Idempotency-Key，
+WHEN 在有效期内并发提交相同订单，
+THEN 只创建一笔订单，并返回同一订单标识。
+
+design 必须覆盖唯一约束、事务边界、冲突响应、前端交互、
+日志指标、兼容性和数据库迁移回滚。</code></pre>
+      </div>
+      <p>审完规格后执行 Apply，并明确要求先写一个能稳定失败的并发集成测试。只有见过测试在旧代码上失败，才能证明它真的覆盖了缺陷。</p>
+      <h3 id="bugfix-验证矩阵"><a class="heading-anchor" href="#bugfix-验证矩阵" aria-label="链接到本节">#</a>3. 验证矩阵</h3>
+      <ul>
+        <li>同 key、同 payload、并发请求：只产生一个订单。</li>
+        <li>同 key、不同 payload：返回明确冲突，不复用错误结果。</li>
+        <li>不同 key：按两个独立请求处理。</li>
+        <li>事务回滚后重试：不会留下半成品或永久占位。</li>
+        <li>前端提交中禁用按钮，但后端测试不依赖此行为。</li>
+        <li>数据库迁移可在测试环境执行，并有回滚或向前修复策略。</li>
+      </ul>
+      <p>本地验证、<code>codex review --base main</code>、CI 和人工确认完成后再归档。OpenSpec 官方也建议 Bugfix 描述“正确行为”，而不是只写“修复 bug”。<a href="https://openspec.dev/docs/examples#recipe-2-a-bug-fix" target="_blank" rel="noopener noreferrer">OpenSpec Bugfix Recipe</a></p>
+
+      <h2 id="示例三-新功能开发"><a class="heading-anchor" href="#示例三-新功能开发" aria-label="链接到本节">#</a>示例三：新功能开发</h2>
+      <p><strong>场景：</strong>增加订单取消功能，涉及权限、状态机、库存释放、前端按钮、审计和并发。</p>
+      <h3 id="新功能-创建可审规格"><a class="heading-anchor" href="#新功能-创建可审规格" aria-label="链接到本节">#</a>1. 创建可审规格</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">使用 $openspec-propose 创建 add-order-cancellation。
+
+业务规则：
+- 只有订单所有者或客服角色可取消；
+- PAID 之前允许取消，SHIPPED 之后拒绝；
+- 取消成功必须释放预占库存并写审计事件；
+- 重复取消幂等；
+- 前端根据状态显示按钮并呈现冲突原因。
+
+要求 proposal 明确非目标；
+spec 使用 Given/When/Then 覆盖成功、越权、状态冲突和重复请求；
+design 说明状态机、并发控制、事务、API、事件、监控和回滚；
+tasks 按数据库→领域→API→前端→可观测性→验证拆分。
+完成 artifacts 后停止等待评审。</code></pre>
+      </div>
+      <h3 id="新功能-任务级-loop"><a class="heading-anchor" href="#新功能-任务级-loop" aria-label="链接到本节">#</a>2. 每个任务执行同一个 Loop</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">读取 add-order-cancellation 的当前 spec、design 和 tasks。
+只执行第一个未完成任务。
+
+使用 Superpowers test-driven-development：
+1. 选出这个任务对应的一个可观察行为；
+2. 写最小失败测试并运行；
+3. 写最小生产代码使它通过；
+4. 重构并运行相关测试；
+5. 对照 spec 做自检；
+6. 更新 tasks.md 和验证证据；
+7. 停止，等待下一个任务。</code></pre>
+      </div>
+      <p>任务粒度过大时先拆分，不要让一次 Codex turn 同时改数据库、领域、接口和整页前端。小步的价值是失败范围更小、上下文更聚焦、评审更具体。</p>
+      <h3 id="新功能-全栈验收"><a class="heading-anchor" href="#新功能-全栈验收" aria-label="链接到本节">#</a>3. 全栈验收</h3>
+      <ul>
+        <li>领域状态转换和权限规则有纯单元测试。</li>
+        <li>数据库并发和事务用集成测试验证，而不是只 mock repository。</li>
+        <li>OpenAPI 契约、错误码和前端类型同步。</li>
+        <li>前端按钮可见性、加载、成功和冲突状态有组件或端到端测试。</li>
+        <li>日志不含敏感数据；指标能区分成功、越权、冲突和内部失败。</li>
+        <li>CI 从干净环境通过，人工走通关键路径和回滚策略。</li>
+      </ul>
+
+      <h2 id="示例四-新功能探索"><a class="heading-anchor" href="#示例四-新功能探索" aria-label="链接到本节">#</a>示例四：新功能探索</h2>
+      <p><strong>场景：</strong>想给学习系统增加 RAG 问答，但尚不确定向量库、切分策略、数据权限、成本和评测方式。此时目标不是“尽快写代码”，而是减少未知数。</p>
+      <h3 id="探索-无承诺模式"><a class="heading-anchor" href="#探索-无承诺模式" aria-label="链接到本节">#</a>1. 无承诺模式</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-text">使用 $openspec-explore 和 Superpowers brainstorming，
+探索“为学习资料增加 RAG 问答”。
+
+先读取现有代码和规格，再回答：
+- 用户问题和成功信号是什么；
+- 数据来源、更新频率、租户隔离和删除要求是什么；
+- pgvector、专用向量库、托管检索三种方案的取舍；
+- Java/Spring AI 接入边界；
+- chunk、embedding、rerank、引用和拒答策略；
+- 离线评测集、线上指标、成本和延迟预算；
+- 必须做的 spike 与可延期项。
+
+只探索，不创建 OpenSpec change，不改生产代码。
+最后给出推荐方案、反对理由、未知项和 go/no-go 条件。</code></pre>
+      </div>
+      <p>Explore 官方定义为“不创建 artifact 的思考伙伴”。如果需要 spike，应把它放在独立临时分支或工作树中，明确“不进入生产”，并用实验问题、时间盒和退出条件约束。</p>
+      <h3 id="探索-决策出口"><a class="heading-anchor" href="#探索-决策出口" aria-label="链接到本节">#</a>2. 探索必须有出口</h3>
+      <table>
+        <thead>
+          <tr><th>结论</th><th>下一步</th><th>不要做</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>信息足够，值得做</td><td>用 <code>$openspec-propose</code> 创建小范围 change</td><td>把整份脑暴直接当实现任务</td></tr>
+          <tr><td>关键假设待验证</td><td>创建时间盒 spike，产出数据和结论</td><td>把实验代码偷偷演变成生产代码</td></tr>
+          <tr><td>收益不足或风险过高</td><td>记录 no-go 原因和重新评估条件</td><td>为了“已经研究过”而强行启动</td></tr>
+          <tr><td>范围过大</td><td>拆成 ingestion、retrieval、answer、evaluation 等独立变更</td><td>一个 change 包揽整个 AI 平台</td></tr>
+        </tbody>
+      </table>
+      <p>当结论成熟后，新会话中创建 proposal，避免把长篇探索上下文全部带入实现阶段。OpenSpec 官方建议在不确定时先 Explore，再将已收敛的洞察转换为 Propose。<a href="https://openspec.dev/docs/examples#recipe-3-exploring-before-you-commit" target="_blank" rel="noopener noreferrer">OpenSpec Explore Recipe</a></p>
+
+      <h2 id="小团队推荐配置"><a class="heading-anchor" href="#小团队推荐配置" aria-label="链接到本节">#</a>两人小团队推荐配置</h2>
+      <p>两人且基本一人一个项目时，不需要设立流程管理员。每个项目只维护四类共享资产：简短 <code>AGENTS.md</code>、OpenSpec 目录、一个本地验证入口、GitLab CI。</p>
+      <ul>
+        <li>项目负责人拥有 change，负责 proposal/design/tasks 与代码一致。</li>
+        <li>另一人只在 proposal/design 和合并请求两个关键点做轻量交叉评审。</li>
+        <li>高风险变更（认证、权限、金额、删除、迁移、外部 API）必须交叉评审；低风险小修可异步。</li>
+        <li>每月只复盘重复出现的问题，把能自动化的规则沉淀到测试、脚本或 CI；判断性经验才写入 AGENTS/skill。</li>
+        <li>不要一开始自建庞大流程平台。先连续使用 4～6 周，留下真正反复出现的约束。</li>
+      </ul>
+
+      <h2 id="常见失败与修正"><a class="heading-anchor" href="#常见失败与修正" aria-label="链接到本节">#</a>常见失败与修正</h2>
+      <table>
+        <thead>
+          <tr><th>失败方式</th><th>原因</th><th>修正</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>在 Codex 输入 <code>/opsx:propose</code> 无反应</td><td>Codex 的 OpenSpec 集成是 skills-only</td><td>使用 <code>$openspec-propose</code> 或自然语言点名技能</td></tr>
+          <tr><td>输入 <code>/brainstorming</code> 找不到</td><td>Superpowers 在 Codex 中也是技能</td><td>自然语言要求使用 brainstorming，或从技能补全选择</td></tr>
+          <tr><td>OpenSpec 与 Superpowers 各有一份计划</td><td>两个顶层指挥流程竞争</td><td>OpenSpec artifacts 是唯一计划，Superpowers 只做局部执行</td></tr>
+          <tr><td>AI 说“测试通过”但没有日志</td><td>声明替代了证据</td><td>运行明确命令，保留退出码、报告和 CI 链接</td></tr>
+          <tr><td>一条任务改几十个文件</td><td>change 或 task 过大</td><td>按可观察行为和架构边界拆分</td></tr>
+          <tr><td>CI 每次安装 <code>latest</code></td><td>上游更新导致不可复现</td><td>开发机用 latest，项目 lockfile 固定 CI 版本</td></tr>
+          <tr><td>Bugfix 只改前端表现</td><td>没有找到系统根因</td><td>systematic debugging + 服务端/数据库回归测试</td></tr>
+          <tr><td>代码完成后才补规格</td><td>规格失去约束作用</td><td>先审 artifact；实现发现偏差时先同步 artifact</td></tr>
+          <tr><td>CI 里直接让 Codex 自动修代码</td><td>权限、成本和非确定性扩大</td><td>默认只跑确定性门禁；AI 修复在有审查的开发分支进行</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="命令速查"><a class="heading-anchor" href="#命令速查" aria-label="链接到本节">#</a>命令速查</h2>
+      <div class="code-block">
+        <div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-bash"># Codex
+codex
+codex doctor
+codex exec --sandbox read-only "..."
+codex review --uncommitted
+codex review --base main
+codex plugin add superpowers@openai-curated
+codex plugin list
+
+# OpenSpec
+openspec init --tools codex
+openspec update
+openspec list
+openspec show &lt;change-id&gt;
+openspec status --change &lt;change-id&gt;
+openspec validate &lt;change-id&gt;
+openspec validate --all --strict
+
+# Java 全栈验证
+./mvnw -B -ntp verify
+cd frontend &amp;&amp; npm ci &amp;&amp; npm run lint &amp;&amp; npm run test:ci &amp;&amp; npm run build</code></pre>
+      </div>
+      <p>日常只需记住四个阶段：<strong>Explore（可选）→ Propose → Apply → Archive</strong>；每个 Apply 任务内部执行 <strong>RED → GREEN → REFACTOR → REVIEW → VERIFY</strong>；CI 在干净环境再次给出证据。</p>
+
+      <h2 id="参考资料"><a class="heading-anchor" href="#参考资料" aria-label="链接到本节">#</a>参考资料</h2>
+      <ul>
+        <li><a href="https://github.com/openai/codex#installing-and-running-codex-cli" target="_blank" rel="noopener noreferrer">OpenAI Codex README</a> — macOS、Linux、Windows、npm、Homebrew 和二进制安装入口，访问日期：2026-07-24。</li>
+        <li><a href="https://learn.chatgpt.com/docs/developer-commands" target="_blank" rel="noopener noreferrer">Codex Developer Commands</a> — <code>login</code>、<code>doctor</code>、<code>exec</code>、<code>review</code>、<code>plugin</code> 等稳定命令，访问日期：2026-07-24。</li>
+        <li><a href="https://learn.chatgpt.com/docs/agent-configuration/agents-md" target="_blank" rel="noopener noreferrer">Codex AGENTS.md</a> — 项目规则的发现、作用域和覆盖关系，访问日期：2026-07-24。</li>
+        <li><a href="https://learn.chatgpt.com/docs/build-skills" target="_blank" rel="noopener noreferrer">Codex Skills</a> — 技能目录、自动发现和显式调用，访问日期：2026-07-24。</li>
+        <li><a href="https://github.com/Fission-AI/OpenSpec" target="_blank" rel="noopener noreferrer">OpenSpec 官方仓库</a> — 安装、Node.js 版本要求、默认工作流和升级方式，访问日期：2026-07-24。</li>
+        <li><a href="https://openspec.dev/docs/reference/cli" target="_blank" rel="noopener noreferrer">OpenSpec CLI Reference</a> — init、update、list、show、validate、archive 和 CI 参数，访问日期：2026-07-24。</li>
+        <li><a href="https://github.com/Fission-AI/OpenSpec/blob/main/docs/supported-tools.md" target="_blank" rel="noopener noreferrer">OpenSpec Supported Tools</a> — Codex 的 <code>.codex/skills/openspec-*</code> 路径及 skills-only 限制，访问日期：2026-07-24。</li>
+        <li><a href="https://openspec.dev/docs/overview" target="_blank" rel="noopener noreferrer">OpenSpec Core Concepts</a> — specs、change、delta、artifact 和 archive 的关系，访问日期：2026-07-24。</li>
+        <li><a href="https://openspec.dev/docs/examples" target="_blank" rel="noopener noreferrer">OpenSpec Examples &amp; Recipes</a> — 小功能、Bugfix、探索和并行变更示例，访问日期：2026-07-24。</li>
+        <li><a href="https://github.com/obra/superpowers" target="_blank" rel="noopener noreferrer">Superpowers 官方仓库</a> — Codex 插件安装、TDD、系统调试、评审和完成前验证，访问日期：2026-07-24。</li>
+      </ul>
+    </article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/codex/2026-07-24-OpenSpec-Superpowers-CI-Codex-CLI实战教程.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="2026-07-24-Codex全栈开发最佳实践.html"><small>上一篇</small><span>Codex 全栈开发最佳实践：Vibe Coding、Harness 与 Loop</span></a>
+        <a class="pager-link next" href="2026-07-24-Superpowers详细介绍.html"><small>下一篇</small><span>Superpowers 详细介绍：Codex 的技能化软件开发方法</span></a>
+      </nav>
+    </footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list">
+        <li class="toc-level-2"><a href="#核心结论">核心结论</a></li>
+        <li class="toc-level-2"><a href="#三层职责与边界">三层职责与边界</a></li>
+        <li class="toc-level-2"><a href="#环境与版本基线">环境与版本基线</a></li>
+        <li class="toc-level-2"><a href="#安装-codex-cli">安装 Codex CLI</a></li>
+        <li class="toc-level-2"><a href="#codex-cli-在项目中的基本用法">Codex CLI 在项目中的基本用法</a></li>
+        <li class="toc-level-2"><a href="#安装与初始化-openspec">安装与初始化 OpenSpec</a></li>
+        <li class="toc-level-2"><a href="#安装与使用-superpowers">安装与使用 Superpowers</a></li>
+        <li class="toc-level-2"><a href="#项目级-agents-md">项目级 AGENTS.md</a></li>
+        <li class="toc-level-2"><a href="#ci-作为确定性-harness">CI 作为确定性 Harness</a></li>
+        <li class="toc-level-2"><a href="#统一日常操作模式">统一日常操作模式</a></li>
+        <li class="toc-level-2"><a href="#示例一-新项目启动">示例一：新项目启动</a></li>
+        <li class="toc-level-2"><a href="#示例二-bugfix">示例二：Bugfix</a></li>
+        <li class="toc-level-2"><a href="#示例三-新功能开发">示例三：新功能开发</a></li>
+        <li class="toc-level-2"><a href="#示例四-新功能探索">示例四：新功能探索</a></li>
+        <li class="toc-level-2"><a href="#小团队推荐配置">两人小团队推荐配置</a></li>
+        <li class="toc-level-2"><a href="#常见失败与修正">常见失败与修正</a></li>
+        <li class="toc-level-2"><a href="#命令速查">命令速查</a></li>
+        <li class="toc-level-2"><a href="#参考资料">参考资料</a></li>
+      </ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+<div class="sidebar-scrim"></div>
+</body>
+</html>

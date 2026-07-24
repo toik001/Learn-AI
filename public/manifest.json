@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-24T06:42:50.178Z",
-  "documentCount": 6,
+  "generatedAt": "2026-07-24T06:57:16.891Z",
+  "documentCount": 7,
   "documents": [
     {
       "output": "notes/codex/2026-07-24-AI开发工作流选型与小团队沉淀指南.html",
@@ -29,6 +29,13 @@
       "category": "Codex 与 AI 工程",
       "date": "2026-07-24",
       "sections": 57
+    },
+    {
+      "output": "notes/codex/2026-07-24-OpenSpec-Superpowers-CI-Codex-CLI实战教程.html",
+      "title": "OpenSpec + Superpowers + CI：Codex CLI 全栈实战教程",
+      "category": "Codex 与 AI 工程",
+      "date": "2026-07-24",
+      "sections": 42
     },
     {
       "output": "notes/codex/2026-07-24-Superpowers详细介绍.html",
