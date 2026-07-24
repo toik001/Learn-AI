@@ -80,6 +80,8 @@
         <div class="code-toolbar"><span>yaml</span><button class="copy-code" type="button">复制</button></div>
         <pre><code class="language-yaml">pages:
   stage: deploy
+  tags:
+    - page-build-zhao
   script:
     - test -s public/index.html
   artifacts:
@@ -88,7 +90,7 @@
   only:
     - main</code></pre>
       </div>
-      <p>目标自建 GitLab 对 job 级 <code>pages: true</code> 报出 <code>unknown keys: pages</code>，说明它尚未支持新版 Pages job 关键字。因此这里使用兼容旧版本的语法：把 job 直接命名为 <code>pages</code>，并通过 <code>artifacts.paths: public</code> 指定发布内容。</p>
+      <p><code>tags: page-build-zhao</code> 将该作业定向交给项目中配置了同名标签的 Runner。目标自建 GitLab 对 job 级 <code>pages: true</code> 报出 <code>unknown keys: pages</code>，说明它尚未支持新版 Pages job 关键字。因此这里使用兼容旧版本的语法：把 job 直接命名为 <code>pages</code>，并通过 <code>artifacts.paths: public</code> 指定发布内容。</p>
       <p><code>only: main</code> 只允许 <code>main</code> 分支触发 Pages。GitLab 新版文档已将 job 名称方式标记为弃用，但在该自建实例上它是实际支持的部署接口；升级 GitLab 后再考虑迁移到自定义 job 名称和 <code>pages: true</code>。<a href="https://docs.gitlab.com/ci/yaml/#pages" target="_blank" rel="noopener noreferrer">GitLab CI/CD YAML：pages</a></p>
 
       <h2 id="后续文档生成规则"><a class="heading-anchor" href="#后续文档生成规则" aria-label="链接到本节">#</a>后续文档生成规则</h2>
@@ -116,7 +118,7 @@ node --check public/assets/app.js</code></pre>
 
       <h2 id="ci-长期-in-progress-排查"><a class="heading-anchor" href="#ci-长期-in-progress-排查" aria-label="链接到本节">#</a>CI 长期 In progress 排查</h2>
       <h3 id="当前项目的判断"><a class="heading-anchor" href="#当前项目的判断" aria-label="链接到本节">#</a>当前项目的判断</h3>
-      <p>当前流水线只有一个 <code>pages</code> 作业，实际脚本只有 <code>test -s public/index.html</code>。入口文件已经存在，该命令正常情况下会在一秒内结束；没有依赖下载、页面构建、网络访问或循环。因此，流水线长时间显示 <em>In progress</em> 时，优先怀疑 Runner 调度，而不是知识库代码卡住。</p>
+      <p>当前流水线只有一个 <code>pages</code> 作业，使用 <code>page-build-zhao</code> 标签匹配 Runner，实际脚本只有 <code>test -s public/index.html</code>。入口文件已经存在，该命令正常情况下会在一秒内结束；没有依赖下载、页面构建、网络访问或循环。因此，流水线长时间显示 <em>In progress</em> 时，优先检查该 Runner 是否在线、是否拥有同名标签以及是否允许当前分支作业，而不是怀疑知识库代码卡住。</p>
       <p>最常见情况是作业处于 <code>pending</code>：GitLab 已创建作业，但没有合适的 Runner 来领取。GitLab 官方将 <code>pending</code> 定义为“在队列中等待 Runner”，将 <code>running</code> 定义为“已经在 Runner 上执行”。<a href="https://docs.gitlab.com/api/jobs/#job-status-values" target="_blank" rel="noopener noreferrer">GitLab Jobs API：Job status values</a></p>
 
       <h3 id="先看-pages-作业的精确状态"><a class="heading-anchor" href="#先看-pages-作业的精确状态" aria-label="链接到本节">#</a>先看 pages 作业的精确状态</h3>
@@ -126,7 +128,7 @@ node --check public/assets/app.js</code></pre>
           <tr><th>页面状态或日志停止位置</th><th>含义</th><th>处理方向</th></tr>
         </thead>
         <tbody>
-          <tr><td><code>pending</code>、<code>stuck</code>，没有 Runner 名称</td><td>作业还未开始执行</td><td>检查项目是否启用在线 Runner、Runner 是否接收无标签作业</td></tr>
+          <tr><td><code>pending</code>、<code>stuck</code>，没有 Runner 名称</td><td>作业还未开始执行</td><td>检查 <code>page-build-zhao</code> 标签是否存在且 Runner 在线</td></tr>
           <tr><td><code>preparing</code> / Preparing environment</td><td>Runner 已领取任务，但执行器环境没有准备好</td><td>检查 Docker、Kubernetes 或 Shell executor 及 Runner 日志</td></tr>
           <tr><td>Getting source from Git repository</td><td>Runner 无法顺利拉取仓库</td><td>检查 Runner 到 GitLab 的网络、DNS、证书和磁盘</td></tr>
           <tr><td>Uploading artifacts</td><td>脚本已完成，卡在上传 <code>public/</code></td><td>检查 GitLab artifact 本地存储或对象存储</td></tr>
@@ -138,17 +140,16 @@ node --check public/assets/app.js</code></pre>
       <ol>
         <li>进入 <strong>Settings → CI/CD → Runners</strong>。</li>
         <li>确认至少一个项目、群组或实例 Runner 为 <code>online</code>，没有暂停，并且已对当前项目启用。官方说明中，<code>online</code> 表示 Runner 最近仍在联系 GitLab，<code>offline</code> 表示当前不可用。<a href="https://docs.gitlab.com/ci/runners/runners_scope/#runner-statuses" target="_blank" rel="noopener noreferrer">GitLab Runner statuses</a></li>
-        <li>当前 <code>pages</code> job 没有配置 <code>tags</code>，因此 Runner 必须允许运行无标签作业（Run untagged jobs）。</li>
-        <li>如果公司 Runner 强制使用标签，在确认真实标签后再给 job 添加对应的 <code>tags</code>；不要猜测标签名。</li>
+        <li>当前 <code>pages</code> job 已配置 <code>page-build-zhao</code> 标签；Runner 必须拥有完全相同的标签。Runner 的显示名称不能代替 Runner Tag。</li>
+        <li>如果 GitLab 页面中的 <code>page-build-zhao</code> 只是 Runner 名称或描述，需要在该 Runner 的 Tags 配置里再添加 <code>page-build-zhao</code>。</li>
         <li>如果 Runner 被标记为 Protected，它只能领取受保护分支产生的作业；确认 <code>main</code> 的保护状态与 Runner 设置匹配。</li>
       </ol>
       <div class="code-block">
         <div class="code-toolbar"><span>yaml</span><button class="copy-code" type="button">复制</button></div>
-        <pre><code class="language-yaml"># 只有在 Runners 页面确认真实标签后才添加
-pages:
+        <pre><code class="language-yaml">pages:
   stage: deploy
   tags:
-    - actual-runner-tag
+    - page-build-zhao
   script:
     - test -s public/index.html
   artifacts:
