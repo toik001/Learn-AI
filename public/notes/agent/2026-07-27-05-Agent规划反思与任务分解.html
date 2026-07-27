@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="面向 Java 开发者系统学习 Agent 规划、任务分解与有限反思：用 DAG、状态、预算、审批、幂等、补偿和人工升级把模型候选计划变成可治理执行。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="Agent 开发">
+  <meta name="study-date" content="2026-07-27">
+  <title>Agent 规划、反思与任务分解｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="2026-07-27-Agent开发学习主目录.html"><span class="brand-mark">J</span><span>Agent 开发学习主目录</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a href="2026-07-27-Agent开发学习主目录.html">课程主目录</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <label class="sidebar-search"><span class="sr-only">筛选文档</span><input type="search" placeholder="筛选文档…" data-sidebar-search></label>
+    <nav class="doc-nav" aria-label="文档列表">
+      <a class="doc-nav-item" href="2026-07-27-Agent开发学习主目录.html"><span>Agent 开发学习主目录</span><small>Agent 开发</small></a>
+      <a class="doc-nav-item is-active" href="#agent-规划反思与任务分解"><span>5. Agent 规划、反思与任务分解</span><small>当前页面</small></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta">
+      <a href="2026-07-27-Agent开发学习主目录.html">Agent 开发学习主目录</a>
+      <span>·</span><span>第 5 课</span><span>·</span>
+      <time datetime="2026-07-27">2026-07-27</time>
+    </div>
+    <article class="markdown-body">
+      <h1 id="agent-规划反思与任务分解"><a class="heading-anchor" href="#agent-规划反思与任务分解" aria-label="链接到本节">#</a>Agent 规划、反思与任务分解</h1>
+      <blockquote>
+        <p>模型可以提出候选步骤，但不能批准自己的计划。生产级规划的核心不是“想得更久”，而是把目标转换为一个经 DAG、工具权限、风险和预算校验的版本化执行计划，并让每一步都可暂停、审计、重试、补偿或转人工。</p>
+        <p>本文使用 Java 21、Spring AI 2.0.0 与 Spring Boot 4.0.x / 4.1.x，保持模型供应商中立。整理日期与官方资料检索日期：2026-07-27。</p>
+      </blockquote>
+
+      <nav aria-label="本课快速目录">
+        <strong>学习路径：</strong>
+        <a href="#核心结论">核心结论</a> ·
+        <a href="#学习目标与本阶段产物">目标与产物</a> ·
+        <a href="#四种执行策略">执行策略</a> ·
+        <a href="#何时需要规划">选择方法</a> ·
+        <a href="#计划状态机">状态机</a> ·
+        <a href="#反思的收益与成本">有限反思</a> ·
+        <a href="#java-21-计划模型">Java 21</a> ·
+        <a href="#spring-ai-候选计划">Spring AI</a> ·
+        <a href="#校验执行与转人工">校验执行</a> ·
+        <a href="#企业服务台案例">服务台案例</a> ·
+        <a href="#测试策略">测试策略</a> ·
+        <a href="#练习与验收">练习与验收</a> ·
+        <a href="#参考资料">参考资料</a>
+      </nav>
+
+      <h2 id="核心结论"><a class="heading-anchor" href="#核心结论" aria-label="链接到本节">#</a>核心结论</h2>
+      <ul>
+        <li><strong>能用固定工作流解决，就不要先上动态规划。</strong>步骤稳定、分支有限、写操作风险高的流程更适合由代码显式编排；动态计划只在任务结构确实随观察变化时增加价值。</li>
+        <li><strong>模型输出只是候选计划。</strong>结构化 JSON 或 Java record 只解决形状与解析问题，不证明依赖无环、工具存在、调用获授权、估算可信或写操作安全。业务 <code>PlanValidator</code> 必须用可信工具目录、主体权限和服务端预算重新计算并拒绝违规计划。</li>
+        <li><strong>执行计划是版本化 DAG，不是一段自然语言。</strong>每步必须有稳定 ID、依赖、工具、输入引用、超时、最大尝试次数、风险、审批要求、幂等键、补偿策略和证据；只有全部依赖成功的步骤才可进入 <code>READY</code>。</li>
+        <li><strong>执行器必须持久化每次状态转换。</strong><code>READY → RUNNING → SUCCEEDED / FAILED_*</code> 由带期望版本的原子更新完成；先持久化意图，再调用工具，再保存 Observation 摘要与外部引用，才能在崩溃后安全恢复。</li>
+        <li><strong>重试、补偿和重规划不是同一件事。</strong>瞬时只读失败可有限重试；不可重试或语义失败需要重规划或转人工；已产生外部副作用时只能调用事先登记、获授权且幂等的补偿动作，不能让模型临时发明“反向操作”。</li>
+        <li><strong>反思是有成本的可选层。</strong>Reflexion 研究显示语言反馈和情景记忆可在若干基准上改善后续尝试，但它不保证生产正确性。反思必须由失败证据触发，并受轮次、时间、token、工具调用和总成本限制；达到上限立即停止并转人工。<a href="https://arxiv.org/abs/2303.11366" target="_blank" rel="noopener noreferrer">Reflexion 原论文</a></li>
+        <li><strong>Spring AI 不是通用 Planner 或工作流引擎。</strong>Spring AI 2.0.0 的 <code>ChatClient</code> 与 Structured Output 可帮助生成结构化候选；Planner 策略、DAG 校验、审批、持久状态机、Executor、补偿和反思循环均由应用实现。</li>
+      </ul>
+
+      <h2 id="学习目标与本阶段产物"><a class="heading-anchor" href="#学习目标与本阶段产物" aria-label="链接到本节">#</a>学习目标与本阶段产物</h2>
+      <p>本课消费前三课的工具契约、持久 <code>AgentState</code> 与带来源的只读 <code>KnowledgeHit</code>。检索结果和工具 Observation 都是不可信数据，只能作为规划证据，不能改变工具白名单、主体权限或预算。RAG 边界可回看<a href="2026-07-27-04-Agent知识检索与RAG.html">Agent 知识检索与 RAG</a>。</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>学习目标</th><th>本阶段产物</th><th>验收问题</th></tr></thead>
+        <tbody>
+          <tr><td>选择最低复杂度的执行策略</td><td>固定工作流、单步工具循环、ReAct、计划后执行与有限反思选择表</td><td>能否根据复杂度、不确定性、风险、延迟和成本解释选择？</td></tr>
+          <tr><td>把任务表达成可验证图</td><td><code>PlanStep</code>、<code>ExecutionPlan</code>、依赖 DAG 与版本</td><td>循环、未知依赖、重复步骤能否在执行前确定性拒绝？</td></tr>
+          <tr><td>建立执行控制面</td><td><code>StepStatus</code>、<code>PlanValidator</code>、<code>StepExecutor</code></td><td>每个外部调用前后是否有持久状态、授权、预算和证据？</td></tr>
+          <tr><td>处理部分失败</td><td>失败分类、有限重试、补偿、重规划与人工升级规则</td><td>写操作失败时会不会被盲目重试或自动回滚？</td></tr>
+          <tr><td>限制反思</td><td>显式 <code>MAX_REFLECTION_ROUNDS</code> 与终止原因</td><td>达到轮次 / 时间 / token / 工具预算时是否确定性停止？</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="四种执行策略"><a class="heading-anchor" href="#四种执行策略" aria-label="链接到本节">#</a>四种执行策略：反思是可选增强层</h2>
+      <p>这里把“固定工作流、单步工具循环、ReAct、计划后执行”视为四种执行策略；反思不是第五种执行器，而是仅在有可判定反馈时叠加到 ReAct 或计划执行上的有限改进层。</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>策略</th><th>控制方式</th><th>适用场景</th><th>主要收益</th><th>主要代价 / 风险</th></tr></thead>
+        <tbody>
+          <tr><td>固定工作流<br>Deterministic workflow</td><td>代码预定义节点、分支和错误路径</td><td>流程稳定、合规严格、写操作多、输入变化有限</td><td>可预测、低延迟、易测试和审计</td><td>难处理结构未知的新任务；变更需要发版</td></tr>
+          <tr><td>单步工具循环</td><td>模型每轮选择至多一个获准工具，应用执行后返回 Observation</td><td>目标简单，只需一两次查询，下一步由最新结果决定</td><td>实现小、上下文新鲜、无需完整计划</td><td>容易重复调用；必须限制轮数、工具数与总时长</td></tr>
+          <tr><td>ReAct</td><td>推理 / 动作 / 观察交错，持续更新局部策略</td><td>环境信息逐步揭示、动作结果影响下一步</td><td>能边查边改路径；论文在问答和交互基准上报告改进</td><td>轨迹更长、更贵，可能循环；研究结果不等于安全保证</td></tr>
+          <tr><td>计划后执行<br>Plan-then-execute</td><td>先产出显式 DAG，经校验审批后按 ready steps 执行</td><td>多步骤、有依赖、可并行、需审计 / 审批 / 恢复</td><td>全局可见、可预算、可暂停、可恢复</td><td>初始计划可能过时；需要版本化重规划</td></tr>
+          <tr><td>有限反思层</td><td>失败后基于可验证反馈生成一次修正建议，再重新校验</td><td>有测试、编译器、规则检查或人工反馈等明确评价信号</td><td>可能修复遗漏步骤或错误假设</td><td>额外模型调用、延迟和自我确认偏差；必须有硬上限</td></tr>
+        </tbody>
+      </table></div>
+      <p><strong>论文边界：</strong>ReAct 论文研究了让模型交错生成推理轨迹与任务动作，并在 HotpotQA、FEVER、ALFWorld 和 WebShop 等实验中比较基线；Plan-and-Solve 论文研究的是先划分子任务、再依计划求解，以缓解 Zero-shot-CoT 的漏步骤问题。两者提供方法证据，不证明它们在你的工具、权限、数据和 SLA 下必然更好。<a href="https://arxiv.org/abs/2210.03629" target="_blank" rel="noopener noreferrer">ReAct</a> · <a href="https://arxiv.org/abs/2305.04091" target="_blank" rel="noopener noreferrer">Plan-and-Solve</a></p>
+
+      <h2 id="何时需要规划"><a class="heading-anchor" href="#何时需要规划" aria-label="链接到本节">#</a>何时需要规划</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>任务特征</th><th>低</th><th>中</th><th>高</th><th>选择建议</th></tr></thead>
+        <tbody>
+          <tr><td>步骤复杂度</td><td>一次查询 / 一次回答</td><td>2～4 步、少量分支</td><td>多依赖、并行、部分完成</td><td>低：单步；中：固定工作流或 ReAct；高：显式 DAG</td></tr>
+          <tr><td>环境不确定性</td><td>输入完整、工具结果稳定</td><td>需一次观察补齐信息</td><td>结果持续改变后续路径</td><td>不确定性越高越需要增量观察；不要一次性锁死长计划</td></tr>
+          <tr><td>副作用风险</td><td>纯只读、易撤销</td><td>内部低风险变更</td><td>写入工单、生产配置、资金 / 权限</td><td>风险越高越偏向固定流程、独立审批和人工门；不是“更自主”</td></tr>
+          <tr><td>延迟要求</td><td>允许秒到分钟</td><td>数秒</td><td>交互级低延迟</td><td>延迟越敏感，越少规划 / 反思模型调用；优先缓存或确定性路径</td></tr>
+          <tr><td>成本预算</td><td>充足且价值高</td><td>有明确上限</td><td>严格受限</td><td>预算严格时固定步骤与小模型分类优先；反思不是免费重试</td></tr>
+        </tbody>
+      </table></div>
+      <h3 id="规划触发问题">五个判断问题</h3>
+      <ol>
+        <li>执行前是否已知全部步骤，且分支数量有限？若是，优先固定工作流。</li>
+        <li>是否只有一个当前可行动作，执行后才能知道下一步？若是，采用受限单步循环。</li>
+        <li>是否存在三个以上有依赖的步骤、可并行分支、审批点或恢复要求？若是，建立显式 DAG。</li>
+        <li>是否有客观评价信号能指出哪里错了？没有测试、规则或人工反馈时，不要启动自我反思。</li>
+        <li>失败后继续尝试的期望价值是否高于额外延迟、token、工具调用与副作用风险？否则直接安全失败或转人工。</li>
+      </ol>
+
+      <h2 id="计划状态机"><a class="heading-anchor" href="#计划状态机" aria-label="链接到本节">#</a>计划状态机：DAG、版本与证据</h2>
+      <div class="agent-call-flow" role="img" aria-label="八节点规划执行流程：一，读取目标与可信约束；二，模型生成结构化候选计划；三，业务校验 DAG、工具策略和预算；四，高风险步骤等待独立审批；五，依赖完成的步骤进入 READY；六，Executor 持久化 RUNNING 后执行工具；七，验证 Observation 并保存步骤证据；八，根据结果完成、生成新版本计划或转人工。横切护栏包括租户与主体授权、计划版本、状态乐观锁、步骤和总超时、token 与工具预算、有限重试、幂等、补偿、审计以及有限反思。">
+        <div class="agent-step">1. Objective<br>目标与可信约束</div>
+        <div class="agent-step">2. Candidate plan<br>结构化候选计划</div>
+        <div class="agent-step">3. Validate<br>DAG / policy / budget</div>
+        <div class="agent-step">4. Approve<br>高风险独立审批</div>
+        <div class="agent-step">5. Ready step<br>依赖已满足</div>
+        <div class="agent-step">6. Execute<br>持久化后调用工具</div>
+        <div class="agent-step">7. Verify<br>验证 Observation / 证据</div>
+        <div class="agent-step">8. Decide<br>完成 / 重规划 / 转人工</div>
+        <div class="guardrail-band">横切护栏：tenant / principal · 工具白名单 · planVersion / 乐观锁 · step / wall-clock / token / tool / cost budget · 有限重试 · 幂等 · 补偿 · 审计 · MAX_REFLECTION_ROUNDS</div>
+      </div>
+      <p class="diagram-text"><strong>等价文字说明：</strong>应用先从认证态、持久状态和业务配置读取目标与可信约束，再允许模型输出结构化候选计划。业务校验器拒绝循环、缺失依赖、重复步骤、未知或越权工具、不安全写操作和超预算计划；高风险步骤由计划外的独立审批服务确认。只有全部依赖成功的步骤才能成为 READY。Executor 用期望版本持久化 RUNNING，随后执行已登记工具；完成后验证 Observation、保存摘要 / 外部引用和预算消耗。若目标完成则终止；若新证据使计划失效则产生版本加一的新计划并重新走完整校验；无法安全继续、预算耗尽或人工拒绝时转人工。租户授权、版本、乐观锁、各类预算、有限重试、幂等、补偿、审计与反思上限横切全流程。</p>
+
+      <h3 id="dag-与-ready-集合">DAG 与 ready set</h3>
+      <p>DAG（Directed Acyclic Graph，有向无环图）让“先做什么”成为可检查的数据。边 <code>A → B</code> 表示 B 依赖 A；当且仅当 B 的所有依赖都为 <code>SUCCEEDED</code>，B 才能进入 <code>READY</code>。无依赖步骤可并行，但并行执行仍要共享原子预算和互斥资源锁。拓扑排序无法访问全部节点时即存在环，计划在任何工具调用前失败。</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>状态</th><th>进入条件</th><th>允许的下一状态</th><th>必须保存的证据</th></tr></thead>
+        <tbody>
+          <tr><td><code>PLANNED</code></td><td>候选已通过完整校验</td><td><code>WAITING_APPROVAL</code> / <code>READY</code> / <code>BLOCKED</code></td><td>planId、planVersion、validator version、预算快照、工具目录版本</td></tr>
+          <tr><td><code>WAITING_APPROVAL</code></td><td>风险策略要求人工审批</td><td><code>READY</code> / <code>HUMAN_REJECTED</code> / <code>ESCALATED</code></td><td>审批请求 ID、审批人、决定、时间与理由；不把审批权交给模型</td></tr>
+          <tr><td><code>READY</code></td><td>依赖成功、预算尚足、授权仍有效</td><td><code>RUNNING</code> / <code>BLOCKED</code> / <code>ESCALATED</code></td><td>依赖版本、剩余预算、策略决定</td></tr>
+          <tr><td><code>RUNNING</code></td><td>原子 claim 成功且写入 attempt</td><td><code>SUCCEEDED</code> / <code>FAILED_RETRYABLE</code> / <code>FAILED_FINAL</code></td><td>attempt、idempotencyKey、开始时间、工具请求摘要</td></tr>
+          <tr><td><code>FAILED_RETRYABLE</code></td><td>分类为瞬时失败且重试安全、仍有尝试 / 时间预算</td><td><code>READY</code> / <code>FAILED_FINAL</code> / <code>ESCALATED</code></td><td>私有错误分类、退避、下次时间；公开错误不含原始异常</td></tr>
+          <tr><td><code>SUCCEEDED</code></td><td>工具结果通过业务后置条件</td><td>终态；必要时可由补偿流程转 <code>COMPENSATING</code></td><td>Observation 摘要 / 哈希、外部对象 ID、知识 / 工具版本、预算消耗</td></tr>
+          <tr><td><code>COMPENSATING</code></td><td>后续失败且存在预注册补偿</td><td><code>COMPENSATED</code> / <code>ESCALATED</code></td><td>原动作证据、补偿动作、独立幂等键、审批和结果</td></tr>
+          <tr><td><code>FAILED_FINAL</code> / <code>BLOCKED</code> / <code>HUMAN_REJECTED</code> / <code>ESCALATED</code></td><td>不可安全自动推进</td><td>仅由人工决定终止或创建新 planVersion</td><td>终止原因、剩余影响、人工队列引用、可恢复检查点</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="幂等重试补偿与重规划">幂等、重试、补偿与重规划</h3>
+      <ul>
+        <li><strong>幂等：</strong>读取天然可重试；写入仅在工具契约明确支持幂等键、业务键或 compare-and-set 时有限重试。HTTP 方法名称不等于业务幂等，重复 <code>POST</code> 创建工单尤其危险。</li>
+        <li><strong>重试：</strong>只处理 429、连接重置、明确 5xx 等瞬时技术失败，并使用指数退避、抖动、最大尝试次数和 deadline。校验失败、403、参数错误、策略拒绝和业务冲突不可重试。</li>
+        <li><strong>补偿：</strong>补偿不是数据库回滚，而是新的业务动作。它必须预先登记、再次鉴权、可审计并处理补偿自身失败；例如“关闭刚创建的重复工单”不等于删除审计记录。</li>
+        <li><strong>重规划：</strong>当 Observation 否定关键假设、依赖永久不可用、目标被用户合法修改，或剩余图不再可达时，保留旧版本事件，创建 <code>planVersion + 1</code> 并重新校验。不得原地改写已经执行过的步骤。</li>
+        <li><strong>转人工：</strong>权限不足、预算耗尽、审批拒绝、补偿失败、反思达上限、未知副作用或连续冲突时停止自动执行，提交最小必要证据与明确待决定事项。</li>
+      </ul>
+
+      <h2 id="反思的收益与成本"><a class="heading-anchor" href="#反思的收益与成本" aria-label="链接到本节">#</a>反思的收益与成本</h2>
+      <p>Reflexion 论文提出用语言形式的反馈和情景记忆影响后续尝试，而不是更新模型权重，并在顺序决策、编程和语言推理任务上报告相对基线的改进。这个研究结论适合启发“失败后生成修正建议”，但不能推出模型能够可靠地审计自己，更不能替代外部测试、权限策略或人工审批。</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>何时允许反思</th><th>何时禁止继续反思</th><th>每轮必须产出</th></tr></thead>
+        <tbody>
+          <tr><td>测试失败给出确定断言；编译器 / schema / 规则引擎给出可定位错误；工具 Observation 与计划假设矛盾；人工给出具体反馈</td><td>没有新证据；只是“再想一遍”；需要扩大权限；写操作结果未知；同一失败重复；任一预算耗尽；达到 <code>MAX_REFLECTION_ROUNDS</code></td><td>引用具体 evidence ID、指出失效假设、提出最小计划 diff、估算新增预算、说明是否需要新审批</td></tr>
+        </tbody>
+      </table></div>
+      <pre><code class="language-java">final class BoundedReflectionPolicy {
+    static final int MAX_REFLECTION_ROUNDS = 2;
+
+    ReflectionDecision decide(
+            int completedRounds,
+            boolean hasNewVerifiableEvidence,
+            boolean sideEffectOutcomeKnown,
+            RemainingBudget remaining) {
+
+        if (completedRounds &gt;= MAX_REFLECTION_ROUNDS) {
+            return ReflectionDecision.ESCALATE_LIMIT_REACHED;
+        }
+        if (!hasNewVerifiableEvidence || !sideEffectOutcomeKnown) {
+            return ReflectionDecision.ESCALATE_UNSAFE_OR_NO_NEW_EVIDENCE;
+        }
+        if (remaining.wallClockMillis() &lt; 2_000
+                || remaining.tokens() &lt; 800
+                || remaining.toolCalls() &lt; 1) {
+            return ReflectionDecision.ESCALATE_BUDGET_EXHAUSTED;
+        }
+        return ReflectionDecision.ALLOW_ONE_ROUND;
+    }
+}</code></pre>
+      <p>反思文本本身是不可信候选，不直接写入长期记忆或执行。它只能提出新计划 diff；应用重新执行完整的 DAG、权限、预算和审批校验。持久记录反思轮次、触发 evidence、输入 / 输出摘要、token 与延迟，但默认不把完整内部推理轨迹写入普通日志或展示给用户。</p>
+
+      <h2 id="java-21-计划模型"><a class="heading-anchor" href="#java-21-计划模型" aria-label="链接到本节">#</a>Java 21：不可变计划模型</h2>
+      <p>下面是供应商中立的 Java 21 领域模型。record 提供不可变载体；所有集合在紧凑构造器中复制，避免计划通过外部引用被悄悄修改。模型生成的是 <code>CandidatePlan</code>，只有业务校验器能产生 <code>ExecutionPlan</code>。</p>
+      <pre><code class="language-java">import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+enum StepStatus {
+    PLANNED, WAITING_APPROVAL, READY, RUNNING,
+    SUCCEEDED, FAILED_RETRYABLE, FAILED_FINAL,
+    COMPENSATING, COMPENSATED, BLOCKED,
+    HUMAN_REJECTED, ESCALATED
+}
+
+enum ToolRisk { READ_ONLY, LOW_RISK_WRITE, HIGH_RISK_WRITE }
+
+record PlanningInput(
+        String objective,
+        String tenantId,
+        String principalId,
+        List&lt;String&gt; allowedEvidenceIds,
+        List&lt;String&gt; allowedToolNames) {
+    PlanningInput {
+        allowedEvidenceIds = List.copyOf(allowedEvidenceIds);
+        allowedToolNames = List.copyOf(allowedToolNames);
+    }
+}
+
+// 由模型产生；全部字段都不可信，不能直接执行。
+record CandidateStep(
+        String stepId,
+        String description,
+        String toolName,
+        Map&lt;String, Object&gt; arguments,
+        List&lt;String&gt; dependsOn,
+        long timeoutMillis,
+        int maxAttempts,
+        long estimatedTokens,
+        int estimatedToolCalls) {
+    CandidateStep {
+        arguments = Map.copyOf(arguments);
+        dependsOn = List.copyOf(dependsOn);
+    }
+}
+
+record CandidatePlan(String objective, List&lt;CandidateStep&gt; steps) {
+    CandidatePlan {
+        steps = List.copyOf(steps);
+    }
+}
+
+record ExecutionBudget(
+        int maxSteps,
+        long maxWallClockMillis,
+        long maxModelTokens,
+        int maxToolCalls,
+        long maxCostMicros) {}
+
+record PlanStep(
+        String stepId,
+        String description,
+        String toolName,
+        Map&lt;String, Object&gt; arguments,
+        Set&lt;String&gt; dependsOn,
+        Duration timeout,
+        int maxAttempts,
+        ToolRisk risk,
+        boolean approvalRequired,
+        String idempotencyKey,
+        String compensationTool,
+        StepStatus status) {
+    PlanStep {
+        arguments = Map.copyOf(arguments);
+        dependsOn = Set.copyOf(dependsOn);
+    }
+}
+
+record ExecutionPlan(
+        UUID planId,
+        long planVersion,
+        String objective,
+        List&lt;PlanStep&gt; steps,
+        ExecutionBudget budget,
+        int reflectionRounds,
+        Instant createdAt) {
+    ExecutionPlan {
+        steps = List.copyOf(steps);
+    }
+}
+
+record StepEvidence(
+        UUID planId,
+        long planVersion,
+        String stepId,
+        int attempt,
+        String observationDigest,
+        List&lt;String&gt; externalReferences,
+        long consumedTokens,
+        int consumedToolCalls,
+        Instant recordedAt) {
+    StepEvidence {
+        externalReferences = List.copyOf(externalReferences);
+    }
+}
+
+interface Planner {
+    CandidatePlan propose(PlanningInput input);
+}
+
+interface StepExecutor {
+    StepExecutionResult executeReadyStep(
+            UUID planId, long expectedPlanVersion, String stepId);
+}</code></pre>
+      <p><code>arguments</code> 只是候选参数；执行前还要按工具自己的输入 record / Bean Validation 转换，不能把任意 Map 直接交给反射、HTTP 客户端、SQL、Shell 或 URL。<code>idempotencyKey</code>、risk、approval 与 compensation 由工具目录和服务器规则派生，不能采信模型自报。</p>
+
+      <h3 id="业务-planvalidator">业务 PlanValidator：从候选到可执行计划</h3>
+      <pre><code class="language-java">import java.time.Clock;
+import java.time.Duration;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+final class PlanValidator {
+    private static final int MAX_ATTEMPTS_PER_STEP = 3;
+    private static final Duration MAX_STEP_TIMEOUT = Duration.ofSeconds(30);
+
+    private final ToolCatalog tools;
+    private final ToolAuthorization authorization;
+    private final Clock clock;
+
+    PlanValidator(
+            ToolCatalog tools,
+            ToolAuthorization authorization,
+            Clock clock) {
+        this.tools = tools;
+        this.authorization = authorization;
+        this.clock = clock;
+    }
+
+    ExecutionPlan validate(
+            CandidatePlan candidate,
+            PlanningInput input,
+            ExecutionBudget trustedBudget) {
+
+        if (!candidate.objective().equals(input.objective())) {
+            throw new InvalidPlan("objective changed");
+        }
+        if (candidate.steps().isEmpty()
+                || candidate.steps().size() &gt; trustedBudget.maxSteps()) {
+            throw new InvalidPlan("step budget exceeded");
+        }
+
+        Map&lt;String, CandidateStep&gt; byId = new HashMap&lt;&gt;();
+        for (CandidateStep step : candidate.steps()) {
+            if (step.stepId() == null || step.stepId().isBlank()
+                    || byId.putIfAbsent(step.stepId(), step) != null) {
+                throw new InvalidPlan("blank or duplicate step id");
+            }
+        }
+        for (CandidateStep step : candidate.steps()) {
+            if (!byId.keySet().containsAll(step.dependsOn())) {
+                throw new InvalidPlan("missing dependency");
+            }
+            if (step.dependsOn().contains(step.stepId())) {
+                throw new InvalidPlan("self dependency");
+            }
+        }
+        rejectCycles(byId);
+
+        long estimatedWallClockMillis = 0;
+        long estimatedTokens = 0;
+        int estimatedToolCalls = 0;
+        long estimatedCostMicros = 0;
+        List&lt;PlanStep&gt; normalized = new ArrayList&lt;&gt;();
+        for (CandidateStep step : candidate.steps()) {
+            ToolDescriptor tool = tools.find(step.toolName())
+                    .orElseThrow(() -&gt; new InvalidPlan("unknown tool"));
+            authorization.requireAllowed(
+                    input.tenantId(), input.principalId(), tool.name());
+
+            if (step.maxAttempts() &lt; 1
+                    || step.maxAttempts() &gt; MAX_ATTEMPTS_PER_STEP) {
+                throw new InvalidPlan("invalid retry budget");
+            }
+            Duration timeout = Duration.ofMillis(step.timeoutMillis());
+            if (timeout.isZero() || timeout.isNegative()
+                    || timeout.compareTo(MAX_STEP_TIMEOUT) &gt; 0) {
+                throw new InvalidPlan("invalid step timeout");
+            }
+            if (tool.risk() != ToolRisk.READ_ONLY
+                    &amp;&amp; !tool.supportsIdempotencyKey()) {
+                throw new InvalidPlan("unsafe write without idempotency");
+            }
+            if (tool.risk() != ToolRisk.READ_ONLY
+                    &amp;&amp; !authorization.mayWrite(
+                            input.tenantId(), input.principalId(), tool.name())) {
+                throw new InvalidPlan("unauthorized write");
+            }
+
+            // 成本来自可信工具目录，不采信模型的低估值。
+            long serverTokens = Math.max(
+                    step.estimatedTokens(), tool.minimumTokenEstimate());
+            int serverCalls = Math.max(
+                    step.estimatedToolCalls(), tool.minimumToolCalls());
+            long worstCaseMillis = Math.multiplyExact(
+                    timeout.toMillis(), step.maxAttempts());
+            long serverCostMicros = Math.multiplyExact(
+                    tool.minimumCostMicros(), serverCalls);
+            estimatedWallClockMillis = Math.addExact(
+                    estimatedWallClockMillis, worstCaseMillis);
+            estimatedTokens = Math.addExact(estimatedTokens, serverTokens);
+            estimatedToolCalls = Math.addExact(estimatedToolCalls, serverCalls);
+            estimatedCostMicros = Math.addExact(
+                    estimatedCostMicros, serverCostMicros);
+
+            String idempotencyKey = tool.risk() == ToolRisk.READ_ONLY
+                    ? ""
+                    : input.tenantId() + ":" + step.stepId();
+            normalized.add(new PlanStep(
+                    step.stepId(), step.description(), tool.name(),
+                    tool.validateAndNormalize(step.arguments()),
+                    Set.copyOf(step.dependsOn()), timeout, step.maxAttempts(),
+                    tool.risk(), tool.requiresApproval(), idempotencyKey,
+                    tool.compensationTool().orElse(""), StepStatus.PLANNED));
+        }
+        if (estimatedWallClockMillis &gt; trustedBudget.maxWallClockMillis()
+                || estimatedTokens &gt; trustedBudget.maxModelTokens()
+                || estimatedToolCalls &gt; trustedBudget.maxToolCalls()
+                || estimatedCostMicros &gt; trustedBudget.maxCostMicros()) {
+            throw new InvalidPlan("execution budget exceeded");
+        }
+
+        return new ExecutionPlan(
+                UUID.randomUUID(), 1L, input.objective(),
+                List.copyOf(normalized), trustedBudget, 0, clock.instant());
+    }
+
+    private static void rejectCycles(Map&lt;String, CandidateStep&gt; byId) {
+        Map&lt;String, Integer&gt; indegree = new HashMap&lt;&gt;();
+        Map&lt;String, List&lt;String&gt;&gt; outgoing = new HashMap&lt;&gt;();
+        byId.keySet().forEach(id -&gt; {
+            indegree.put(id, 0);
+            outgoing.put(id, new ArrayList&lt;&gt;());
+        });
+        byId.values().forEach(step -&gt; step.dependsOn().forEach(parent -&gt; {
+            outgoing.get(parent).add(step.stepId());
+            indegree.merge(step.stepId(), 1, Integer::sum);
+        }));
+
+        ArrayDeque&lt;String&gt; ready = new ArrayDeque&lt;&gt;();
+        indegree.forEach((id, degree) -&gt; {
+            if (degree == 0) ready.add(id);
+        });
+        int visited = 0;
+        while (!ready.isEmpty()) {
+            String id = ready.remove();
+            visited++;
+            for (String child : outgoing.get(id)) {
+                if (indegree.merge(child, -1, Integer::sum) == 0) {
+                    ready.add(child);
+                }
+            }
+        }
+        if (visited != byId.size()) {
+            throw new InvalidPlan("dependency cycle");
+        }
+    }
+}</code></pre>
+      <p>示例省略了参数 schema 类和异常定义，但校验顺序不能省：先做结构与 DAG，再解析可信工具描述、鉴权并归一化参数，最后按服务端估算累计预算。实际系统还应校验 wall-clock / cost 上界、互斥资源、租户数据引用、证据来源、并行宽度和补偿图，并给 <code>PlanValidator</code> 与工具目录自身加版本号。</p>
+
+      <h2 id="spring-ai-候选计划"><a class="heading-anchor" href="#spring-ai-候选计划" aria-label="链接到本节">#</a>Spring AI 2.0.0：只生成候选计划</h2>
+      <p>Spring AI 2.0.0 官方 <code>ChatClient</code> 支持同步 <code>call()</code>，并通过 <code>entity(Class&lt;T&gt;)</code> 将模型回复映射为 Java 类型。Structured Output 文档明确提示默认转换属于 best effort，模型不保证按要求输出，因此解析成功也不能跳过业务校验。若开启 provider-native structured output，支持程度因模型和提供商而异；本例保持 provider-neutral，使用默认路径并在失败时安全终止。<a href="https://docs.spring.io/spring-ai/reference/api/chatclient.html" target="_blank" rel="noopener noreferrer">ChatClient 官方文档</a> · <a href="https://docs.spring.io/spring-ai/reference/api/structured-output-converter.html" target="_blank" rel="noopener noreferrer">Structured Output 官方文档</a></p>
+
+      <h3 id="spring-能力边界">原生能力与应用职责边界</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>能力</th><th>Spring AI 2.0.0 原生提供</th><th>应用必须拥有</th></tr></thead>
+        <tbody>
+          <tr><td>模型交互</td><td><code>ChatClient</code> fluent API、同步 / 流式响应、ChatModel 抽象</td><td>模型选择策略、deadline、预算归集、错误分级</td></tr>
+          <tr><td>结构化候选</td><td><code>call().entity(CandidatePlan.class)</code> 与 Structured Output Converter；可选 schema validation / provider-native 模式</td><td>候选不可信标记、解析失败处理、业务字段归一化</td></tr>
+          <tr><td>规划</td><td><strong>不提供通用 Planner</strong></td><td><code>Planner</code> 接口、提示策略、版本化重规划规则</td></tr>
+          <tr><td>校验与审批</td><td><strong>不提供业务 DAG / 工具授权 / 预算 / 审批</strong></td><td><code>PlanValidator</code>、<code>ApprovalService</code>、IAM 与策略引擎</td></tr>
+          <tr><td>执行与恢复</td><td><strong>不提供通用工作流引擎或持久状态机</strong></td><td><code>StepExecutor</code>、Repository、乐观锁、队列、幂等、补偿与人工队列</td></tr>
+          <tr><td>反思</td><td><strong>不提供通用 reflection loop</strong></td><td>触发信号、<code>MAX_REFLECTION_ROUNDS</code>、各类预算、终止与升级</td></tr>
+        </tbody>
+      </table></div>
+
+      <pre><code class="language-java">import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.stereotype.Service;
+
+@Configuration
+class PlanningConfiguration {
+
+    @Bean
+    ChatClient planningChatClient(ChatClient.Builder builder) {
+        return builder
+                .defaultSystem("""
+                    你只生成候选任务计划，不执行工具、不批准写操作。
+                    仅使用请求中给出的工具名与 evidence ID。
+                    每步必须有稳定 stepId、dependsOn、timeoutMillis、
+                    maxAttempts 与保守成本估算。禁止循环依赖。
+                    无足够信息时返回空 steps，由应用转人工。
+                    """)
+                .build();
+    }
+
+    // 以下 Bean 都是应用自建能力，不是 Spring AI 内置 Planner / Executor。
+    @Bean
+    PlanValidator planValidator(
+            ToolCatalog tools,
+            ToolAuthorization authorization,
+            java.time.Clock clock) {
+        return new PlanValidator(tools, authorization, clock);
+    }
+
+    @Bean
+    ApprovalService approvalService(
+            ApprovalRepository approvals,
+            ToolAuthorization authorization) {
+        return new PolicyBackedApprovalService(approvals, authorization);
+    }
+
+    @Bean
+    PersistingStepExecutor stepExecutor(
+            PlanRepository plans,
+            ToolGateway tools,
+            ApprovalService approvals,
+            ExecutionBudgetLedger budgets,
+            FailureClassifier failures) {
+        return new PersistingStepExecutor(
+                plans, tools, approvals, budgets, failures);
+    }
+}
+
+@Service
+final class SpringChatPlanner implements Planner {
+    private final ChatClient chatClient;
+
+    SpringChatPlanner(
+            @Qualifier("planningChatClient") ChatClient chatClient) {
+        this.chatClient = chatClient;
+    }
+
+    @Override
+    public CandidatePlan propose(PlanningInput input) {
+        try {
+            return chatClient.prompt()
+                    .user(user -&gt; user.text("""
+                        目标：{objective}
+                        可用 evidence IDs：{evidenceIds}
+                        可用工具名：{toolNames}
+                        不得自造工具；应用仍会重新校验全部工具与权限。
+                        """)
+                            .param("objective", input.objective())
+                            .param("evidenceIds",
+                                    String.join(",", input.allowedEvidenceIds()))
+                            .param("toolNames",
+                                    String.join(",", input.allowedToolNames())))
+                    .call()
+                    .entity(CandidatePlan.class);
+        }
+        catch (RuntimeException conversionOrModelFailure) {
+            // 记录私有错误分类；公开响应只说明候选计划不可用。
+            throw new CandidatePlanUnavailable(
+                    "candidate plan could not be produced");
+        }
+    }
+}</code></pre>
+      <p><strong>两个重要限制：</strong>第一，Prompt 中列工具名只是帮助模型减少错误，真正的白名单来自服务端 <code>ToolCatalog</code>；上例故意不把权限决定放进模型。第二，Spring AI 2.0.0 也支持 <code>entity(..., spec -&gt; spec.validateSchema())</code>，官方说明 schema 失败会进行有限重复尝试且流式模式不支持该校验；即使启用，它也只验证 JSON schema，不验证 DAG、IAM、预算或副作用。模型重试次数仍须计入总模型 / 时间预算。</p>
+      <p>依赖基线使用 <code>org.springframework.ai:spring-ai-bom:2.0.0</code>；官方 Getting Started 当前说明 Spring AI 2.0.x 支持 Spring Boot 4.0.x 和 4.1.x。模型 starter 由部署方选择，领域代码只依赖 <code>ChatClient</code> / <code>ChatModel</code> 抽象。<a href="https://docs.spring.io/spring-ai/reference/getting-started.html" target="_blank" rel="noopener noreferrer">Spring AI Getting Started</a></p>
+
+      <h2 id="校验执行与转人工"><a class="heading-anchor" href="#校验执行与转人工" aria-label="链接到本节">#</a>校验、执行与转人工</h2>
+      <h3 id="持久化-executor">持久化 StepExecutor</h3>
+      <pre><code class="language-java">final class PersistingStepExecutor implements StepExecutor {
+    private final PlanRepository plans;
+    private final ToolGateway tools;
+    private final ApprovalService approvals;
+    private final ExecutionBudgetLedger budgets;
+    private final FailureClassifier failures;
+
+    // constructor 省略
+
+    @Override
+    public StepExecutionResult executeReadyStep(
+            UUID planId, long expectedPlanVersion, String stepId) {
+
+        PlanSnapshot snapshot = plans.load(planId);
+        PlanStep step = snapshot.requireStep(stepId);
+        if (snapshot.planVersion() != expectedPlanVersion
+                || step.status() != StepStatus.READY
+                || !snapshot.allDependenciesSucceeded(step)) {
+            return StepExecutionResult.notClaimed("stale or not ready");
+        }
+        if (step.approvalRequired()
+                &amp;&amp; !approvals.isApproved(planId, expectedPlanVersion, stepId)) {
+            plans.transition(planId, expectedPlanVersion, stepId,
+                    StepStatus.READY, StepStatus.WAITING_APPROVAL,
+                    "approval-required");
+            return StepExecutionResult.waitingForApproval();
+        }
+        if (!budgets.tryReserve(planId, stepId, step.timeout(), 1)) {
+            plans.escalate(planId, expectedPlanVersion, stepId,
+                    "execution-budget-exhausted");
+            return StepExecutionResult.escalated();
+        }
+
+        int attempt = plans.claimRunning(
+                planId, expectedPlanVersion, stepId,
+                step.idempotencyKey()); // 原子 READY -&gt; RUNNING + attempt
+        try {
+            ToolObservation observation = tools.execute(
+                    step.toolName(), step.arguments(),
+                    step.idempotencyKey(), step.timeout());
+            StepEvidence evidence = verifyAndSummarize(
+                    snapshot, step, attempt, observation);
+            plans.completeWithEvidence(
+                    planId, expectedPlanVersion, stepId, evidence);
+            budgets.commit(planId, stepId, observation.usage());
+            return StepExecutionResult.succeeded(evidence);
+        }
+        catch (RuntimeException failure) {
+            FailureClass kind = failures.classify(failure);
+            boolean retrySafe = step.risk() == ToolRisk.READ_ONLY
+                    || !step.idempotencyKey().isBlank();
+            boolean attemptsRemain = attempt &lt; step.maxAttempts();
+            boolean budgetRemains = budgets.mayRetry(planId, stepId);
+
+            if (kind == FailureClass.TRANSIENT
+                    &amp;&amp; retrySafe &amp;&amp; attemptsRemain &amp;&amp; budgetRemains) {
+                plans.failRetryableThenScheduleReady(
+                        planId, expectedPlanVersion, stepId,
+                        privateDiagnosticCode(failure));
+                return StepExecutionResult.retryScheduled();
+            }
+            plans.failFinalAndEscalate(
+                    planId, expectedPlanVersion, stepId,
+                    privateDiagnosticCode(failure));
+            return StepExecutionResult.escalated();
+        }
+    }
+}</code></pre>
+      <p><code>claimRunning</code> 和状态转换必须是数据库 compare-and-set：带 <code>planId + planVersion + stepId + fromStatus</code> 条件更新；影响行数不是 1 就表示其他 worker 已领取或计划已重规划。工具调用无法与数据库跨系统原子提交，因此写工具还必须使用外部系统可识别的幂等键，并在恢复时先查询外部结果，再决定是否重放。</p>
+
+      <h3 id="失败路由">有限重试、补偿、重规划和升级的决策表</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>观察</th><th>自动动作</th><th>禁止动作</th><th>终止 / 升级条件</th></tr></thead>
+        <tbody>
+          <tr><td>只读工具 429 / 明确临时 5xx</td><td>预算内退避重试，保持同一 stepId</td><td>扩大超时到无限、切换未授权工具</td><td>达到 maxAttempts 或 deadline 后转人工 / 降级</td></tr>
+          <tr><td>写操作响应丢失，结果未知</td><td>用幂等键查询外部对象；必要时暂停</td><td>直接再次创建、假设失败、自动补偿未知结果</td><td>无法确认外部状态时人工核对</td></tr>
+          <tr><td>403 / 策略拒绝 / 人工拒绝</td><td>保存决定并停止受影响分支</td><td>反思如何绕过权限、换工具规避审批</td><td>目标仍需完成时由授权人员创建新版本</td></tr>
+          <tr><td>参数 / schema / 前置条件错误</td><td>若有新可验证证据，可进行一次有限反思并重新校验</td><td>按瞬时失败盲重试相同输入</td><td>无新证据或反思达上限即升级</td></tr>
+          <tr><td>后续永久失败，前序已有副作用</td><td>评估预注册补偿，重新鉴权与审批后执行</td><td>让模型发明反向工具；删除审计</td><td>补偿不适用 / 失败时报告残余影响并升级</td></tr>
+          <tr><td>关键假设被 Observation 否定</td><td>冻结当前版本，生成最小新版本候选并全量校验</td><td>原地修改历史步骤或复用旧审批</td><td>预算不足、目标不可达或风险上升时升级</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="企业服务台案例"><a class="heading-anchor" href="#企业服务台案例" aria-label="链接到本节">#</a>企业服务台增量案例</h2>
+      <p>用户目标：“支付服务持续超时，请诊断并在必要时更新 INC-4821。”Agent 先消费 Task 4 的带引用 runbook 结果和 Task 2 的工具契约；它不能因为 runbook 文本要求写入就获得写权限。</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>步骤</th><th>依赖</th><th>工具 / 输入来源</th><th>风险、证据与失败处理</th></tr></thead>
+        <tbody>
+          <tr><td><code>S1 retrieve-runbook</code><br>检索处置手册</td><td>无</td><td>Task 4 只读 <code>KnowledgeRetriever</code>；tenant / ACL / version 来自认证态</td><td>只读；保存 documentId、version、URI 与 evidence key；无可信命中则停止并转 L2</td></tr>
+          <tr><td><code>S2 inspect-service</code><br>查询服务状态</td><td>无，可与 S1 并行</td><td><code>service-status.read</code></td><td>只读、最多 2 次、5 秒；保存指标快照引用，超时后有限重试</td></tr>
+          <tr><td><code>S3 inspect-ticket</code><br>查询用户工单</td><td>无，可与 S1 / S2 并行</td><td><code>ticket.read</code>；ticketId 由已验证请求解析</td><td>只读、工单级 ACL；不存在或越权时不可重试，转人工</td></tr>
+          <tr><td><code>S4 propose-diagnostic</code><br>提出诊断动作</td><td>S1、S2、S3</td><td>模型只汇总已验证 Observation 与 runbook evidence</td><td>不执行写操作；声明必须引用 evidence；关键证据矛盾才允许重规划</td></tr>
+          <tr><td><code>S5 approve-ticket-change</code><br>审批创建 / 更新</td><td>S4</td><td>应用 <code>ApprovalService</code></td><td>高风险门；审批记录绑定 planVersion、stepId、精确 diff 和过期时间，拒绝即终止</td></tr>
+          <tr><td><code>S6 create-or-update-ticket</code><br>创建或更新工单</td><td>S5</td><td><code>ticket.create</code> 或 <code>ticket.update</code>，由校验器根据现状选择</td><td>写操作；必须幂等键、compare-and-set / ticket version、审计；结果未知先查再重试</td></tr>
+        </tbody>
+      </table></div>
+      <p>若 S3 发现 INC-4821 已关闭，原候选中的 “update” 前置条件失效：Executor 不把失败当 5xx 重试，也不让模型私自改成 create。它冻结 v1，生成 v2 候选，把 S6 改为“提议创建新工单”，重新执行工具权限、预算、DAG 和高风险审批。v1 的查询证据保留，但 v1 对 update 的审批不能复用到 v2 的 create。</p>
+      <h3 id="服务台预算">示例预算与人工门</h3>
+      <ul>
+        <li>最多 8 步、总 wall-clock 60 秒、每步 5～30 秒、最多 10 次工具调用、模型输入输出合计 12,000 tokens、反思最多 2 轮。</li>
+        <li>只读查询单步最多 2 次；写步骤最多 1 次业务提交。网络不确定时只用相同幂等键查证结果，不产生第二个逻辑写入。</li>
+        <li>创建 / 更新工单必须由当前 tenant 的支持人员审批精确 diff；审批过期、主体变化或 planVersion 变化均重新审批。</li>
+        <li>公开响应只给出“诊断未完成 / 等待审批 / 已转人工”和安全引用；原始异常、内部 URL、完整 Observation 与策略细节进入受限诊断存储。</li>
+      </ul>
+
+      <h2 id="测试策略"><a class="heading-anchor" href="#测试策略" aria-label="链接到本节">#</a>测试策略</h2>
+      <p>测试分三层：对 <code>PlanValidator</code> 做纯 Java 表驱动测试；对 Repository + Executor 做状态与恢复集成测试；对 <code>SpringChatPlanner</code> 用可控 ChatModel 验证解析失败和候选隔离。不要测试模型“总能规划正确”，而要证明错误候选无法越过应用控制面。</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>用例</th><th>测试布置</th><th>预期断言</th></tr></thead>
+        <tbody>
+          <tr><td>循环依赖</td><td>S1 依赖 S2，S2 依赖 S1</td><td><code>PlanValidator</code> 在任何工具调用前拒绝 <code>dependency cycle</code></td></tr>
+          <tr><td>缺失依赖</td><td>S2 依赖不存在的 S9</td><td>拒绝 <code>missing dependency</code>；不静默删除边</td></tr>
+          <tr><td>重复步骤</td><td>两个步骤都叫 S1</td><td>拒绝 blank / duplicate ID；证据不会覆盖</td></tr>
+          <tr><td>未知工具</td><td>模型提出 <code>shell.exec</code></td><td>可信目录查找失败；绝不动态反射或联网解析工具</td></tr>
+          <tr><td>越权工具</td><td>主体只有 service.read，却计划 ticket.read</td><td>授权校验拒绝，公开错误不泄露工具目录</td></tr>
+          <tr><td>不安全写操作</td><td>写工具不支持幂等键或无审批</td><td>验证失败；Executor 从未获得可执行 <code>PlanStep</code></td></tr>
+          <tr><td>步骤超时</td><td>只读工具超过 deadline</td><td>取消 / 隔离结果，按策略有限重试；过期结果不能把步骤改为成功</td></tr>
+          <tr><td>不可重试失败</td><td>403、参数错误或业务冲突</td><td>直接 <code>FAILED_FINAL</code> / <code>ESCALATED</code>，attempt 不增加</td></tr>
+          <tr><td>重试耗尽</td><td>瞬时 5xx 连续发生</td><td>最多执行 <code>maxAttempts</code> 次；没有第 N+1 次调用</td></tr>
+          <tr><td>反思上限</td><td>两轮后仍返回同一失败建议</td><td>第 3 轮不调用模型，状态转 <code>ESCALATED</code></td></tr>
+          <tr><td>预算耗尽</td><td>并行 worker 同时争抢最后一次工具额度</td><td>原子 ledger 只允许一个 reservation；另一个转人工 / 等待</td></tr>
+          <tr><td>部分完成</td><td>S1 成功产生副作用，S2 永久失败</td><td>仅评估预注册补偿；原步骤证据保留，补偿独立审计</td></tr>
+          <tr><td>人工拒绝</td><td>审批服务返回 reject</td><td>步骤为 <code>HUMAN_REJECTED</code>，依赖写步骤永不 READY，不能反思绕过</td></tr>
+          <tr><td>崩溃恢复</td><td>外部写成功后、数据库保存 evidence 前进程崩溃</td><td>恢复器用同一幂等键查询外部状态，不重复创建对象</td></tr>
+          <tr><td>计划版本冲突</td><td>worker 执行 v1 时已创建 v2</td><td>compare-and-set 影响 0 行，v1 工具不调用，旧审批不复用</td></tr>
+        </tbody>
+      </table></div>
+      <p><strong>关键性质测试：</strong>对任意通过验证的计划，所有依赖 ID 均存在、图可拓扑排序、所有工具均在 allowlist、所有写步骤具备审批与幂等策略，按可信成本重算后不超过预算；对任意状态轨迹，不出现 <code>PLANNED → SUCCEEDED</code>、<code>HUMAN_REJECTED → RUNNING</code> 或终态重新执行。故障注入覆盖进程终止、超时后的迟到响应、重复消息与数据库乐观锁冲突。</p>
+
+      <h2 id="练习与验收"><a class="heading-anchor" href="#练习与验收" aria-label="链接到本节">#</a>练习与验收</h2>
+      <h3 id="练习">练习：实现受治理的服务台计划执行</h3>
+      <ol>
+        <li>用 Java 21 实现本页 records、<code>Planner</code>、<code>PlanValidator</code> 与内存 <code>PlanRepository</code>；先写循环、缺失依赖、重复步骤、未知工具、越权写入和超预算的失败测试。</li>
+        <li>实现 Kahn 拓扑校验与 ready-set 计算；准备两个无依赖只读步骤，证明它们可并行，但共享预算只被原子扣减。</li>
+        <li>用 Spring AI 2.0.0 <code>ChatClient.call().entity(CandidatePlan.class)</code> 生成候选。让假模型依次返回 malformed JSON、循环计划和合法计划，证明只有最后一个能经业务 validator 产生 <code>ExecutionPlan</code>。</li>
+        <li>实现持久化 <code>StepExecutor</code>，在 RUNNING 之后、保存结果之前注入崩溃；用幂等键查证外部结果并恢复，不重复创建工单。</li>
+        <li>加入 <code>MAX_REFLECTION_ROUNDS = 2</code>、总 deadline、token、工具次数和成本预算；证明第 3 次反思模型调用永远不会发生。</li>
+        <li>模拟人工拒绝与补偿失败，验证自动路径停止并生成包含 planVersion、步骤证据、残余影响和待决定问题的人工升级记录。</li>
+      </ol>
+
+      <h3 id="验收标准">验收标准</h3>
+      <ul>
+        <li>能用复杂度、不确定性、风险、延迟和成本解释为何选择固定工作流、单步循环、ReAct 或计划后执行，并明确反思只是有限增强层。</li>
+        <li><code>CandidatePlan</code> 与 <code>ExecutionPlan</code> 分离；模型不能设置可信预算、授权、风险、审批、幂等键或补偿工具。</li>
+        <li><code>PlanValidator</code> 在执行前拒绝环、缺失依赖、重复步骤、未知工具、越权 / 不安全写入和按服务端估算超预算。</li>
+        <li><code>StepExecutor</code> 用 planVersion 和 fromStatus 做原子转换，保存 attempt、idempotencyKey、Observation 摘要 / 外部引用与预算消耗。</li>
+        <li>瞬时失败有限重试，不可重试失败直接停止；写结果未知先查证；补偿是独立获授权动作，失败时转人工。</li>
+        <li>反思只由新可验证证据触发，最多 2 轮，同时受 wall-clock、token、tool-call 和 cost 预算；达到任一上限即升级。</li>
+        <li>Spring AI 仅承担模型交互和结构化候选转换；页面和实现均未宣称它原生提供 Planner、DAG validator、审批、工作流引擎、持久状态机、Executor 或 reflection loop。</li>
+        <li>循环、缺失依赖、重复步骤、未知 / 越权工具、不安全写入、超时、不可重试失败、重试耗尽、反思超限、预算耗尽、部分完成、人工拒绝、崩溃恢复和版本冲突全部有自动化断言。</li>
+      </ul>
+
+      <h2 id="参考资料"><a class="heading-anchor" href="#参考资料" aria-label="链接到本节">#</a>参考资料</h2>
+      <p>以下均为原始论文或 Spring 官方文档，检索于 <strong>2026-07-27</strong>。论文结果应理解为其数据集、模型和实验设置下的研究发现；框架 API、模型支持与版本兼容性会变化，升级时需重新核验。</p>
+      <ol>
+        <li><a href="https://arxiv.org/abs/2210.03629" target="_blank" rel="noopener noreferrer">Shunyu Yao 等：ReAct: Synergizing Reasoning and Acting in Language Models</a>，2022-10-06 首次提交，2023-03-10 修订；提出推理轨迹与任务动作交错，并在问答、事实核验和交互决策基准上报告实验结果。</li>
+        <li><a href="https://arxiv.org/abs/2305.04091" target="_blank" rel="noopener noreferrer">Lei Wang 等：Plan-and-Solve Prompting: Improving Zero-Shot Chain-of-Thought Reasoning by Large Language Models</a>，2023-05-06 首次提交，ACL 2023；研究先划分子任务、再按计划求解，以减少漏步骤问题。</li>
+        <li><a href="https://arxiv.org/abs/2303.11366" target="_blank" rel="noopener noreferrer">Noah Shinn 等：Reflexion: Language Agents with Verbal Reinforcement Learning</a>，2023-03-20 首次提交，2023-10-10 修订；研究语言反馈、情景记忆与后续尝试，不通过权重更新实现。</li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/api/chatclient.html" target="_blank" rel="noopener noreferrer">Spring AI 2.0.0 — Chat Client API</a>：<code>ChatClient.Builder</code>、<code>prompt()</code>、<code>call()</code>、<code>entity(Class&lt;T&gt;)</code>、可选 schema validation 与 provider-native structured output。</li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/api/structured-output-converter.html" target="_blank" rel="noopener noreferrer">Spring AI 2.0.0 — Structured Output Converter</a>：<code>BeanOutputConverter</code>、Java record / 泛型映射、best-effort 边界与原生结构化输出限制。</li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/getting-started.html" target="_blank" rel="noopener noreferrer">Spring AI 2.0.0 — Getting Started</a>：Spring AI BOM 2.0.0，以及 Spring Boot 4.0.x / 4.1.x 兼容性说明。</li>
+      </ol>
+    </article>
+  </main>
+</div>
+</body>
+</html>
