@@ -177,7 +177,7 @@ function categorySummary(documents) {
 
 function classTokens(attributes) {
   const className =
-    /\bclass\s*=\s*["']([^"']*)["']/i.exec(attributes)?.[1] ?? "";
+    /(?:^|\s)class\s*=\s*["']([^"']*)["']/i.exec(attributes)?.[1] ?? "";
   return className.split(/\s+/).filter(Boolean);
 }
 

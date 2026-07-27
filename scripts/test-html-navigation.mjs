@@ -20,7 +20,7 @@ const decodeEntities = (value) =>
     .replaceAll("&#39;", "'");
 
 const attribute = (html, name) =>
-  new RegExp(`\\b${name}="([^"]*)"`, "i").exec(html)?.[1] ?? "";
+  new RegExp(`(?:^|\\s)${name}\\s*=\\s*"([^"]*)"`, "i").exec(html)?.[1] ?? "";
 
 const readerFixture = ({
   title,
@@ -109,6 +109,17 @@ try {
       <meta name="study-date" content="2026-07-27"><title>No Layout</title>
     </head><body><main><article><h1 id="title">No Layout</h1><h2 id="section">Section</h2></article></main></body></html>`,
   );
+  await fs.writeFile(
+    path.join(fixtureNotes, "data-class-decoy.html"),
+    `<!doctype html><html lang="zh-CN"><head>
+      <meta charset="utf-8"><meta name="viewport" content="width=device-width">
+      <meta name="description" content="fixture">
+      <meta name="study-category" content="No Layout">
+      <meta name="study-date" content="2026-07-27"><title>Data Class Decoy</title>
+    </head><body><div data-class="reader-layout"><main><article>
+      <h1 id="title">Data Class Decoy</h1><h2 id="section">Section</h2>
+    </article></main><aside data-class="toc-sidebar">decoy</aside></div></body></html>`,
+  );
 
   const generated = spawnSync(
     process.execPath,
@@ -142,7 +153,10 @@ try {
       ...document.output.split("/"),
     );
     const html = await fs.readFile(outputPath, "utf8");
-    if (document.output.endsWith("no-reader-layout.html")) {
+    if (
+      document.output.endsWith("no-reader-layout.html") ||
+      document.output.endsWith("data-class-decoy.html")
+    ) {
       assert.equal(
         tocAsides(html).length,
         0,
