@@ -1,7 +1,14 @@
 {
-  "generatedAt": "2026-07-24T09:37:08.881Z",
-  "documentCount": 8,
+  "generatedAt": "2026-07-27T03:24:25.629Z",
+  "documentCount": 9,
   "documents": [
+    {
+      "output": "notes/agent/2026-07-27-Agent开发学习主目录.html",
+      "title": "Agent 开发学习主目录",
+      "category": "Agent 开发",
+      "date": "2026-07-27",
+      "sections": 10
+    },
     {
       "output": "notes/codex/2026-07-24-AI开发工作流选型与小团队沉淀指南.html",
       "title": "AI 开发工作流选型与小团队沉淀指南",
