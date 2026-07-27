@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>知识库分类导航优化实施计划</title>
+</head>
+<body>
+  <main>
+    <article>
+      <h1>知识库分类导航优化实施计划</h1>
+      <p><strong>目标：</strong>生成分类内聚的左侧导航、以大分类为第一入口的首页，以及可自然换行的统一右侧目录。</p>
+      <p><strong>架构：</strong>由 <code>build-html-index.mjs</code> 统一生成结构，CSS 负责布局和换行，现有 JavaScript 继续负责搜索、移动侧栏和目录高亮。</p>
+      <p><strong>技术栈：</strong>Node.js ESM、语义化 HTML、原生 CSS、原生 JavaScript。</p>
+
+      <h2>全局约束</h2>
+      <ul>
+        <li>页面分类只读取 <code>study-category</code> 或现有 fallback。</li>
+        <li>所有 URL 保持相对路径，兼容 GitLab Pages 子路径部署。</li>
+        <li>不引入构建框架、前端依赖或 Markdown 内容源。</li>
+        <li>生成器重复运行除 <code>manifest.generatedAt</code> 外必须幂等。</li>
+      </ul>
+
+      <h2>任务一：建立真实生成器回归测试</h2>
+      <p><strong>创建：</strong><code>scripts/test-html-navigation.mjs</code></p>
+      <ol>
+        <li>复制当前 <code>public</code> 和生成器到系统临时目录。</li>
+        <li>运行真实生成器并解析输出，而不是检查源代码文本。</li>
+        <li>断言左侧只含当前分类文档、只有一个活动项，并包含首页及分类入口。</li>
+        <li>断言首页分类入口数量等于唯一分类数量，每个锚点实际存在。</li>
+        <li>断言右侧目录统一为 <code>ol.toc-list</code>，目录链接目标存在。</li>
+        <li>先运行并观察当前实现因跨分类侧栏、缺少分类入口和不统一目录而失败。</li>
+      </ol>
+
+      <h2>任务二：生成分类侧栏与统一目录</h2>
+      <p><strong>修改：</strong><code>scripts/build-html-index.mjs</code></p>
+      <ol>
+        <li>新增稳定分类锚点函数，将分类名编码为确定性 ID。</li>
+        <li><code>documentNavigation</code> 只接收当前分类文档，并给活动项添加 <code>aria-current="page"</code>。</li>
+        <li>新增侧栏头部生成函数，输出知识库首页、当前分类入口、分类名和文档数。</li>
+        <li>新增 <code>tableOfContents</code>，根据正文 h2～h4 输出统一列表；没有标题时输出空状态。</li>
+        <li><code>updateDocumentHtml</code> 替换现有左侧导航和右侧目录，不改文章正文。</li>
+        <li>运行回归测试，确认生成结构通过。</li>
+      </ol>
+
+      <h2>任务三：首页大分类入口</h2>
+      <p><strong>修改：</strong><code>scripts/build-html-index.mjs</code>、<code>public/assets/app.js</code></p>
+      <ol>
+        <li>在首页搜索区之后生成 <code>category-entry-grid</code>，每张卡显示文档数和章节数。</li>
+        <li>为每个分类文档区添加稳定 ID，入口卡链接至该 ID。</li>
+        <li>保留现有文档卡和全库搜索；分类入口卡不参与文档匹配计数。</li>
+        <li>运行测试，确认分类卡与区块一一对应，搜索行为没有回归。</li>
+      </ol>
+
+      <h2>任务四：可读样式与响应式校验</h2>
+      <p><strong>修改：</strong><code>public/assets/style.css</code></p>
+      <ol>
+        <li>增加侧栏首页按钮、分类摘要和分类入口卡样式。</li>
+        <li>统一 <code>.toc-list a</code> 与遗留 <code>.toc-nav a</code>：块级、自然换行、任意长词折行、合理行高。</li>
+        <li>为 h3/h4 目录项保持层级缩进，活动项不改变宽度。</li>
+        <li>在 820px 和 560px 断点验证首页分类卡和移动侧栏。</li>
+      </ol>
+
+      <h2>任务五：生成与最终验证</h2>
+      <ol>
+        <li>运行 <code>node scripts/build-html-index.mjs</code> 更新 17 篇页面、首页和 manifest。</li>
+        <li>运行导航回归测试、Node 语法检查、<code>git diff --check</code>。</li>
+        <li>检查所有本地链接、片段、重复 ID、外链安全属性和目录目标。</li>
+        <li>在隔离副本连续运行生成器两次，确认结构幂等。</li>
+        <li>用本地浏览器检查桌面首页、长目录页面和移动侧栏截图。</li>
+      </ol>
+    </article>
+  </main>
+</body>
+</html>
