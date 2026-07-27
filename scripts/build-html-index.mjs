@@ -142,6 +142,11 @@ function extractDocument(outputPath, html) {
 }
 
 function categoryId(category) {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < String(category).length; index += 1) {
+    hash ^= String(category).charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
   const slug = String(category)
     .normalize("NFKC")
     .trim()
@@ -150,7 +155,7 @@ function categoryId(category) {
     .replace(/[^\p{Letter}\p{Number}-]+/gu, "")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
-  return `category-${slug || "other"}`;
+  return `category-${slug || "other"}-${(hash >>> 0).toString(36)}`;
 }
 
 function documentsInCategory(documents, category) {
@@ -159,6 +164,45 @@ function documentsInCategory(documents, category) {
 
 function categoryMainDocument(documents) {
   return documents.find((document) => /主目录|总览/.test(document.title)) ?? null;
+}
+
+function categorySummary(documents) {
+  const source = categoryMainDocument(documents) ?? documents[0];
+  const description = source?.description?.trim() ?? "";
+  if (!description) return "打开分类，查看完整学习资料与实践内容。";
+  return description.length > 76
+    ? `${description.slice(0, 76).trimEnd()}…`
+    : description;
+}
+
+function classTokens(attributes) {
+  const className =
+    /\bclass\s*=\s*["']([^"']*)["']/i.exec(attributes)?.[1] ?? "";
+  return className.split(/\s+/).filter(Boolean);
+}
+
+function openingElementIndexByClass(html, tagName, className) {
+  const openings = new RegExp(`<${tagName}\\b([^>]*)>`, "gi");
+  for (const match of html.matchAll(openings)) {
+    if (classTokens(match[1]).includes(className)) return match.index;
+  }
+  return -1;
+}
+
+function replaceElementByClass(html, tagName, className, replacement) {
+  let replaced = false;
+  const elements = new RegExp(
+    `<${tagName}\\b([^>]*)>[\\s\\S]*?<\\/${tagName}>`,
+    "gi",
+  );
+  const output = html.replace(elements, (element, attributes) => {
+    if (replaced || !classTokens(attributes).includes(className)) {
+      return element;
+    }
+    replaced = true;
+    return replacement;
+  });
+  return { html: output, replaced };
 }
 
 function documentNavigation(categoryDocuments, currentDocument) {
@@ -282,14 +326,33 @@ function updateDocumentHtml(document, documents, currentIndex) {
     /<nav class="doc-nav" aria-label="[^"]*">[\s\S]*?<\/nav>/i,
     `<nav class="doc-nav" aria-label="当前分类文档">\n      ${documentNavigation(categoryDocuments, document)}\n    </nav>`,
   );
-  const toc = tableOfContents(document);
-  const existingToc = /<aside class="toc-sidebar">[\s\S]*?<\/aside>/i;
-  updated = existingToc.test(updated)
-    ? updated.replace(existingToc, toc)
-    : updated.replace(
-        /(<\/main>\s*)(<\/div>)/i,
-        `$1  ${toc}\n$2`,
-      );
+  const readerLayoutIndex = openingElementIndexByClass(
+    updated,
+    "div",
+    "reader-layout",
+  );
+  if (readerLayoutIndex >= 0) {
+    const beforeReader = updated.slice(0, readerLayoutIndex);
+    const readerAndAfter = updated.slice(readerLayoutIndex);
+    const tocReplacement = replaceElementByClass(
+      readerAndAfter,
+      "aside",
+      "toc-sidebar",
+      tableOfContents(document),
+    );
+    if (tocReplacement.replaced) {
+      updated = beforeReader + tocReplacement.html;
+    } else {
+      const mainEnd = updated.indexOf("</main>", readerLayoutIndex);
+      if (mainEnd >= 0) {
+        const insertAt = mainEnd + "</main>".length;
+        updated =
+          updated.slice(0, insertAt) +
+          `\n  ${tableOfContents(document)}` +
+          updated.slice(insertAt);
+      }
+    }
+  }
   const footer = articleFooter(documents, currentIndex, document);
   const existingFooter =
     /^[ \t]*<footer class="article-footer">[\s\S]*?<\/footer>/im;
@@ -324,6 +387,7 @@ function renderIndex(documents) {
       return `<a class="category-entry-card" href="#${attributeEscape(categoryId(category))}">
       <span class="eyebrow">COLLECTION</span>
       <strong>${htmlEscape(category)}</strong>
+      <p>${htmlEscape(categorySummary(categoryDocuments))}</p>
       <span>${categoryDocuments.length} 篇文档 · ${sectionCount} 个章节</span>
     </a>`;
     })

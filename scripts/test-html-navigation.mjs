@@ -22,6 +22,43 @@ const decodeEntities = (value) =>
 const attribute = (html, name) =>
   new RegExp(`\\b${name}="([^"]*)"`, "i").exec(html)?.[1] ?? "";
 
+const readerFixture = ({
+  title,
+  category,
+  heading = '<h2 id="section">Section</h2>',
+  toc = '<aside class="toc-sidebar"><p>legacy</p></aside>',
+}) => `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="fixture">
+  <meta name="study-category" content="${category}">
+  <meta name="study-date" content="2026-07-27">
+  <title>${title}</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header"><a href="../../index.html">首页</a></div>
+    <label class="sidebar-search"><input type="search" placeholder="筛选文档…"></label>
+    <nav class="doc-nav" aria-label="文档列表"></nav>
+  </aside>
+  <main class="article-column">
+    <article><h1 id="title">${title}</h1>${heading}</article>
+  </main>
+  ${toc}
+</div>
+</body>
+</html>`;
+
+const tocAsides = (html) =>
+  [...html.matchAll(/<aside\b([^>]*)>([\s\S]*?)<\/aside>/gi)].filter(
+    (match) =>
+      attribute(match[1], "class").split(/\s+/).includes("toc-sidebar"),
+  );
+
 try {
   await fs.cp(path.join(rootDir, "public"), path.join(fixtureRoot, "public"), {
     recursive: true,
@@ -30,6 +67,47 @@ try {
   await fs.copyFile(
     path.join(rootDir, "scripts", "build-html-index.mjs"),
     path.join(fixtureRoot, "scripts", "build-html-index.mjs"),
+  );
+
+  const fixtureNotes = path.join(
+    fixtureRoot,
+    "public",
+    "notes",
+    "navigation-fixtures",
+  );
+  await fs.mkdir(fixtureNotes, { recursive: true });
+  await fs.writeFile(
+    path.join(fixtureNotes, "collision-slash.html"),
+    readerFixture({ title: "Slash Category", category: "AI/ML" }),
+  );
+  await fs.writeFile(
+    path.join(fixtureNotes, "collision-space.html"),
+    readerFixture({ title: "Space Category", category: "AI ML" }),
+  );
+  await fs.writeFile(
+    path.join(fixtureNotes, "toc-extra-attributes.html"),
+    readerFixture({
+      title: "TOC Attributes",
+      category: "TOC Fixture",
+      toc: '<aside data-fixture="legacy" class="secondary toc-sidebar" aria-label="旧目录"><p>legacy</p></aside>',
+    }),
+  );
+  await fs.writeFile(
+    path.join(fixtureNotes, "zero-headings.html"),
+    readerFixture({
+      title: "Zero Headings",
+      category: "TOC Fixture",
+      heading: "",
+    }),
+  );
+  await fs.writeFile(
+    path.join(fixtureNotes, "no-reader-layout.html"),
+    `<!doctype html><html lang="zh-CN"><head>
+      <meta charset="utf-8"><meta name="viewport" content="width=device-width">
+      <meta name="description" content="fixture">
+      <meta name="study-category" content="No Layout">
+      <meta name="study-date" content="2026-07-27"><title>No Layout</title>
+    </head><body><main><article><h1 id="title">No Layout</h1><h2 id="section">Section</h2></article></main></body></html>`,
   );
 
   const generated = spawnSync(
@@ -64,6 +142,14 @@ try {
       ...document.output.split("/"),
     );
     const html = await fs.readFile(outputPath, "utf8");
+    if (document.output.endsWith("no-reader-layout.html")) {
+      assert.equal(
+        tocAsides(html).length,
+        0,
+        "没有 reader-layout 的页面不得猜测插入右侧目录",
+      );
+      continue;
+    }
     const nav =
       /<nav class="doc-nav" aria-label="当前分类文档">([\s\S]*?)<\/nav>/i.exec(
         html,
@@ -136,14 +222,26 @@ try {
       );
     }
 
-    const toc =
-      /<aside class="toc-sidebar">([\s\S]*?)<\/aside>/i.exec(html)?.[1] ??
-      "";
-    assert.match(
-      toc,
-      /<ol class="toc-list">/,
-      `${document.output} 右侧目录必须使用统一 toc-list`,
+    const asides = tocAsides(html);
+    assert.equal(
+      asides.length,
+      1,
+      `${document.output} 必须恰有一个右侧目录`,
     );
+    const toc = asides[0][2];
+    if (document.sections === 0) {
+      assert.match(
+        toc,
+        /class="toc-empty"/,
+        `${document.output} 零标题页面必须显示目录空状态`,
+      );
+    } else {
+      assert.match(
+        toc,
+        /<ol class="toc-list">/,
+        `${document.output} 右侧目录必须使用统一 toc-list`,
+      );
+    }
     const tocLinks = [...toc.matchAll(/<a href="#([^"]+)"/gi)];
     assert.equal(
       tocLinks.length,
@@ -164,7 +262,9 @@ try {
       indexHtml,
     )?.[1] ?? "";
   const categoryEntries = [
-    ...entryGrid.matchAll(/<a class="category-entry-card"([^>]*)>/gi),
+    ...entryGrid.matchAll(
+      /<a class="category-entry-card"([^>]*)>([\s\S]*?)<\/a>/gi,
+    ),
   ];
   assert.equal(
     categoryEntries.length,
@@ -179,6 +279,11 @@ try {
     assert.ok(
       indexHtml.includes(`id="${href.slice(1)}"`),
       `首页缺少分类区块 ${href}`,
+    );
+    assert.match(
+      entry[2],
+      /<p>[^<]+<\/p>/,
+      `分类入口 ${href} 必须包含简短说明`,
     );
   }
   assert.equal(entryTargets.size, categoryCounts.size, "分类入口锚点必须唯一");
@@ -205,7 +310,7 @@ try {
   );
 
   console.log(
-    `PASS: ${manifest.documents.length} 篇文档按 ${categoryCounts.size} 个分类生成导航与目录`,
+    `PASS: ${manifest.documents.length} 个真实页面与边界夹具按 ${categoryCounts.size} 个分类生成导航与目录`,
   );
 } finally {
   await fs.rm(fixtureRoot, { recursive: true, force: true });
