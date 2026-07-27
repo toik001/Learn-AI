@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="面向 Java 开发者的 Agent 开发学习主目录：概念、调用循环、最小运行时、学习路线与实践项目。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="Agent 开发">
+  <meta name="study-date" content="2026-07-27">
+  <title>Agent 开发学习主目录｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header"><a href="../../index.html">全部文档</a><button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button></div>
+    <label class="sidebar-search"><span class="sr-only">筛选文档</span><input type="search" placeholder="筛选文档…" data-sidebar-search></label>
+    <nav class="doc-nav" aria-label="文档列表">
+      <a class="doc-nav-item is-active" href="2026-07-27-Agent开发学习主目录.html"><span>Agent 开发学习主目录</span><small>Agent 开发</small></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta"><a href="../../index.html">知识库首页</a><span>·</span><span>Agent 开发</span><span>·</span><time datetime="2026-07-27">2026-07-27</time></div>
+    <article class="markdown-body">
+      <h1 id="agent-开发学习主目录"><a class="heading-anchor" href="#agent-开发学习主目录" aria-label="链接到本节">#</a>Agent 开发学习主目录</h1>
+      <blockquote>
+        <p>面向 Java 开发者：先理解 Agent 的边界，再实现一个可观测、可限制、可测试的工具调用循环。</p>
+        <p>整理日期：2026-07-27；资料检索日期：2026-07-27。</p>
+      </blockquote>
+
+      <h2 id="核心结论"><a class="heading-anchor" href="#核心结论" aria-label="链接到本节">#</a>核心结论</h2>
+      <ul>
+        <li>Agent 不是某个模型或框架，而是“目标 + 决策 + 行动 + 反馈 + 状态”的系统循环。</li>
+        <li>LLM 只负责提出文本或结构化决策；工具的授权、执行、结果校验和审计必须由应用掌控。</li>
+        <li>生产级 Agent 的起点不是多 Agent，而是单 Agent 的白名单工具、明确状态、步骤/时间/成本上限和可追踪日志。</li>
+      </ul>
+
+      <h2 id="agent-通用释义"><a class="heading-anchor" href="#agent-通用释义" aria-label="链接到本节">#</a>Agent 通用释义</h2>
+      <dl>
+        <dt>Software Agent</dt>
+        <dd>感知环境、依据规则或策略采取行动以实现目标的软件实体。</dd>
+        <dt>AI Agent</dt>
+        <dd>决策策略部分使用机器学习或生成式模型的 Agent。</dd>
+        <dt>LLM Agent</dt>
+        <dd>以大语言模型承担理解、推理、规划或工具选择的 AI Agent。</dd>
+        <dt>Agentic System</dt>
+        <dd>由一个或多个 Agent、工具、状态、控制逻辑与人类协作组成的完整系统。</dd>
+      </dl>
+      <p>这些是用于工程沟通的厂商无关工作定义。实现时应把“模型能提出请求”与“系统允许执行请求”分开：Spring AI 的官方说明同样强调，模型只能请求工具调用，客户端应用负责执行并回传结果。<a href="https://docs.spring.io/spring-ai/reference/api/tools.html" target="_blank" rel="noopener noreferrer">Spring AI Tool Calling</a></p>
+
+      <h2 id="agent-不是什么"><a class="heading-anchor" href="#agent-不是什么" aria-label="链接到本节">#</a>Agent 不是什么</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>形态</th><th>控制方式</th><th>工具使用</th><th>状态</th><th>适用场景</th></tr></thead>
+        <tbody>
+          <tr><td>普通聊天机器人</td><td>单轮或固定提示词</td><td>通常无，或由后端固定触发</td><td>短对话历史</td><td>问答、内容生成</td></tr>
+          <tr><td>固定工作流</td><td>开发者预先编排分支</td><td>步骤确定</td><td>流程变量、持久化任务</td><td>稳定业务流程、合规自动化</td></tr>
+          <tr><td>单 Agent</td><td>模型在受限策略内选择下一步</td><td>从白名单中结构化请求</td><td>会话、Observation、任务进度</td><td>调查、辅助操作、动态检索</td></tr>
+          <tr><td>多 Agent 系统</td><td>协调器或协议分派角色</td><td>各角色拥有不同受限能力</td><td>共享或隔离的任务状态</td><td>可独立分解、评审或并行的复杂任务</td></tr>
+        </tbody>
+      </table></div>
+      <p>因此，带一个模型调用的程序不必然是 Agent；反过来，固定规则驱动的软件 Agent 也不必然是 AI Agent。先选最简单、最可审计的控制方式。</p>
+
+      <h2 id="核心组成"><a class="heading-anchor" href="#核心组成" aria-label="链接到本节">#</a>核心组成</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>组成</th><th>职责</th><th>Java 中的典型边界</th></tr></thead>
+        <tbody>
+          <tr><td>目标与请求</td><td>定义用户意图、输入约束和成功条件</td><td><code>AgentRequest</code>、Bean Validation</td></tr>
+          <tr><td>上下文与状态</td><td>保存已知事实、步骤、Observation 与预算</td><td><code>AgentState</code>、数据库/缓存</td></tr>
+          <tr><td>模型决策器</td><td>输出最终答复或结构化工具请求</td><td><code>AgentModel</code></td></tr>
+          <tr><td>工具注册表</td><td>只暴露允许的工具和输入 schema</td><td><code>ToolRegistry</code></td></tr>
+          <tr><td>运行时与护栏</td><td>驱动循环、校验权限、限制预算、记录审计</td><td><code>AgentRuntime</code>、策略服务</td></tr>
+          <tr><td>环境与人</td><td>返回 Observation，或对高风险操作批准/拒绝</td><td>业务 API、队列、人工审批</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="一次完整调用过程"><a class="heading-anchor" href="#一次完整调用过程" aria-label="链接到本节">#</a>一次完整调用过程</h2>
+      <div class="agent-call-flow" role="img" aria-label="调用流程：用户目标依次经过上下文组装、模型决策、工具调用、环境反馈、状态更新、循环判断，最终形成最终响应；权限、校验、预算、人工审批和失败降级贯穿整个流程。">
+        <div class="agent-step">用户目标</div><div class="agent-step">上下文组装</div><div class="agent-step">模型决策</div><div class="agent-step">工具调用</div><div class="agent-step">环境反馈</div><div class="agent-step">状态更新</div><div class="agent-step">循环判断</div><div class="agent-step">最终响应</div>
+        <div class="guardrail-band">护栏层：权限 · 校验 · 预算 · 人工审批 · 失败降级</div>
+      </div>
+      <p class="diagram-text">等价文字说明：用户目标进入上下文组装；模型在可用工具和当前状态的约束下作出决策。若决策是最终答复，则直接输出；若是工具请求，运行时校验并执行工具，接收环境反馈（Observation），更新状态后回到模型决策。循环必须受最大步数、超时和成本预算约束。</p>
+      <ol>
+        <li>将用户输入、系统规则、已知状态和当前可用工具组装为模型可见上下文。</li>
+        <li>模型返回两种互斥分支：<strong>final</strong>（直接产生最终答案）或 <strong>tool</strong>（请求名称与结构化参数）。</li>
+        <li>对于工具分支，应用先检查工具白名单、参数 schema、调用者权限、预算与是否需要人工批准；模型不能绕过这些检查。</li>
+        <li>工具与环境交互后产生 Observation；运行时将其连同步骤记录写入状态，供下一轮决策使用。</li>
+        <li>达到最终答复、最大步数、超时或成本预算时停止。失败则返回可解释的降级结果，而不是虚构工具结果。</li>
+      </ol>
+      <p>这种“推理/行动交错，并从外部环境获取反馈”的模式可参考 ReAct 原始论文；论文讨论了交错轨迹如何帮助更新行动计划并处理异常。<a href="https://arxiv.org/abs/2210.03629" target="_blank" rel="noopener noreferrer">Yao et al., ReAct (2022)</a></p>
+
+      <h2 id="java-开发者映射"><a class="heading-anchor" href="#java-开发者映射" aria-label="链接到本节">#</a>Java 开发者映射</h2>
+      <p>可以把 Agent Runtime 看作一个受策略约束的应用服务编排器：<code>Controller</code> 接收请求，运行时维护事务外的任务状态，模型类似不可信的“决策建议者”，而工具像需要鉴权、参数校验、超时和审计的下游服务调用。模型输出不是可执行权限。</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Agent 概念</th><th>熟悉的 Java/Spring 类比</th><th>不可忽略的差异</th></tr></thead>
+        <tbody>
+          <tr><td>Tool call</td><td>受 DTO 约束的服务调用</td><td>调用意图来自概率模型，必须重新校验</td></tr>
+          <tr><td>Observation</td><td>下游服务响应 / 领域事件</td><td>应区分可信业务结果与不可信文本</td></tr>
+          <tr><td>AgentState</td><td>会话状态 + Saga 上下文</td><td>要控制上下文长度、敏感数据与可恢复性</td></tr>
+          <tr><td>Guardrail</td><td>Spring Security、限流、熔断、审批</td><td>同时约束模型输入、工具参数和输出动作</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="最小-java-实现"><a class="heading-anchor" href="#最小-java-实现" aria-label="链接到本节">#</a>最小 Java 实现</h2>
+      <p>以下是 Java 21 的教学骨架，不依赖任何 SDK；真实项目可把 <code>AgentModel</code> 适配到模型 API，把 <code>ToolRegistry</code> 适配到 Spring Bean 或显式注册的业务客户端。</p>
+      <pre><code class="language-java">import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+record AgentRequest(String goal, String userId) {}
+record ToolCall(String name, Map&lt;String, Object&gt; arguments) {}
+record ToolResult(boolean success, String observation) {}
+record ModelDecision(String finalAnswer, ToolCall toolCall) {
+    boolean isFinal() { return finalAnswer != null; }
+}
+
+interface AgentModel {
+    ModelDecision decide(AgentRequest request, AgentState state, List&lt;String&gt; tools);
+}
+
+interface ToolRegistry {
+    List&lt;String&gt; allowedToolNames();
+    ToolResult execute(ToolCall call, String userId);
+}
+
+final class AgentState {
+    private final List&lt;String&gt; observations = new ArrayList&lt;&gt;();
+    void addObservation(String value) { observations.add(value); }
+    List&lt;String&gt; observations() { return List.copyOf(observations); }
+}
+
+final class AgentRuntime {
+    private static final int MAX_STEPS = 8;
+    private final AgentModel model;
+    private final ToolRegistry tools;
+
+    AgentRuntime(AgentModel model, ToolRegistry tools) {
+        this.model = model;
+        this.tools = tools;
+    }
+
+    String run(AgentRequest request) {
+        AgentState state = new AgentState();
+        for (int step = 0; step &lt; MAX_STEPS; step++) {
+            ModelDecision decision = model.decide(request, state, tools.allowedToolNames());
+            if (decision.isFinal()) return decision.finalAnswer();
+            ToolCall call = decision.toolCall();
+            if (call == null || !tools.allowedToolNames().contains(call.name())) {
+                return "无法执行该请求：工具不在白名单中。";
+            }
+            ToolResult result = tools.execute(call, request.userId());
+            state.addObservation(result.observation());
+            if (!result.success()) return "工具执行失败，已安全降级：" + result.observation();
+        }
+        return "已达到最多 8 步限制；请缩小目标或由人工继续处理。";
+    }
+}</code></pre>
+      <p>最小代码刻意省略了真实的超时、预算计量、JSON Schema 校验、审批和持久化；它展示的边界是：模型决定“请求什么”，运行时决定“是否以及如何执行”。</p>
+
+      <h2 id="主学习路线"><a class="heading-anchor" href="#主学习路线" aria-label="链接到本节">#</a>主学习路线</h2>
+      <div class="learning-roadmap">
+        <section class="roadmap-stage"><h3>1. Agent 基础概念与边界 <span class="status-tag">待建设</span></h3><p><strong>目标：</strong>区分 Agent、聊天、工作流与 Agentic System。<br><strong>关键问题：</strong>何时不该用 Agent？<br><strong>Java 实践：</strong>为需求写出目标、状态、工具、护栏四栏设计。<br><strong>验收：</strong>能解释一次工具调用为何必须由应用执行。</p></section>
+        <section class="roadmap-stage"><h3>2. 模型 API、结构化输出与 Tool Calling <span class="status-tag">待建设</span></h3><p><strong>目标：</strong>让模型输出可校验的决策。<br><strong>关键问题：</strong>如何区分文本答复和工具请求？<br><strong>Java 实践：</strong>用 record 表达 <code>ModelDecision</code> 与工具参数。<br><strong>验收：</strong>拒绝未知工具与不合法参数。</p></section>
+        <section class="roadmap-stage"><h3>3. 状态、上下文与记忆 <span class="status-tag">待建设</span></h3><p><strong>目标：</strong>管理会话事实、Observation 与长期记忆。<br><strong>关键问题：</strong>哪些信息可进上下文，哪些必须脱敏或过期？<br><strong>Java 实践：</strong>实现可序列化的 <code>AgentState</code>。<br><strong>验收：</strong>中断后能恢复且不泄露敏感数据。</p></section>
+        <section class="roadmap-stage"><h3>4. 知识检索与 RAG <span class="status-tag">待建设</span></h3><p><strong>目标：</strong>把检索结果作为受引用约束的上下文。<br><strong>关键问题：</strong>检索失败时如何诚实降级？<br><strong>Java 实践：</strong>实现检索工具及来源记录。<br><strong>验收：</strong>答案能追溯到召回文档。</p></section>
+        <section class="roadmap-stage"><h3>5. 规划、反思与任务分解 <span class="status-tag">待建设</span></h3><p><strong>目标：</strong>将复杂目标拆为可验证步骤。<br><strong>关键问题：</strong>反思何时有用，何时只会增加成本？<br><strong>Java 实践：</strong>加入计划状态与步骤预算。<br><strong>验收：</strong>失败步骤可定位、可重试或可转人工。</p></section>
+        <section class="roadmap-stage"><h3>6. 多 Agent 协作与编排 <span class="status-tag">待建设</span></h3><p><strong>目标：</strong>只在角色边界明确时引入协作。<br><strong>关键问题：</strong>共享状态如何避免冲突？<br><strong>Java 实践：</strong>实现协调器与角色专属工具集。<br><strong>验收：</strong>单 Agent 基线与协作方案可比较。</p></section>
+        <section class="roadmap-stage"><h3>7. 评测、安全、权限与成本控制 <span class="status-tag">待建设</span></h3><p><strong>目标：</strong>把正确性、安全性和成本变成可测指标。<br><strong>关键问题：</strong>谁有权执行不可逆操作？<br><strong>Java 实践：</strong>增加策略校验、审计和 token/调用预算。<br><strong>验收：</strong>越权、超时、超预算与工具故障都有测试。</p></section>
+        <section class="roadmap-stage"><h3>8. Java 生产部署、可观测性与故障恢复 <span class="status-tag">待建设</span></h3><p><strong>目标：</strong>交付可运维的 Agent 服务。<br><strong>关键问题：</strong>如何重放一次失败调用？<br><strong>Java 实践：</strong>接入日志、指标、trace、重试与恢复队列。<br><strong>验收：</strong>能用调用记录定位一次失败并安全恢复。</p></section>
+      </div>
+
+      <h2 id="第一个实践项目"><a class="heading-anchor" href="#第一个实践项目" aria-label="链接到本节">#</a>第一个实践项目</h2>
+      <h3>带白名单城市与超时控制的天气工具 Agent</h3>
+      <p>目标：用户以自然语言询问天气；模型只能请求 <code>weather</code> 工具，应用只接受预设城市，给工具调用配置超时，并将结果回传模型或安全降级。</p>
+      <ul>
+        <li><strong>结构化参数：</strong>工具输入使用 <code>{ city: string }</code>，由应用校验而非相信模型文本。</li>
+        <li><strong>工具白名单：</strong>运行时只注册 <code>weather</code>，禁止任意 URL、Shell 或数据库写入能力。</li>
+        <li><strong>循环限制：</strong>最多 8 步；到达上限直接停止并返回可理解信息。</li>
+        <li><strong>可追踪记录：</strong>为每步保存 requestId、工具名、脱敏参数、耗时、结果状态和降级原因。</li>
+        <li><strong>错误降级：</strong>城市不在白名单、超时、服务 5xx 或模型请求异常时，明确说明不能取得实时结果。</li>
+        <li><strong>单元测试：</strong>覆盖合法城市、越权城市、未知工具、超时、工具失败与第 8 步上限。</li>
+      </ul>
+
+      <h2 id="参考资料"><a class="heading-anchor" href="#参考资料" aria-label="链接到本节">#</a>参考资料</h2>
+      <p>以下均为一手论文、标准机构或项目官方文档，检索于 2026-07-27：</p>
+      <ul>
+        <li><a href="https://arxiv.org/abs/2210.03629" target="_blank" rel="noopener noreferrer">Yao et al. — ReAct: Synergizing Reasoning and Acting in Language Models</a>：交错 Reasoning 与 Action，并使用环境反馈更新任务轨迹。</li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/api/tools.html" target="_blank" rel="noopener noreferrer">Spring AI — Tool Calling</a>：Java/Spring 工具定义、调用生命周期与应用侧执行责任。</li>
+        <li><a href="https://docs.langchain4j.dev/tutorials/tools/" target="_blank" rel="noopener noreferrer">LangChain4j — Tools (Function Calling)</a>：Java 工具调用的官方教程与实现入口。</li>
+        <li><a href="https://www.nist.gov/itl/ai-risk-management-framework" target="_blank" rel="noopener noreferrer">NIST — AI Risk Management Framework</a>：治理、风险管理与可信 AI 的权威框架。</li>
+      </ul>
+    </article>
+    <nav class="pager" aria-label="文档导航"><a href="../../index.html">← 返回知识库首页</a><span>后续专题：待建设</span></nav>
+    <p class="source-path">来源路径：<code>public/notes/agent/2026-07-27-Agent开发学习主目录.html</code></p>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav class="toc-nav" aria-label="页内目录">
+      <a href="#核心结论">核心结论</a>
+      <a href="#agent-通用释义">Agent 通用释义</a>
+      <a href="#agent-不是什么">Agent 不是什么</a>
+      <a href="#核心组成">核心组成</a>
+      <a href="#一次完整调用过程">一次完整调用过程</a>
+      <a href="#java-开发者映射">Java 开发者映射</a>
+      <a href="#最小-java-实现">最小 Java 实现</a>
+      <a href="#主学习路线">主学习路线</a>
+      <a href="#第一个实践项目">第一个实践项目</a>
+      <a href="#参考资料">参考资料</a>
+    </nav>
+  </aside>
+</div>
+</body>
+</html>
