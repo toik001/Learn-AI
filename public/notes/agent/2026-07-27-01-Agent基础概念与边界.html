@@ -74,7 +74,7 @@
       <h2 id="核心结论"><a class="heading-anchor" href="#核心结论" aria-label="链接到本节">#</a>核心结论</h2>
       <ul>
         <li><strong>Agent 是受目标驱动的闭环软件系统，不是“会聊天的模型”。</strong>它感知环境、维护状态、依据策略提出行动、接收反馈并判断是否达标。NIST 的工作定义同样强调软件程序与环境交互、接收信息并为外部指定目标采取自主行动。<a href="https://csrc.nist.gov/glossary/term/agent" target="_blank" rel="noopener noreferrer">NIST CSRC Agent 术语</a></li>
-        <li><strong>模型只有建议权，没有业务授权。</strong>模型输出、检索文本和工具 Observation 都是不可信输入；应用必须完成身份与租户校验、工具白名单、参数 schema 校验、人工审批、预算控制和审计。</li>
+        <li><strong>模型只有建议权，没有业务授权。</strong>Spring AI 可通过 <code>ToolCallingAdvisor</code> 自动调用应用已注册的 tool handler，但“已注册”不等于“已授权”：应用必须在策略执行点控制每次请求可注册/暴露的 handler，并在 handler 内执行身份与租户校验、参数 schema、审批、预算和审计。</li>
         <li><strong>Spring AI 提供模型与交互抽象，不替应用承担业务治理。</strong><code>ChatModel</code>、<code>ChatClient</code> 和 Advisor 是原生能力；目标生命周期、授权、审批、业务 Agent Runtime 循环与状态仍由应用负责。<a href="https://docs.spring.io/spring-ai/reference/api/chatclient.html" target="_blank" rel="noopener noreferrer">Spring AI ChatClient API</a></li>
         <li><strong>能用确定性流程解决时，不引入 Agent。</strong>只有在下一步需要根据开放环境动态选择、成功标准可测、数据可信且风险与预算可控时，Agent 才可能值得。</li>
       </ul>
@@ -114,7 +114,7 @@
           <tr><td>环境 / 输入（Environment / Input）</td><td>Agent 能感知哪些对象？输入来自谁、可信度如何？</td><td>用户问题、服务状态、工单、知识条目；均带租户与来源。</td></tr>
           <tr><td>状态（State）</td><td>跨步骤保留什么？状态归谁、何时过期？</td><td>tenant、user、conversation、run、已批准动作与预算消耗。</td></tr>
           <tr><td>策略 / 模型（Policy / Model）</td><td>如何从状态选择候选行动？允许多大随机性？</td><td>通过 <code>ChatModel</code> 生成答复或候选工具请求。</td></tr>
-          <tr><td>行动 / 工具（Action / Tool）</td><td>可造成什么外部效果？谁真正执行？</td><td>应用读取状态/工单/知识；仅批准后创建工单。</td></tr>
+          <tr><td>行动 / 工具（Action / Tool）</td><td>哪些 handler 对本次请求可见？谁调用、谁授权？</td><td>框架可调用已注册 handler；应用控制注册集合并在 handler 内强制执行业务策略。创建工单 handler 仅在独立审批验证通过后才注册/暴露。</td></tr>
           <tr><td>反馈（Feedback / Observation）</td><td>执行后如何更新事实并判断下一步？</td><td>工具返回结构化结果，运行时校验后更新状态。</td></tr>
           <tr><td>护栏（Guardrails）</td><td>哪些输入、输出、工具、步数、时间和成本受限？</td><td>租户隔离、allowlist、schema、审批、预算、引用与审计。</td></tr>
           <tr><td>人类权限（Human authority）</td><td>谁能批准、拒绝、接管或终止？</td><td>当前用户批准创建工单；值班人员可接管或停止 run。</td></tr>
@@ -122,18 +122,18 @@
       </table></div>
 
       <h3 id="八节点调用闭环">八节点调用闭环</h3>
-      <div class="agent-call-flow" role="img" aria-label="八节点 Agent 闭环：业务目标，环境或对象，感知或输入，状态或上下文，策略或模型，候选行动，应用执行工具，Observation 与验收。授权、校验、审批、预算和审计贯穿全程。">
+      <div class="agent-call-flow" role="img" aria-label="八节点 Agent 闭环：业务目标，环境或对象，感知或输入，状态或上下文，策略或模型，候选行动，策略执行点暴露 handler 并由框架调用，Observation 与验收。授权、校验、审批、预算和审计贯穿全程。">
         <div class="agent-step">业务目标</div>
         <div class="agent-step">环境 / 对象</div>
         <div class="agent-step">感知 / 输入</div>
         <div class="agent-step">状态 / 上下文</div>
         <div class="agent-step">策略 / 模型</div>
         <div class="agent-step">候选行动</div>
-        <div class="agent-step">应用执行工具</div>
+        <div class="agent-step">策略执行点 / handler</div>
         <div class="agent-step">Observation / 验收</div>
         <div class="guardrail-band">横切护栏：身份与租户 · 工具白名单 · schema 校验 · 人工审批 · 步数/时间/成本预算 · 安全错误 · 审计</div>
       </div>
-      <p class="diagram-text"><strong>等价文字说明：</strong>外部指定的业务目标落在具体环境或业务对象上；应用接收并校验感知输入，装配可信度标记明确的状态与上下文；策略或模型只能提出候选行动；应用再次执行授权、白名单、schema、审批和预算检查后才调用工具；工具 Observation 作为不可信输入被校验、记录并用于验收，未达标时由应用决定是否进入下一轮。任何节点都不能绕过横切护栏。</p>
+      <p class="diagram-text"><strong>等价文字说明：</strong>外部指定的业务目标落在具体环境或业务对象上；应用接收并校验感知输入，装配可信度标记明确的状态与上下文；策略或模型只能提出候选行动。应用策略执行点先依据身份、租户、allowlist、schema、独立审批和剩余预算决定本次可注册/暴露的 handler；Spring AI 的 <code>ToolCallingAdvisor</code> 可以调用模型请求的已注册 handler 并回传结果。handler 自身仍须重新执行对象级授权、审批与预算检查。Observation 作为不可信输入被校验、记录并用于验收，未达标时由应用决定是否进入下一轮。任何节点都不能绕过横切护栏。</p>
 
       <h2 id="边界辨析"><a class="heading-anchor" href="#边界辨析" aria-label="链接到本节">#</a>边界辨析</h2>
       <div class="table-wrap"><table>
@@ -323,13 +323,14 @@ final class ServiceDeskAssistant {
         <tbody>
           <tr><td>模型调用</td><td><code>ChatModel</code> 抽象；<code>ChatClient</code> 同步/流式 fluent API</td><td>供应商配置、SLO、故障策略、数据分级</td></tr>
           <tr><td>交互增强</td><td>Advisor 链可增强 Prompt、上下文和响应；内置记忆、RAG、工具调用等 Advisor</td><td>Advisor 顺序、敏感数据策略与业务正确性验证</td></tr>
-          <tr><td>工具调用机制</td><td><code>ChatClient</code> 可注册工具；<code>ToolCallingAdvisor</code> 可处理模型请求与低层调用往返</td><td>工具实现、参数 schema、当前用户/租户授权、副作用幂等与审计</td></tr>
+          <tr><td>工具调用机制</td><td><code>ChatClient</code> 默认自动注册 <code>ToolCallingAdvisor</code>；它可调用模型请求的已注册 tool handler、回传结果并继续低层调用循环</td><td>在策略执行点按请求决定注册/暴露哪些 handler；handler 内重新校验 schema、当前用户/租户授权、预算，并保证副作用幂等与审计。需要审批的写 handler 在独立审批验证通过前不得注册或暴露</td></tr>
           <tr><td>目标生命周期</td><td>无业务目标聚合根</td><td>创建、暂停、恢复、取消、完成和转人工</td></tr>
-          <tr><td>授权与审批</td><td>Prompt/Advisor 不能替代安全控制</td><td>由 Spring Security/策略服务和独立审批记录做最终判定</td></tr>
+          <tr><td>授权与审批</td><td>Prompt 与自动工具调用不提供业务授权；“框架能调用 handler”不表示调用者有权执行动作</td><td>由 Spring Security/策略服务和独立审批记录做最终判定；注册/暴露前验证一次，handler 执行时基于当前 principal、tenant、对象和审批状态再次验证</td></tr>
           <tr><td>预算与业务 Agent Runtime 循环</td><td>框架可提供单次调用与工具往返积木</td><td>run 级最大步骤、墙钟时间、token/费用、终止条件、重试与恢复</td></tr>
           <tr><td>状态</td><td>可用 Chat Memory 等基础设施</td><td>状态所有权、tenant 隔离、持久化、过期、脱敏与恢复语义</td></tr>
         </tbody>
       </table></div>
+      <p><strong>安全注册规则：</strong>默认启用的 <code>ToolCallingAdvisor</code> 会自动执行模型请求的已注册 handler。因而注册表本身就是策略执行点（Policy Enforcement Point, PEP），不能把全部工具永久暴露后再依赖 Prompt 约束。只读 handler 也要按 tenant 和对象授权；任何需审批的写 handler（例如 <code>createTicket</code>）在独立审批记录验证通过之前都不得注册或暴露，即便审批后暴露，handler 内仍须防止审批过期、对象替换和预算竞态。<a href="https://docs.spring.io/spring-ai/reference/api/chatclient.html" target="_blank" rel="noopener noreferrer">Spring AI ChatClient — Tool Calling</a></p>
       <p>Spring AI 官方项目把自身定位为连接企业数据/API 与模型的 Spring-friendly 抽象，并提供 portable model API、ChatClient、Advisor、tool calling 等能力；这不等于开箱即得完整业务 Agent Runtime。<a href="https://github.com/spring-projects/spring-ai" target="_blank" rel="noopener noreferrer">Spring AI 官方项目概览</a></p>
 
       <h2 id="企业服务台案例"><a class="heading-anchor" href="#企业服务台案例" aria-label="链接到本节">#</a>企业服务台案例</h2>
@@ -345,14 +346,14 @@ final class ServiceDeskAssistant {
         </section>
         <section class="roadmap-stage">
           <h3 id="服务台-工具动作">3. 工具 / 动作（Tools）</h3>
-          <p>只读服务状态、只读工单、检索知识；<strong>仅在独立审批通过后</strong>创建工单。模型可提出候选调用，应用根据当前身份、对象、schema 与审批记录执行。</p>
+          <p>只读服务状态、只读工单和检索知识 handler 仅在当前 tenant / user 获得相应读取权限时暴露。<code>createTicket</code> 是审批型写 handler：<strong>独立审批验证通过前不注册、不暴露</strong>；通过后 <code>ToolCallingAdvisor</code> 可以调用它，但 handler 内仍要重新校验 principal、tenant、对象、审批、schema 和预算。</p>
         </section>
         <section class="roadmap-stage">
           <h3 id="服务台-护栏验收">4. 护栏 / 验收（Guardrails）</h3>
           <p>tenant 隔离、工具 allowlist、schema 校验、审批、最大步骤/时间/成本、来源引用、安全公开错误与私有诊断分离、全链路审计。验收覆盖越权、超预算、过期知识、工具故障和转人工。</p>
         </section>
       </div>
-      <p><strong>信任边界：</strong>用户文本可能诱导越权，检索文档可能包含 prompt injection，工具 Observation 可能陈旧、恶意或含敏感信息，模型输出可能虚构。它们都先进入校验与分类层；只有应用持有凭证并调用业务 API。对用户只返回固定、无敏感细节的安全错误；堆栈、原始 Observation、下游响应和策略判定进入访问受控的私有日志/trace。</p>
+      <p><strong>信任边界：</strong>用户文本可能诱导越权，检索文档可能包含 prompt injection，工具 Observation 可能陈旧、恶意或含敏感信息，模型输出可能虚构。它们都先进入校验与分类层；Spring AI 可以调用已注册 handler，但只有应用拥有 handler 注册权、业务凭证和策略执行点。对用户只返回固定、无敏感细节的安全错误；堆栈、原始 Observation、下游响应和策略判定进入访问受控的私有日志/trace。</p>
 
       <h2 id="常见错误"><a class="heading-anchor" href="#常见错误" aria-label="链接到本节">#</a>常见错误</h2>
       <div class="table-wrap"><table>
@@ -381,7 +382,7 @@ final class ServiceDeskAssistant {
         <ol>
           <li>普通聊天：单次内容转换，无环境行动。</li>
           <li>确定性工作流：顺序、审批和补偿均已知，不需要概率策略。</li>
-          <li>受限单 Agent：调查路径动态，但工具、审批和成功标准可明确；创建动作仍由应用授权和执行。</li>
+          <li>受限单 Agent：调查路径动态，但工具、审批和成功标准可明确；Spring AI 可调用应用已注册的 handler，而应用负责注册范围、授权和审批。创建工单 handler 在独立审批验证通过前不注册或暴露。</li>
         </ol>
       </details>
 
@@ -399,8 +400,8 @@ final class ServiceDeskAssistant {
         <li>能不用“就是聊天机器人”来定义四个 Agent 术语，并给出一个非聊天 Software Agent 例子。</li>
         <li>能从自己的需求中逐项标注目标、环境/输入、状态、策略/模型、行动/工具、反馈、护栏和人类权限。</li>
         <li>能对三个练习需求给出分类，并说明为什么确定性入职流程不需要 Agent。</li>
-        <li>能画出八节点调用闭环，且明确模型只产生<strong>候选行动</strong>。</li>
-        <li>能解释为什么由应用而不是模型执行工具：只有应用持有真实身份与凭证，能执行授权、schema、审批、预算、幂等、审计和安全错误处理；模型输出只是不可直接信任的数据。</li>
+        <li>能画出八节点调用闭环，且明确模型只产生<strong>候选行动</strong>；<code>ToolCallingAdvisor</code> 可以调用应用已注册的 handler。</li>
+        <li>能解释精确的工具边界：框架控制已注册 handler 的调用往返；应用拥有注册表和策略执行点，负责授权、schema、审批、预算、幂等、审计和 handler 内复核。模型输出只是不可直接信任的数据，审批型写 handler 在独立审批验证通过前不得注册或暴露。</li>
         <li>提交一份完整四栏设计，其中写操作有审批，run 有最大步骤/时间/成本，答案有来源，公开错误不包含私有诊断。</li>
         <li>能指出 <code>ChatClient</code> / Advisor 属于 Spring AI 原生能力，而目标生命周期、授权、审批、预算和业务 Agent Runtime 循环属于应用责任。</li>
       </ul>
