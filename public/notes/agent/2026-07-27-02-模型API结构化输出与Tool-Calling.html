@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="面向 Java 开发者系统学习模型结构化决策与 Spring AI 2.0.0 Tool Calling，并为企业服务台建立工具契约、授权边界和测试策略。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="Agent 开发">
+  <meta name="study-date" content="2026-07-27">
+  <title>模型 API、结构化输出与 Tool Calling｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="2026-07-27-Agent开发学习主目录.html"><span class="brand-mark">J</span><span>Agent 开发学习主目录</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a href="2026-07-27-Agent开发学习主目录.html">课程主目录</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <label class="sidebar-search"><span class="sr-only">筛选文档</span><input type="search" placeholder="筛选文档…" data-sidebar-search></label>
+    <nav class="doc-nav" aria-label="文档列表">
+      <a class="doc-nav-item" href="2026-07-27-Agent开发学习主目录.html"><span>Agent 开发学习主目录</span><small>Agent 开发</small></a>
+      <a class="doc-nav-item is-active" href="#模型-api-结构化输出与-tool-calling"><span>2. 模型 API、结构化输出与 Tool Calling</span><small>当前页面</small></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta">
+      <a href="2026-07-27-Agent开发学习主目录.html">Agent 开发学习主目录</a>
+      <span>·</span><span>第 2 课</span><span>·</span>
+      <time datetime="2026-07-27">2026-07-27</time>
+    </div>
+    <article class="markdown-body">
+      <h1 id="模型-api-结构化输出与-tool-calling"><a class="heading-anchor" href="#模型-api-结构化输出与-tool-calling" aria-label="链接到本节">#</a>模型 API、结构化输出与 Tool Calling</h1>
+      <blockquote>
+        <p>模型只负责提出结构化决策，应用才负责授权和执行。本文使用 Java 21、Spring AI 2.0.0 与 Spring Boot 4.0.x / 4.1.x，并保持模型供应商中立。</p>
+        <p>整理日期：2026-07-27；官方资料检索日期：2026-07-27。</p>
+      </blockquote>
+
+      <nav aria-label="本课快速目录">
+        <strong>学习路径：</strong>
+        <a href="#核心结论">核心结论</a> ·
+        <a href="#学习目标与本阶段产物">目标与产物</a> ·
+        <a href="#结构化决策模型">结构化决策</a> ·
+        <a href="#tool-calling-调用过程">调用过程</a> ·
+        <a href="#三种执行控制模式">三种模式</a> ·
+        <a href="#java-21-类型设计">Java 21 类型设计</a> ·
+        <a href="#spring-ai-tool-calling">Spring AI Tool Calling</a> ·
+        <a href="#maven-bom">Maven BOM</a> ·
+        <a href="#只读工具与框架控制">只读工具与框架控制</a> ·
+        <a href="#用户控制生命周期">用户控制生命周期</a> ·
+        <a href="#return-direct-边界">returnDirect 边界</a> ·
+        <a href="#授权校验与错误边界">授权与错误</a> ·
+        <a href="#企业服务台案例">服务台案例</a> ·
+        <a href="#测试策略">测试策略</a> ·
+        <a href="#练习与验收">练习与验收</a> ·
+        <a href="#练习">练习</a> ·
+        <a href="#本课验收标准">验收标准</a> ·
+        <a href="#参考资料">参考资料</a>
+      </nav>
+
+      <h2 id="核心结论"><a class="heading-anchor" href="#核心结论" aria-label="链接到本节">#</a>核心结论</h2>
+      <ul>
+        <li><strong>工具调用是一项应用能力，不是模型获得了系统权限。</strong>模型只能返回工具名和参数；应用解析、授权、执行并决定向模型回传什么。Spring 官方同样强调模型不会接触工具 API，真正执行者是客户端应用。<a href="https://docs.spring.io/spring-ai/reference/api/tools.html" target="_blank" rel="noopener noreferrer">Spring AI Tool Calling</a></li>
+        <li><strong>JSON Schema 只约束数据形状。</strong>它可以描述类型、必填项和取值范围，却不证明模型输出真实、不证明当前用户有权限，也不覆盖租户归属、审批、幂等和预算等业务不变量。</li>
+        <li><strong>Spring AI 2.0.0 有三种执行控制模式。</strong><code>ChatClient</code> 的 framework-controlled 模式适合已在工具 handler 内完成强制策略的低风险调用；显式 <code>ToolCallingAdvisor</code> 的 Advisor-controlled 模式适合扩展可观测性、记忆与循环判定；需要在每轮插入独立审批、预算和条件分支时选择 user-controlled，并由应用使用 <code>ToolCallingManager</code> 驱动生命周期。</li>
+        <li><strong>授权、审批和预算始终由应用掌控。</strong>无论谁驱动循环，allowlist、Bean Validation、主体与租户校验、超时、错误脱敏、审计及执行预算都不是模型或 JSON Schema 能替代的。</li>
+      </ul>
+
+      <h2 id="学习目标与本阶段产物"><a class="heading-anchor" href="#学习目标与本阶段产物" aria-label="链接到本节">#</a>学习目标与本阶段产物</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>学习目标</th><th>阶段产物</th><th>验收问题</th></tr></thead>
+        <tbody>
+          <tr><td>区分答复与动作请求</td><td><code>ModelDecision</code>、<code>FinalAnswer</code>、<code>ToolRequest</code></td><td>能否在 Java 类型层阻止“文本看起来像工具调用”被直接执行？</td></tr>
+          <tr><td>建立稳定工具边界</td><td><code>ToolCall</code>、<code>ServiceStatusQuery</code>、<code>TicketQuery</code></td><td>工具名是否来自 allowlist，参数是否为不可变 DTO？</td></tr>
+          <tr><td>把授权与模型解耦</td><td><code>ToolPolicy.authorize(UserContext, ToolCall)</code></td><td>即使模型要求越权，应用是否仍会拒绝？</td></tr>
+          <tr><td>选择 Spring AI 控制方式</td><td>三种模式决策表与两种代码路径</td><td>审批和预算插入点是否由应用明确拥有？</td></tr>
+        </tbody>
+      </table></div>
+      <p>本页中的这些契约都是课程领域模型，<strong>不是 Spring AI 类型</strong>。它们用于隔离模型供应商协议与企业服务台的业务规则。</p>
+
+      <h2 id="结构化决策模型"><a class="heading-anchor" href="#结构化决策模型" aria-label="链接到本节">#</a>结构化决策模型</h2>
+      <p>一次模型响应至少可能落入三种语义。不要只根据字符串外观猜测它属于哪一种：</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>响应形态</th><th>含义</th><th>应用处理</th><th>能否直接产生副作用</th></tr></thead>
+        <tbody>
+          <tr><td>普通文本答复</td><td>自然语言解释或追问，没有机器可执行承诺</td><td>内容安全检查后展示；事实仍需证据</td><td>不能</td></tr>
+          <tr><td>最终结构化答复</td><td>映射为 <code>FinalAnswer</code> 等 DTO，便于下游稳定消费</td><td>Schema、Bean Validation 与业务不变量检查后消费</td><td>不能；DTO 合法不等于动作获批</td></tr>
+          <tr><td>结构化工具请求</td><td>模型选择工具名并给出 JSON 参数</td><td>解析为 <code>ToolCall</code>，经过 allowlist、授权、校验、审批与预算后才执行</td><td>只有应用放行后才可能</td></tr>
+        </tbody>
+      </table></div>
+
+      <p>Spring AI 的 <code>StructuredOutputConverter</code> 围绕文本补全做“尽力而为”的转换，官方明确说明模型并不保证遵守格式；需要额外校验。它也不用于 Tool Calling，因为工具协议本身已经携带结构化参数。<code>StructuredOutputValidationAdvisor</code> 可以依据 JSON Schema 校验结构并有限重试，但重试成功仍只代表结构有效。<a href="https://docs.spring.io/spring-ai/reference/api/structured-output-converter.html" target="_blank" rel="noopener noreferrer">Structured Output Converter</a>、<a href="https://docs.spring.io/spring-ai/reference/api/advisors-recursive.html" target="_blank" rel="noopener noreferrer">Recursive Advisors</a></p>
+
+      <p>JSON Schema 2020-12 规范分为 Core 与 Validation。它擅长表达“对象必须有 <code>ticketId</code> 且为字符串”，但下面五件事必须由应用另行判断：</p>
+      <ol>
+        <li><strong>真实性：</strong><code>ticketId</code> 是否存在、状态是否最新。</li>
+        <li><strong>权限：</strong>当前主体能否查看该对象。</li>
+        <li><strong>租户边界：</strong>该工单是否属于受信上下文中的 tenant，而不是模型参数声称的 tenant。</li>
+        <li><strong>安全与业务不变量：</strong>动作是否可逆、是否已审批、是否幂等。</li>
+        <li><strong>资源约束：</strong>本轮是否还有步数、时间、调用次数与成本预算。</li>
+      </ol>
+
+      <h2 id="tool-calling-调用过程"><a class="heading-anchor" href="#tool-calling-调用过程" aria-label="链接到本节">#</a>Tool Calling 调用过程</h2>
+      <div class="agent-call-flow" role="img" aria-label="八节点 Tool Calling 流程：用户请求、工具定义、模型决策、结构化工具调用、应用授权、校验后执行、安全 Observation、模型或最终响应。横切护栏包含身份租户、白名单、参数校验、审批、预算、超时、脱敏和审计。">
+        <div class="agent-step">1. 用户请求</div>
+        <div class="agent-step">2. 工具定义</div>
+        <div class="agent-step">3. 模型决策</div>
+        <div class="agent-step">4. 结构化工具调用</div>
+        <div class="agent-step">5. 应用授权</div>
+        <div class="agent-step">6. 校验后执行</div>
+        <div class="agent-step">7. 安全 Observation</div>
+        <div class="agent-step">8. 模型 / 最终响应</div>
+        <div class="guardrail-band">横切护栏：可信身份与租户 · 工具 allowlist · Bean Validation · 对象级授权 · 独立审批 · 步数/时间/成本预算 · 超时 · 错误脱敏 · 审计</div>
+      </div>
+      <p class="diagram-text"><strong>等价文字说明：</strong>应用收到用户请求后，只向模型提供当前主体可用的工具定义；模型选择直接答复或生成结构化工具调用。应用把调用视为不可信输入，先核对工具 allowlist、可信身份与租户、参数和对象级权限，再检查审批及剩余预算；仅通过后才在超时和最小权限凭证下执行。工具结果会被裁剪、脱敏并封装成安全 Observation，随后交给模型生成答复或由应用直接返回。身份、授权、预算、错误和审计护栏横切全部八个节点。</p>
+      <p>这个流程的关键分界线在第 5 节点：模型可以<strong>建议</strong>使用哪个工具，只有应用可以<strong>授权</strong>调用。把工具定义发给模型是可用性提示，不是权限授予。</p>
+
+      <h2 id="三种执行控制模式"><a class="heading-anchor" href="#三种执行控制模式" aria-label="链接到本节">#</a>三种执行控制模式</h2>
+      <p>Spring AI 2.0.0 官方文档把工具执行生命周期分成三类。此前由 <code>ChatModel</code> 实现内部自动执行的方式从 2.0.0 起已弃用，计划在 3.0.0 移除；新代码应使用 <code>ChatClient</code> + <code>ToolCallingAdvisor</code>，或显式采用用户控制循环。</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>模式</th><th>循环由谁驱动</th><th>Spring AI 2.0.0 行为</th><th>应用责任</th><th>选择建议</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Framework-controlled（框架控制）</td>
+            <td><code>ChatClient</code> 自动注册的 <code>ToolCallingAdvisor</code></td>
+            <td>Advisor 拦截工具请求，经 <code>ToolCallingManager</code> 执行并回传，直到模型给出最终响应</td>
+            <td>在每个 handler 内强制执行身份、租户、参数、对象授权、超时、预算和错误边界；按请求收窄工具集合</td>
+            <td>只读、低风险、循环无需定制，且所有强制策略都能封装在 handler / 自定义 manager 中时优先</td>
+          </tr>
+          <tr>
+            <td>Advisor-controlled（Advisor 控制）</td>
+            <td>应用显式配置的 <code>ToolCallingAdvisor</code></td>
+            <td>仍由 Advisor 循环，可注入自定义 <code>ToolCallingManager</code>、循环资格检查、顺序与可观测 Advisor</td>
+            <td>自定义扩展不能取代业务授权；handler 和 manager 继续强制策略</td>
+            <td>需要观察每轮、结合记忆、定制循环资格或执行 manager，但不需要应用逐轮暂停时使用</td>
+          </tr>
+          <tr>
+            <td>User-controlled（用户控制）</td>
+            <td>业务 Agent Runtime</td>
+            <td>关闭自动 <code>ToolCallingAdvisor</code>；应用检查 <code>ChatResponse</code>，再使用 <code>ToolCallingManager</code> 执行</td>
+            <td>逐轮授权、审批、预算预占、进度推送、停止条件、安全 Observation 与审计</td>
+            <td>写操作、高风险动作、条件审批、强预算、人工介入或自定义分支所需的首选</td>
+          </tr>
+        </tbody>
+      </table></div>
+      <p><strong>边界提醒：</strong>“framework-controlled”只表示 Spring AI 驱动调用循环，不表示 Spring AI 替你理解 RBAC、租户、审批单或成本上限；“user-controlled”中的 user 指使用框架的应用开发者控制生命周期，不是让终端用户直接执行任意工具。</p>
+
+      <h2 id="java-21-类型设计"><a class="heading-anchor" href="#java-21-类型设计" aria-label="链接到本节">#</a>Java 21 类型设计</h2>
+      <p>Java 21 的 sealed interface 让模型决策成为封闭代数类型：调用方必须处理最终答复或工具请求，不能把任意文本偷偷混进可执行分支。record 隐式为 final，可以作为 sealed interface 的许可实现。下面示例依赖 Jakarta Bean Validation API；所有集合在构造时复制。</p>
+      <pre><code class="language-java">import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Valid;
+import jakarta.validation.Validator;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
+
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
+sealed interface ModelDecision permits FinalAnswer, ToolRequest {}
+
+record FinalAnswer(@NotBlank @Size(max = 2_000) String text)
+        implements ModelDecision {
+    public FinalAnswer {
+        text = Required.text(text, "text");
+    }
+}
+
+record ToolRequest(ToolCall call) implements ModelDecision {
+    public ToolRequest {
+        Objects.requireNonNull(call, "call");
+    }
+}
+
+record ToolCall(String name, Map&lt;String, Object&gt; arguments) {
+    public ToolCall {
+        name = Required.text(name, "name");
+        arguments = Map.copyOf(Objects.requireNonNull(arguments, "arguments"));
+    }
+}
+
+record ServiceStatusQuery(
+        @NotBlank
+        @Pattern(regexp = "[A-Z][A-Z0-9_-]{1,31}")
+        String serviceCode) {
+    public ServiceStatusQuery {
+        serviceCode = Required.text(serviceCode, "serviceCode");
+    }
+}
+
+record TicketQuery(
+        @NotBlank
+        @Pattern(regexp = "TKT-[0-9]{6,12}")
+        String ticketId) {
+    public TicketQuery {
+        ticketId = Required.text(ticketId, "ticketId");
+    }
+}
+
+record UserContext(String userId, String tenantId, Set&lt;String&gt; permissions) {
+    public UserContext {
+        userId = Required.text(userId, "userId");
+        tenantId = Required.text(tenantId, "tenantId");
+        permissions = Set.copyOf(Objects.requireNonNull(permissions, "permissions"));
+    }
+}
+
+enum AuthorizationCode {
+    ALLOWED, UNKNOWN_TOOL, PERMISSION_DENIED, TENANT_MISMATCH,
+    APPROVAL_REQUIRED, BUDGET_EXHAUSTED
+}
+
+record AuthorizationDecision(AuthorizationCode code, String reason) {
+    public AuthorizationDecision {
+        Objects.requireNonNull(code, "code");
+        reason = Required.text(reason, "reason");
+    }
+
+    boolean allowed() {
+        return code == AuthorizationCode.ALLOWED;
+    }
+}
+
+interface ToolPolicy {
+    AuthorizationDecision authorize(UserContext user, ToolCall call);
+}
+
+final class AllowlistToolPolicy implements ToolPolicy {
+    private static final Set&lt;String&gt; READ_TOOLS =
+            Set.of("readServiceStatus", "readTenantTicket");
+
+    @Override
+    public AuthorizationDecision authorize(UserContext user, ToolCall call) {
+        if (!READ_TOOLS.contains(call.name())) {
+            return new AuthorizationDecision(
+                    AuthorizationCode.UNKNOWN_TOOL, "Tool is not allowlisted");
+        }
+        if (!user.permissions().contains("service-desk:read")) {
+            return new AuthorizationDecision(
+                    AuthorizationCode.PERMISSION_DENIED, "Read permission is required");
+        }
+        return new AuthorizationDecision(AuthorizationCode.ALLOWED, "Allowed");
+    }
+}
+
+enum PublicToolError {
+    INVALID_REQUEST, FORBIDDEN, NOT_FOUND, TEMPORARILY_UNAVAILABLE,
+    TIMEOUT, LIMIT_EXCEEDED
+}
+
+record SafeToolFailure(
+        PublicToolError code,
+        String message,
+        String correlationId,
+        boolean retryable) {
+    public SafeToolFailure {
+        Objects.requireNonNull(code, "code");
+        message = Required.text(message, "message");
+        correlationId = Required.text(correlationId, "correlationId");
+    }
+}
+
+// 只写私有日志/Trace，不返回给模型或终端用户。
+record PrivateDiagnostic(
+        String correlationId,
+        String toolName,
+        String tenantId,
+        String exceptionType,
+        String redactedDetail) {
+    public PrivateDiagnostic {
+        correlationId = Required.text(correlationId, "correlationId");
+        toolName = Required.text(toolName, "toolName");
+        tenantId = Required.text(tenantId, "tenantId");
+        exceptionType = Required.text(exceptionType, "exceptionType");
+        redactedDetail = Required.text(redactedDetail, "redactedDetail");
+    }
+}
+
+final class ToolBoundary {
+    private final Validator validator;
+    private final ToolPolicy policy;
+    private final Duration timeout = Duration.ofSeconds(2);
+
+    ToolBoundary(Validator validator, ToolPolicy policy) {
+        this.validator = Objects.requireNonNull(validator);
+        this.policy = Objects.requireNonNull(policy);
+    }
+
+    void authorizeAndValidate(
+            UserContext user, ToolCall call, @Valid Object typedArguments) {
+        AuthorizationDecision decision = policy.authorize(user, call);
+        if (!decision.allowed()) {
+            throw new PolicyRejectedException(decision.code());
+        }
+        Set&lt;ConstraintViolation&lt;Object&gt;&gt; violations =
+                validator.validate(typedArguments);
+        if (!violations.isEmpty()) {
+            throw new InvalidToolArgumentsException();
+        }
+        // 调用下游时应用 timeout，并使用 user.tenantId() 构造查询范围；
+        // 永远不要信任模型参数中的 tenant、URL、SQL 或命令。
+    }
+}
+
+final class Required {
+    private Required() {}
+
+    static String text(String value, String name) {
+        Objects.requireNonNull(value, name);
+        if (value.isBlank()) {
+            throw new IllegalArgumentException(name + " must not be blank");
+        }
+        return value;
+    }
+}
+
+final class PolicyRejectedException extends RuntimeException {
+    PolicyRejectedException(AuthorizationCode code) {
+        super(code.name());
+    }
+}
+
+final class InvalidToolArgumentsException extends RuntimeException {}</code></pre>
+      <p>上例中的 <code>timeout</code> 是执行约束，不是装饰信息：实际 adapter 必须把它交给 HTTP / 数据库客户端并在到期后取消。安全错误只暴露稳定枚举、通用消息和关联 ID；异常类型、下游地址、堆栈、SQL、token 与原始响应仅进入访问受控且已脱敏的私有诊断。</p>
+
+      <h2 id="spring-ai-tool-calling"><a class="heading-anchor" href="#spring-ai-tool-calling" aria-label="链接到本节">#</a>Spring AI 2.0.0 Tool Calling</h2>
+      <p>以下代码展示 API 形态和责任边界，业务 repository 与策略实现需由项目提供。模型通过抽象 <code>ChatModel</code> 注入，示例不绑定任何供应商。</p>
+
+      <h3 id="maven-bom">Maven BOM</h3>
+      <pre><code class="language-xml">&lt;dependencyManagement&gt;
+  &lt;dependencies&gt;
+    &lt;dependency&gt;
+      &lt;groupId&gt;org.springframework.ai&lt;/groupId&gt;
+      &lt;artifactId&gt;spring-ai-bom&lt;/artifactId&gt;
+      &lt;version&gt;2.0.0&lt;/version&gt;
+      &lt;type&gt;pom&lt;/type&gt;
+      &lt;scope&gt;import&lt;/scope&gt;
+    &lt;/dependency&gt;
+  &lt;/dependencies&gt;
+&lt;/dependencyManagement&gt;</code></pre>
+      <p>截至检索日，Spring AI 2.0.x 官方支持 Spring Boot 4.0.x 与 4.1.x，稳定版依赖可直接从 Maven Central 获取。BOM 只负责统一 Spring AI 组件版本；具体模型 starter 由部署环境选择。<a href="https://docs.spring.io/spring-ai/reference/getting-started.html" target="_blank" rel="noopener noreferrer">Spring AI Getting Started</a></p>
+
+      <h3 id="只读工具与框架控制">只读工具与 framework-controlled 示例</h3>
+      <p>工具参数使用类型化 record；租户来自应用注入且不会发送给模型的 <code>ToolContext</code>，绝不从模型生成参数信任 tenant。handler 内再次执行 Bean Validation、对象级授权和超时。这里仅注册两个只读工具。</p>
+      <pre><code class="language-java">import jakarta.validation.Validator;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.tool.ToolContext;
+import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.stereotype.Component;
+
+import java.util.Map;
+
+@Component
+final class ServiceDeskReadTools {
+    private final ServiceStatusRepository statusRepository;
+    private final TicketRepository ticketRepository;
+    private final Validator validator;
+    private final ServiceDeskAuthorization authorization;
+
+    ServiceDeskReadTools(
+            ServiceStatusRepository statusRepository,
+            TicketRepository ticketRepository,
+            Validator validator,
+            ServiceDeskAuthorization authorization) {
+        this.statusRepository = statusRepository;
+        this.ticketRepository = ticketRepository;
+        this.validator = validator;
+        this.authorization = authorization;
+    }
+
+    @Tool(
+        name = "readServiceStatus",
+        description = "Read the current status of one allowlisted service code")
+    ServiceStatusView readServiceStatus(
+            ServiceStatusQuery query, ToolContext context) {
+        TrustedToolContext trusted = TrustedToolContext.from(context);
+        ToolGuards.validate(validator, query);
+        authorization.requireServiceRead(trusted, query.serviceCode());
+        return statusRepository.findAllowlisted(
+                trusted.tenantId(), query.serviceCode(), trusted.timeout());
+    }
+
+    @Tool(
+        name = "readTenantTicket",
+        description = "Read one ticket visible to the authenticated tenant")
+    TicketView readTenantTicket(TicketQuery query, ToolContext context) {
+        TrustedToolContext trusted = TrustedToolContext.from(context);
+        ToolGuards.validate(validator, query);
+        authorization.requireTicketRead(
+                trusted.userId(), trusted.tenantId(), query.ticketId());
+        return ticketRepository.findTenantScoped(
+                trusted.tenantId(), query.ticketId(), trusted.timeout());
+    }
+}
+
+@Component
+final class ServiceDeskAssistant {
+    private final ChatClient chatClient;
+
+    ServiceDeskAssistant(ChatModel chatModel, ServiceDeskReadTools tools) {
+        this.chatClient = ChatClient.builder(chatModel)
+                .defaultTools(tools)
+                .build();
+    }
+
+    String answer(UserContext user, String question) {
+        return chatClient.prompt()
+                .user(question)
+                .toolContext(Map.of(
+                        "trustedUserId", user.userId(),
+                        "trustedTenantId", user.tenantId(),
+                        "timeoutMillis", 2_000L))
+                .call()
+                .content();
+    }
+}</code></pre>
+      <p><code>ChatClient.builder(chatModel).defaultTools(tools)</code> 是 Spring AI 2.0.0 官方记录的方式。<code>ChatClient</code> 会自动注册 <code>ToolCallingAdvisor</code> 并完成循环。默认工具会对由同一 builder 构建的全部 client 请求可见，因此生产代码应优先按用例拆分 client，或使用每次请求的 <code>.tools(...)</code> 进一步收窄暴露面。</p>
+      <p><strong>不要把“Spring 调到了方法”误认为“方法已安全”。</strong><code>ServiceDeskAuthorization</code>、<code>TrustedToolContext</code>、验证器、repository 租户过滤、超时与公共错误映射均由应用拥有。框架只负责把符合协议的调用分派到已注册 handler。</p>
+
+      <h3 id="用户控制生命周期">User-controlled 生命周期：插入审批与预算</h3>
+      <p>需要人工批准或严格预算时，关闭本次调用的自动 Advisor。下面是刻意简化的生命周期伪代码；其中 <code>extractDomainCalls</code> 与 <code>appendSafeRejections</code> 是应用 adapter，不是 Spring AI API。只有当本轮全部请求通过 allowlist、类型化参数、对象授权、审批与预算预占后，才交给 <code>ToolCallingManager</code> 执行。</p>
+      <pre><code class="language-java">ToolCallback[] callbacks = ToolCallbacks.from(readOnlyTools);
+ToolCallingManager toolCallingManager = ToolCallingManager.builder().build();
+ChatOptions options = ToolCallingChatOptions.builder()
+        .toolCallbacks(callbacks)
+        .build();
+
+Prompt prompt = new Prompt(List.of(new UserMessage(question)), options);
+ChatResponse response = chatModel.call(prompt);
+
+for (int step = 0; response.hasToolCalls(); step++) {
+    executionBudget.requireStepAvailable(step);       // 应用拥有
+
+    List&lt;ToolCall&gt; requested = extractDomainCalls(response);
+    for (ToolCall call : requested) {
+        allowlist.requireKnown(call.name());          // 应用拥有
+        Object typed = arguments.decodeAndValidate(call);
+        toolPolicy.requireAuthorized(user, call);     // 应用拥有
+        approval.requireIfRisky(user, call, typed);   // 应用拥有
+        executionBudget.reserve(call);                // 应用拥有
+        audit.recordApproved(user, call);
+    }
+
+    ToolExecutionResult result =
+            toolCallingManager.executeToolCalls(prompt, response);
+    prompt = new Prompt(
+            sanitizeObservations(result.conversationHistory()), options);
+    response = chatModel.call(prompt);
+}
+
+return safeFinalResponse(response);</code></pre>
+      <p>若任一调用被拒绝，应用不能先执行其余调用再补记失败；应把拒绝转为无敏感信息的 Observation 或终止并转人工。预算预占要发生在执行前，成功或失败后按策略结算。重复工具调用必须用 run 内指纹或幂等键识别，并受最大步数、总耗时与成本三重上限约束。</p>
+
+      <p>若只需观察或定制框架循环，可显式构造 Advisor-controlled 配置，而不必接管全部循环：</p>
+      <pre><code class="language-java">var toolCallingAdvisor = ToolCallingAdvisor.builder()
+        .toolCallingManager(policyEnforcingToolCallingManager)
+        .toolExecutionEligibilityChecker(response -&gt;
+                response.hasToolCalls() &amp;&amp; runBudget.hasRemainingSteps())
+        .build();
+
+var advisorControlledClient = ChatClient.builder(chatModel)
+        .defaultAdvisors(toolCallingAdvisor)
+        .build();</code></pre>
+      <p>这段 Lambda 中的预算判定只决定是否继续循环；真正执行前的主体、对象、参数与审批校验仍应在 <code>policyEnforcingToolCallingManager</code> 或工具 handler 内强制完成。</p>
+
+      <h3 id="return-direct-边界"><code>returnDirect</code> 的边界</h3>
+      <p>默认情况下，工具结果会回给模型，由模型生成最终答复。设置 <code>@Tool(returnDirect = true)</code> 后，<code>ToolCallingAdvisor</code> 会在工具执行完成时退出循环，把结果直接交给 client，减少一次模型调用并避免模型改写。</p>
+      <p><strong>return direct 不是 authorization direct。</strong>它跳过的是工具执行后的最终模型处理，不会也不应跳过执行前的 allowlist、身份与租户、参数、对象级授权、审批、预算和超时；也不会跳过执行后的输出字段过滤、脱敏、内容类型、响应大小和审计。若多个工具同时被请求，官方文档说明必须全部设置 <code>returnDirect=true</code> 才会直接返回。对内部实体或含敏感字段的结果，默认不要启用。</p>
+
+      <h2 id="授权校验与错误边界"><a class="heading-anchor" href="#授权校验与错误边界" aria-label="链接到本节">#</a>授权校验与错误边界</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>边界</th><th>必须执行的检查</th><th>失败时公开响应</th><th>仅私有诊断</th></tr></thead>
+        <tbody>
+          <tr><td>工具解析</td><td>精确名称 allowlist；拒绝别名、动态类名和反射目标</td><td><code>INVALID_REQUEST</code></td><td>原始工具名、模型响应 ID</td></tr>
+          <tr><td>参数</td><td>JSON 解析、未知字段策略、Bean Validation、长度与枚举</td><td><code>INVALID_REQUEST</code></td><td>脱敏后的 violation 路径</td></tr>
+          <tr><td>身份 / 租户</td><td>主体来自认证上下文；tenant 来自可信 context；对象级授权</td><td><code>FORBIDDEN</code>，不透露对象是否存在</td><td>主体、tenant、策略规则 ID</td></tr>
+          <tr><td>审批 / 预算</td><td>审批绑定具体主体、对象、参数摘要和有效期；执行前预占预算</td><td><code>LIMIT_EXCEEDED</code> 或转人工</td><td>审批 ID、预算账本、拒绝原因</td></tr>
+          <tr><td>执行</td><td>最小权限凭证、硬超时、熔断、幂等、响应大小上限</td><td><code>TIMEOUT</code> 或 <code>TEMPORARILY_UNAVAILABLE</code></td><td>下游状态码、耗时、异常类型、脱敏堆栈</td></tr>
+          <tr><td>Observation / 输出</td><td>Schema、字段 allowlist、脱敏、提示注入标记、内容长度</td><td>通用消息 + correlation ID</td><td>原始结果存于受控诊断域，不进入模型上下文</td></tr>
+        </tbody>
+      </table></div>
+      <p>工具失败不应把堆栈、内部主机名、原始 SQL、访问 token 或其他租户数据放进模型 Observation。对于未知工具和非法参数，默认不可重试；对于超时或工具 5xx，只有确认操作只读或具备幂等键且仍有预算时才能有限重试。所有对模型回传的 Observation 都是不可信输入，不能允许其内容改变系统策略或扩大工具集合。</p>
+      <p>本课程<strong>永不暴露</strong>任意 URL 抓取、Shell、原始 SQL、任意类反射或无限制写工具。若确有需要，应把资源标识映射到应用 allowlist 中的固定 adapter，并在网络出口、数据库角色和进程权限层再做隔离。</p>
+
+      <h2 id="企业服务台案例"><a class="heading-anchor" href="#企业服务台案例" aria-label="链接到本节">#</a>企业服务台案例</h2>
+      <p>本阶段在服务台场景只增加两项只读能力，并把“创建工单”保留为需要审批的后续动作。这样可以先验证工具选择、租户隔离和错误处理，再引入外部副作用。</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>能力</th><th>模型可见参数</th><th>可信上下文</th><th>执行规则</th><th>当前是否注册</th></tr></thead>
+        <tbody>
+          <tr><td><code>readServiceStatus</code></td><td><code>ServiceStatusQuery.serviceCode</code></td><td>user、tenant、2 秒超时</td><td>服务代码 allowlist；只读；裁剪为公开状态</td><td>是</td></tr>
+          <tr><td><code>readTenantTicket</code></td><td><code>TicketQuery.ticketId</code></td><td>user、tenant、2 秒超时</td><td>repository 强制 tenant 过滤；无权时不暴露存在性</td><td>是</td></tr>
+          <tr><td><code>createTicket</code></td><td>标题、摘要、分类的候选草稿</td><td>用户身份、tenant、审批 ID、幂等键</td><td>应用先展示不可变草稿；审批绑定参数摘要；执行前重新鉴权</td><td><strong>否；批准前不注册</strong></td></tr>
+        </tbody>
+      </table></div>
+      <p>创建工单的正确路径是“模型生成候选草稿 → 应用校验 → 用户看到准确副作用 → 用户批准 → 应用将批准绑定到草稿摘要和时限 → 运行时在一次请求范围内注册受限 callback 或走确定性命令服务 → 再次鉴权并幂等执行”。批准前不把写工具定义发给模型；批准也不会放宽租户、字段、预算和审计约束。</p>
+      <p>服务状态与工单结果回给模型前只保留回答问题所需字段，并附数据时间戳和来源类型。工单正文可能包含提示注入文本，应当作为数据引用而非指令处理。</p>
+
+      <h2 id="测试策略"><a class="heading-anchor" href="#测试策略" aria-label="链接到本节">#</a>测试策略</h2>
+      <p>测试应穿过真实策略边界，不只断言“模型返回了某个 JSON”。模型响应、工具 adapter 与时钟可以替换为确定性测试夹具，但 allowlist、Validator、租户过滤、预算账本和错误映射应运行真实代码。</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>用例</th><th>注入条件</th><th>预期结果</th><th>关键断言</th></tr></thead>
+        <tbody>
+          <tr><td>未知工具</td><td>模型请求 <code>runShell</code></td><td>执行前拒绝</td><td>adapter 零调用；公开 <code>INVALID_REQUEST</code>；记录工具名</td></tr>
+          <tr><td>畸形 JSON</td><td>参数缺少闭合符或类型不匹配</td><td>解析失败，不进入 handler</td><td>不可重试或有限结构重试；不泄漏 parser 堆栈</td></tr>
+          <tr><td>Bean Validation 失败</td><td><code>serviceCode</code> 含空格或超长</td><td>执行前拒绝</td><td>repository 零调用；只返回安全字段级错误</td></tr>
+          <tr><td>租户不匹配</td><td>认证 tenant A 请求 tenant B 的工单 ID</td><td>对象级策略拒绝</td><td>查询强制 tenant A；公开 <code>FORBIDDEN</code> 且不暴露对象存在性</td></tr>
+          <tr><td>超时</td><td>只读下游超过 2 秒</td><td>取消调用并返回安全失败</td><td><code>TIMEOUT</code>；预算结算；无后台失控执行</td></tr>
+          <tr><td>工具 5xx</td><td>下游返回 503 和含内部信息的正文</td><td>正文被丢弃或脱敏</td><td>公开 <code>TEMPORARILY_UNAVAILABLE</code>；私有诊断保存状态码与 correlation ID</td></tr>
+          <tr><td>模型重复调用</td><td>连续请求同一工具和参数</td><td>命中 run 内指纹或幂等策略</td><td>不会无界执行；只读可复用安全缓存或计入重试预算</td></tr>
+          <tr><td>最大步数 / 预算耗尽</td><td>模型持续返回工具调用</td><td>循环在硬上限停止并转人工</td><td>不再调用模型或工具；公开 <code>LIMIT_EXCEEDED</code>；完整审计</td></tr>
+          <tr><td>安全公开错误</td><td>adapter 抛出带主机、SQL、token 的异常</td><td>公开与私有诊断分离</td><td>用户/模型只见枚举、通用消息、correlation ID；敏感值不出现</td></tr>
+        </tbody>
+      </table></div>
+      <p>此外应做契约测试：确保 JSON Schema 与 Java record 同步、每个工具名唯一、批准前的工具定义列表不包含 <code>createTicket</code>、<code>returnDirect</code> 输出经过同一脱敏器，以及 framework-controlled 与 user-controlled 两条路径共享同一授权策略。</p>
+
+      <h2 id="练习与验收"><a class="heading-anchor" href="#练习与验收" aria-label="链接到本节">#</a>练习与验收</h2>
+      <h3 id="练习">练习</h3>
+      <ol>
+        <li>为 <code>ServiceStatusQuery</code> 写 JSON Schema，并列出 Schema 通过后仍需执行的五项业务检查。</li>
+        <li>实现 <code>AllowlistToolPolicy</code> 的参数化测试，覆盖未知工具、权限缺失和只读工具放行；证明测试不调用真实下游。</li>
+        <li>用 Bean Validation 测试空 <code>ticketId</code>、错误格式和超长值，再验证公开错误中不包含原始异常类名。</li>
+        <li>画出创建工单审批的 user-controlled 时序：必须标出工具未注册、草稿摘要绑定、审批过期、预算预占、幂等键和再次鉴权。</li>
+        <li>比较 framework-controlled 与 user-controlled 的代码和运行轨迹，说明为何高风险写操作选择后者。</li>
+      </ol>
+
+      <h3 id="本课验收标准">本课验收标准</h3>
+      <ul>
+        <li>能用一句话说明：模型提出 <code>ToolCall</code>，应用 <code>ToolPolicy</code> 才决定能否执行。</li>
+        <li>能分别解释普通文本、<code>FinalAnswer</code> 与 <code>ToolRequest</code>，并说明 JSON Schema 不覆盖权限与真实性。</li>
+        <li>Java 21 契约包含 sealed <code>ModelDecision</code>、不可变 record、allowlist、Bean Validation、可信租户上下文和公开/私有错误分离。</li>
+        <li>能准确描述 framework-controlled、Advisor-controlled、user-controlled 三种模式，以及 Spring AI 2.0.0 中 <code>ToolCallingAdvisor</code> 与 <code>ToolCallingManager</code> 的分工。</li>
+        <li>能证明审批和预算在应用执行前生效，<code>returnDirect</code> 不绕过授权和输出控制。</li>
+        <li>服务台只注册读取服务状态与租户工单两个工具；创建工单在批准前不可被模型调用。</li>
+        <li>未知工具、畸形 JSON、Bean Validation、租户不匹配、超时、工具 5xx、重复调用、预算耗尽与安全公开错误均有自动化测试设计。</li>
+      </ul>
+
+      <h2 id="参考资料"><a class="heading-anchor" href="#参考资料" aria-label="链接到本节">#</a>参考资料</h2>
+      <p>以下均为官方一手资料，检索于 <time datetime="2026-07-27">2026-07-27</time>：</p>
+      <ul>
+        <li><a href="https://docs.spring.io/spring-ai/reference/api/tools.html" target="_blank" rel="noopener noreferrer">Spring AI 2.0.0 Reference：Tool Calling</a>——工具定义、<code>ToolCallingAdvisor</code>、<code>ToolCallingManager</code>、三种控制模式、异常处理与 <code>returnDirect</code>。</li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/api/structured-output-converter.html" target="_blank" rel="noopener noreferrer">Spring AI 2.0.0 Reference：Structured Output Converter</a>——文本输出转换的尽力而为语义及额外校验要求。</li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/api/advisors-recursive.html" target="_blank" rel="noopener noreferrer">Spring AI 2.0.0 Reference：Recursive Advisors</a>——<code>ToolCallingAdvisor</code> 与 <code>StructuredOutputValidationAdvisor</code> 的递归和有限重试行为。</li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/getting-started.html" target="_blank" rel="noopener noreferrer">Spring AI 2.0.0 Reference：Getting Started</a>——2.0.0 BOM、Maven Central 与 Spring Boot 4.0.x / 4.1.x 支持范围。</li>
+        <li><a href="https://json-schema.org/specification" target="_blank" rel="noopener noreferrer">JSON Schema Specification</a>——当前发布规范 2020-12 的 Core 与 Validation 文档入口。</li>
+        <li><a href="https://docs.oracle.com/en/java/javase/21/language/sealed-classes-and-interfaces.html" target="_blank" rel="noopener noreferrer">Oracle Java 21：Sealed Classes and Interfaces</a>——<code>sealed</code>、<code>permits</code> 及 record 作为许可实现。</li>
+      </ul>
+      <p><strong>时效说明：</strong>本文锁定 Spring AI 稳定版 2.0.0。框架 API、模型原生结构化输出能力与 JSON Schema 支持会变化，升级时应重新核验官方版本文档并重跑工具契约、安全与预算回归测试。</p>
+    </article>
+  </main>
+</div>
+</body>
+</html>
