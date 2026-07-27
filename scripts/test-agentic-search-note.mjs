@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { promises as fs } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 const rootDir = process.cwd();
@@ -159,6 +161,115 @@ assert.ok(
   "新页面必须链接回 Agent 主学习目录",
 );
 
+const codeBlocks = [
+  ...note.matchAll(/<pre><code>([\s\S]*?)<\/code><\/pre>/g),
+].map((match) =>
+  match[1]
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&amp;", "&")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'"),
+);
+const javaFixture = await fs.mkdtemp(
+  path.join(os.tmpdir(), "agentic-search-java-test-"),
+);
+for (const [name, index] of [
+  ["SearchTypes.java", 0],
+  ["EvidenceLedger.java", 1],
+  ["AgenticSearchService.java", 2],
+]) {
+  await fs.writeFile(path.join(javaFixture, name), codeBlocks[index]);
+}
+await fs.writeFile(
+  path.join(javaFixture, "AgenticSearchCoreHarness.java"),
+  `import java.net.URI;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public final class AgenticSearchCoreHarness {
+    public static void main(String[] args) {
+        Evidence evidence = new Evidence(
+                "e-1", "runbook", "Runbook", URI.create("https://example.test/runbook"),
+                Instant.parse("2026-07-27T00:00:00Z"), "supported", Set.of("claim-1"), Map.of());
+        SearchPlanner planner = (goal, accepted, remaining, sources) ->
+                new SearchDecision(
+                        DecisionType.SEARCH,
+                        List.of(new SearchQuery("runbook", "timeout", "claim-1")),
+                        "fill claim-1",
+                        Set.of());
+        SearchGateway gateway = (query, principal, timeout) -> List.of(evidence);
+        EvidenceEvaluator evaluator = (existing, candidates, required) ->
+                new EvidenceAssessment(candidates, List.of());
+        AnswerPublisher publisher = new AnswerPublisher() {
+            public SearchOutcome abstain(
+                    List<Evidence> accepted, String reason, int rounds, int queries) {
+                return new SearchOutcome("", accepted, reason, rounds, queries);
+            }
+
+            public SearchOutcome publishIfSupported(
+                    Set<String> required,
+                    EvidenceLedger ledger,
+                    int rounds,
+                    int queries,
+                    RemainingBudget remaining) {
+                if (!ledger.covers(required)) throw new AssertionError("unsupported publish");
+                return new SearchOutcome("answer", ledger.snapshot(), "PUBLISHED", rounds, queries);
+            }
+        };
+        AgenticSearchService service = new AgenticSearchService(
+                planner,
+                gateway,
+                evaluator,
+                publisher,
+                () -> new Usage(0, 0),
+                Clock.fixed(Instant.parse("2026-07-27T00:00:00Z"), ZoneOffset.UTC));
+        SearchOutcome outcome = service.search(
+                new SearchRequest(
+                        "why timeout",
+                        new PrincipalScope("tenant-a", "user-a", Set.of("support")),
+                        Set.of("claim-1")),
+                new SearchBudget(2, 1, 4, Duration.ofSeconds(30), 4_000, 1_000_000),
+                Set.of("runbook"));
+        if (!"PUBLISHED".equals(outcome.stopReason())) {
+            throw new AssertionError(
+                    "final permitted query must publish sufficient evidence, got "
+                            + outcome.stopReason());
+        }
+    }
+}
+`,
+);
+const javaFiles = [
+  "SearchTypes.java",
+  "EvidenceLedger.java",
+  "AgenticSearchService.java",
+  "AgenticSearchCoreHarness.java",
+].map((name) => path.join(javaFixture, name));
+const compiled = spawnSync("javac", ["--release", "21", ...javaFiles], {
+  encoding: "utf8",
+});
+assert.equal(
+  compiled.status,
+  0,
+  `Java 21 核心示例编译失败：${compiled.stderr || compiled.stdout}`,
+);
+const executed = spawnSync(
+  "java",
+  ["-cp", javaFixture, "AgenticSearchCoreHarness"],
+  { encoding: "utf8" },
+);
+assert.equal(
+  executed.status,
+  0,
+  `最后一次允许查询获得充分证据时必须发布：${executed.stderr || executed.stdout}`,
+);
+
 console.log(
-  `PASS: ${noteRelativePath} 的概念、图表、Java/Spring AI、评测、安全、来源与交叉入口完整`,
+  `PASS: ${noteRelativePath} 的内容契约及 Java 21 最后一次查询停止路径完整`,
 );

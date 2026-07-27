@@ -308,11 +308,18 @@ record RemainingBudget(
                 limit.maxCostMicros() - usage.costMicros());
     }
 
-    boolean exhausted(SearchBudget limit) {
-        return querySlots &lt;= 0
-                || elapsed.compareTo(limit.maxElapsed()) &gt;= 0
+    boolean hardLimitExceeded(SearchBudget limit) {
+        return elapsed.compareTo(limit.maxElapsed()) &gt;= 0
                 || modelTokensLeft &lt;= 0
                 || costMicrosLeft &lt;= 0;
+    }
+
+    boolean noQuerySlots() {
+        return querySlots &lt;= 0;
+    }
+
+    boolean exhausted(SearchBudget limit) {
+        return noQuerySlots() || hardLimitExceeded(limit);
     }
 }
 
@@ -468,7 +475,7 @@ public final class AgenticSearchService {
         for (int round = 1; round &lt;= budget.maxRounds(); round++) {
             RemainingBudget beforePlanning = RemainingBudget.from(
                     budget, queriesUsed, startedAt, clock.instant(), usageMeter.snapshot());
-            if (beforePlanning.exhausted(budget)) {
+            if (beforePlanning.hardLimitExceeded(budget)) {
                 return publisher.abstain(ledger.snapshot(), "BUDGET_EXHAUSTED", round, queriesUsed);
             }
             if (ledger.hasConflicts()) {
@@ -481,6 +488,10 @@ public final class AgenticSearchService {
             if (ledger.snapshot().size() &gt;= budget.maxEvidence()) {
                 return publisher.abstain(
                         ledger.snapshot(), "EVIDENCE_BUDGET_EXHAUSTED", round, queriesUsed);
+            }
+            if (beforePlanning.noQuerySlots()) {
+                return publisher.abstain(
+                        ledger.snapshot(), "QUERY_BUDGET_EXHAUSTED", round, queriesUsed);
             }
 
             SearchDecision decision = planner.next(
@@ -525,7 +536,7 @@ public final class AgenticSearchService {
 
                 RemainingBudget afterQuery = RemainingBudget.from(
                         budget, queriesUsed, startedAt, clock.instant(), usageMeter.snapshot());
-                if (afterQuery.exhausted(budget)) {
+                if (afterQuery.hardLimitExceeded(budget)) {
                     return publisher.abstain(
                             ledger.snapshot(), "BUDGET_EXHAUSTED", round, queriesUsed);
                 }
@@ -540,6 +551,10 @@ public final class AgenticSearchService {
                 if (ledger.snapshot().size() &gt;= budget.maxEvidence()) {
                     return publisher.abstain(
                             ledger.snapshot(), "EVIDENCE_BUDGET_EXHAUSTED", round, queriesUsed);
+                }
+                if (afterQuery.noQuerySlots()) {
+                    return publisher.abstain(
+                            ledger.snapshot(), "QUERY_BUDGET_EXHAUSTED", round, queriesUsed);
                 }
             }
         }
