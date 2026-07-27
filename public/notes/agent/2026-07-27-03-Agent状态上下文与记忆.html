@@ -46,6 +46,7 @@
 
       <nav aria-label="本课快速目录">
         <strong>学习路径：</strong>
+        <a href="#课程导航">课程导航</a> ·
         <a href="#核心结论">核心结论</a> ·
         <a href="#学习目标与本阶段产物">目标与产物</a> ·
         <a href="#四类信息不要混在一起">四类信息</a> ·
@@ -53,12 +54,35 @@
         <a href="#上下文窗口与压缩">窗口与压缩</a> ·
         <a href="#java-21-agentstate">Java 21</a> ·
         <a href="#spring-ai-chat-memory">Spring AI</a> ·
+        <a href="#spring-ai-职责边界">框架与业务责任</a> ·
+        <a href="#maven-bom">Maven BOM</a> ·
+        <a href="#provider-neutral-配置">Provider-neutral 配置</a> ·
         <a href="#持久化恢复与并发">恢复与并发</a> ·
+        <a href="#检查点与事件日志">检查点与事件日志</a> ·
+        <a href="#乐观锁冲突">乐观锁冲突</a> ·
         <a href="#安全与隐私">安全与隐私</a> ·
         <a href="#企业服务台案例">服务台案例</a> ·
         <a href="#测试策略">测试策略</a> ·
         <a href="#练习与验收">练习与验收</a> ·
+        <a href="#练习一-字段分层">字段分层练习</a> ·
+        <a href="#练习二-实现仓储">仓储练习</a> ·
+        <a href="#练习三-spring-ai">Spring AI 练习</a> ·
+        <a href="#本课验收标准">验收标准</a> ·
         <a href="#参考资料">参考资料</a>
+      </nav>
+
+      <h2 id="课程导航"><a class="heading-anchor" href="#课程导航" aria-label="链接到本节">#</a>课程导航</h2>
+      <nav class="course-nav" aria-labelledby="课程导航">
+        <ol class="course-nav-list">
+          <li class="course-nav-item"><a href="2026-07-27-01-Agent基础概念与边界.html">01 Agent 基础概念与边界</a></li>
+          <li class="course-nav-item"><a href="2026-07-27-02-模型API结构化输出与Tool-Calling.html">02 模型 API、结构化输出与 Tool Calling</a></li>
+          <li class="course-nav-item"><span class="course-nav-current" aria-current="page">03 Agent 状态、上下文与记忆</span></li>
+          <li class="course-nav-item"><a href="2026-07-27-04-Agent知识检索与RAG.html">04 Agent 知识检索与 RAG</a></li>
+          <li class="course-nav-item"><a href="2026-07-27-05-Agent规划反思与任务分解.html">05 Agent 规划、反思与任务分解</a></li>
+          <li class="course-nav-item"><a href="2026-07-27-06-多Agent协作与编排.html">06 多 Agent 协作与编排</a></li>
+          <li class="course-nav-item"><a href="2026-07-27-07-Agent评测安全权限与成本控制.html">07 Agent 评测、安全、权限与成本控制</a></li>
+          <li class="course-nav-item"><a href="2026-07-27-08-Java-Agent生产部署可观测性与故障恢复.html">08 Java Agent 生产部署、可观测性与故障恢复</a></li>
+        </ol>
       </nav>
 
       <h2 id="核心结论"><a class="heading-anchor" href="#核心结论" aria-label="链接到本节">#</a>核心结论</h2>
@@ -721,6 +745,11 @@ final class ServiceDeskAssistant {
         <li><a href="https://genai.owasp.org/" target="_blank" rel="noopener noreferrer">OWASP GenAI Security Project</a>：生成式 AI 与 Agentic 应用安全资料入口，覆盖敏感数据与记忆 / 上下文风险。</li>
         <li><a href="https://genai.owasp.org/llmrisk/llm022025-sensitive-information-disclosure/" target="_blank" rel="noopener noreferrer">OWASP LLM02:2025 — Sensitive Information Disclosure</a>：敏感数据清洗、输入校验、数据源限制、最小权限与访问控制建议。</li>
       </ul>
+
+      <nav class="pager course-pager" aria-label="课程上一篇和下一篇">
+        <a class="pager-link prev" href="2026-07-27-02-模型API结构化输出与Tool-Calling.html"><small>上一篇</small><span>02 模型 API、结构化输出与 Tool Calling</span></a>
+        <a class="pager-link next" href="2026-07-27-04-Agent知识检索与RAG.html"><small>下一篇</small><span>04 Agent 知识检索与 RAG</span></a>
+      </nav>
     </article>
     <footer class="article-footer">
       <div class="source-path">HTML 页面：<code>notes/agent/2026-07-27-03-Agent状态上下文与记忆.html</code></div>
@@ -733,6 +762,7 @@ final class ServiceDeskAssistant {
   <aside class="toc-sidebar">
     <div class="toc-title">本页目录</div>
     <nav class="toc-nav" aria-label="页内目录">
+      <a href="#课程导航">课程导航</a>
       <a href="#核心结论">核心结论</a>
       <a href="#学习目标与本阶段产物">学习目标与本阶段产物</a>
       <a href="#四类信息不要混在一起">四类信息不要混在一起</a>

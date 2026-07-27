@@ -46,20 +46,52 @@
 
       <nav aria-label="本课快速目录">
         <strong>学习路径：</strong>
+        <a href="#课程导航">课程导航</a> ·
         <a href="#核心结论">核心结论</a> ·
         <a href="#学习目标与本阶段产物">目标与产物</a> ·
         <a href="#生产拓扑">生产拓扑</a> ·
+        <a href="#框架能力与业务责任">框架与业务责任</a> ·
         <a href="#同步异步与状态机">同步异步</a> ·
+        <a href="#状态与检查点纪律">状态与检查点</a> ·
         <a href="#超时重试熔断与背压">韧性</a> ·
+        <a href="#韧性组件的组合边界">韧性组件边界</a> ·
         <a href="#可观测性">可观测性</a> ·
+        <a href="#关联字段与基数">关联字段与基数</a> ·
+        <a href="#业务指标与告警">业务指标与告警</a> ·
+        <a href="#spring-ai-2-0-观测名称">Spring AI 观测名称</a> ·
+        <a href="#vectorstore-trace-内容清洗">VectorStore Trace 清洗</a> ·
+        <a href="#vectorstore-convention-接线">Convention 接线</a> ·
+        <a href="#vectorstore-canary-回归">Canary 回归</a> ·
+        <a href="#trace-父子关系">Trace 父子关系</a> ·
         <a href="#幂等与一致性">幂等</a> ·
         <a href="#故障恢复与安全重放">恢复</a> ·
         <a href="#java-21-运行模型">Java 21</a> ·
         <a href="#spring-boot-与-spring-ai">Spring</a> ·
+        <a href="#安全配置基线">安全配置基线</a> ·
+        <a href="#controller-service-与-observationregistry">Controller、Service 与 ObservationRegistry</a> ·
+        <a href="#worker-观测与内容最小化">Worker 观测</a> ·
         <a href="#企业服务台案例">案例</a> ·
         <a href="#生产检查与故障演练">演练</a> ·
+        <a href="#生产就绪清单">生产就绪清单</a> ·
+        <a href="#故障演练矩阵">故障演练矩阵</a> ·
         <a href="#练习与验收">练习与验收</a> ·
+        <a href="#练习">练习</a> ·
+        <a href="#验收标准">验收标准</a> ·
         <a href="#参考资料">参考资料</a>
+      </nav>
+
+      <h2 id="课程导航"><a class="heading-anchor" href="#课程导航" aria-label="链接到本节">#</a>课程导航</h2>
+      <nav class="course-nav" aria-labelledby="课程导航">
+        <ol class="course-nav-list">
+          <li class="course-nav-item"><a href="2026-07-27-01-Agent基础概念与边界.html">01 Agent 基础概念与边界</a></li>
+          <li class="course-nav-item"><a href="2026-07-27-02-模型API结构化输出与Tool-Calling.html">02 模型 API、结构化输出与 Tool Calling</a></li>
+          <li class="course-nav-item"><a href="2026-07-27-03-Agent状态上下文与记忆.html">03 Agent 状态、上下文与记忆</a></li>
+          <li class="course-nav-item"><a href="2026-07-27-04-Agent知识检索与RAG.html">04 Agent 知识检索与 RAG</a></li>
+          <li class="course-nav-item"><a href="2026-07-27-05-Agent规划反思与任务分解.html">05 Agent 规划、反思与任务分解</a></li>
+          <li class="course-nav-item"><a href="2026-07-27-06-多Agent协作与编排.html">06 多 Agent 协作与编排</a></li>
+          <li class="course-nav-item"><a href="2026-07-27-07-Agent评测安全权限与成本控制.html">07 Agent 评测、安全、权限与成本控制</a></li>
+          <li class="course-nav-item"><span class="course-nav-current" aria-current="page">08 Java Agent 生产部署、可观测性与故障恢复</span></li>
+        </ol>
       </nav>
 
       <h2 id="核心结论"><a class="heading-anchor" href="#核心结论" aria-label="链接到本节">#</a>核心结论</h2>
@@ -894,6 +926,11 @@ final class AgentRunService {
       </ul>
 
       <p><strong>课程收束：</strong>前七课定义了 Agent 应该知道什么、能做什么、如何计划协作以及怎样受治理；本课把这些契约放进持久 run、明确事务边界、有限资源、可观测信号和安全恢复流程。生产级的核心不是让 Agent 永不失败，而是让失败可分类、影响被限制、状态可证明、恢复不扩权、每个副作用都有负责人。</p>
+
+      <nav class="pager course-pager" aria-label="课程上一篇和下一篇">
+        <a class="pager-link prev" href="2026-07-27-07-Agent评测安全权限与成本控制.html"><small>上一篇</small><span>07 Agent 评测、安全、权限与成本控制</span></a>
+        <a class="pager-link next" href="2026-07-27-Agent开发学习主目录.html"><small>下一步：课程总结与实践入口</small><span>Agent 开发学习主目录</span></a>
+      </nav>
     </article>
   </main>
 </div>
