@@ -141,15 +141,88 @@ function extractDocument(outputPath, html) {
   };
 }
 
-function documentNavigation(documents, currentDocument) {
-  return documents
+function categoryId(category) {
+  const slug = String(category)
+    .normalize("NFKC")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s/]+/g, "-")
+    .replace(/[^\p{Letter}\p{Number}-]+/gu, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  return `category-${slug || "other"}`;
+}
+
+function documentsInCategory(documents, category) {
+  return documents.filter((document) => document.category === category);
+}
+
+function categoryMainDocument(documents) {
+  return documents.find((document) => /主目录|总览/.test(document.title)) ?? null;
+}
+
+function documentNavigation(categoryDocuments, currentDocument) {
+  return categoryDocuments
     .map((document) => {
       const href = relativeUrl(currentDocument.outputPath, document.outputPath);
       const active =
         document.outputPath === currentDocument.outputPath ? " is-active" : "";
-      return `<a class="doc-nav-item${active}" href="${attributeEscape(href)}"><span>${htmlEscape(document.title)}</span><small>${htmlEscape(document.category)}</small></a>`;
+      const current =
+        document.outputPath === currentDocument.outputPath
+          ? ' aria-current="page"'
+          : "";
+      return `<a class="doc-nav-item${active}" href="${attributeEscape(href)}"${current}><span>${htmlEscape(document.title)}</span>${document.date ? `<small>${htmlEscape(document.date)}</small>` : ""}</a>`;
     })
     .join("");
+}
+
+function sidebarChrome(documents, currentDocument) {
+  const categoryDocuments = documentsInCategory(
+    documents,
+    currentDocument.category,
+  );
+  const homeHref = relativeUrl(
+    currentDocument.outputPath,
+    path.join(publicDir, "index.html"),
+  );
+  const categoryHref = `${homeHref}#${categoryId(currentDocument.category)}`;
+  const mainDocument = categoryMainDocument(categoryDocuments);
+  const featured =
+    mainDocument === null
+      ? ""
+      : `\n      <a class="sidebar-featured-link" href="${attributeEscape(relativeUrl(currentDocument.outputPath, mainDocument.outputPath))}">分类主目录<span>${htmlEscape(mainDocument.title)}</span></a>`;
+
+  return `<div class="sidebar-header">
+      <a class="sidebar-home-link" href="${attributeEscape(homeHref)}"><span aria-hidden="true">←</span>知识库首页</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <div class="sidebar-category-summary">
+      <span class="eyebrow">当前分类</span>
+      <a class="sidebar-category-link" href="${attributeEscape(categoryHref)}">
+        <strong>${htmlEscape(currentDocument.category)}</strong>
+        <small>${categoryDocuments.length} 篇文档</small>
+      </a>${featured}
+    </div>`;
+}
+
+function tableOfContents(document) {
+  const content =
+    document.headings.length === 0
+      ? '<p class="toc-empty">本页暂无分节</p>'
+      : `<ol class="toc-list">${document.headings
+          .map(
+            (heading) =>
+              `<li class="toc-level-${heading.level}"><a href="#${attributeEscape(heading.id)}">${htmlEscape(heading.text)}</a></li>`,
+          )
+          .join("")}</ol>`;
+
+  return `<aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      ${content}
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>`;
 }
 
 function pager(documents, currentIndex, currentDocument) {
@@ -191,12 +264,32 @@ function ensureMeta(html, name, value) {
 
 function updateDocumentHtml(document, documents, currentIndex) {
   let updated = document.html;
+  const categoryDocuments = documentsInCategory(
+    documents,
+    document.category,
+  );
   updated = ensureMeta(updated, "study-category", document.category);
   updated = ensureMeta(updated, "study-date", document.date);
   updated = updated.replace(
-    /<nav class="doc-nav" aria-label="文档列表">[\s\S]*?<\/nav>/i,
-    `<nav class="doc-nav" aria-label="文档列表">\n      ${documentNavigation(documents, document)}\n    </nav>`,
+    /<div class="sidebar-header">[\s\S]*?<\/div>(?:\s*<div class="sidebar-category-summary">[\s\S]*?<\/div>)?/i,
+    sidebarChrome(documents, document),
   );
+  updated = updated.replace(
+    /placeholder="筛选文档…"/i,
+    'placeholder="筛选当前分类…"',
+  );
+  updated = updated.replace(
+    /<nav class="doc-nav" aria-label="[^"]*">[\s\S]*?<\/nav>/i,
+    `<nav class="doc-nav" aria-label="当前分类文档">\n      ${documentNavigation(categoryDocuments, document)}\n    </nav>`,
+  );
+  const toc = tableOfContents(document);
+  const existingToc = /<aside class="toc-sidebar">[\s\S]*?<\/aside>/i;
+  updated = existingToc.test(updated)
+    ? updated.replace(existingToc, toc)
+    : updated.replace(
+        /(<\/main>\s*)(<\/div>)/i,
+        `$1  ${toc}\n$2`,
+      );
   const footer = articleFooter(documents, currentIndex, document);
   const existingFooter =
     /^[ \t]*<footer class="article-footer">[\s\S]*?<\/footer>/im;
@@ -222,9 +315,23 @@ function renderIndex(documents) {
     0,
   );
 
+  const categoryEntryHtml = [...categories.entries()]
+    .map(([category, categoryDocuments]) => {
+      const sectionCount = categoryDocuments.reduce(
+        (sum, document) => sum + document.sectionCount,
+        0,
+      );
+      return `<a class="category-entry-card" href="#${attributeEscape(categoryId(category))}">
+      <span class="eyebrow">COLLECTION</span>
+      <strong>${htmlEscape(category)}</strong>
+      <span>${categoryDocuments.length} 篇文档 · ${sectionCount} 个章节</span>
+    </a>`;
+    })
+    .join("");
+
   const categoryHtml = [...categories.entries()]
     .map(
-      ([category, categoryDocuments]) => `<section class="library-section">
+      ([category, categoryDocuments]) => `<section class="library-section" id="${attributeEscape(categoryId(category))}">
   <div class="section-heading">
     <div>
       <span class="eyebrow">COLLECTION</span>
@@ -301,6 +408,9 @@ function renderIndex(documents) {
     </label>
     <p class="search-status" aria-live="polite">显示全部 ${documents.length} 篇文档</p>
   </section>
+  <nav class="category-entry-grid" aria-label="知识分类">
+    ${categoryEntryHtml}
+  </nav>
   <div class="no-results" hidden>
     <h2>没有找到匹配文档</h2>
     <p>换一个关键词，或清空搜索框查看全部内容。</p>
