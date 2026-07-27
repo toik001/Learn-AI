@@ -88,6 +88,25 @@ for (const phrase of [
   assert.ok(note.includes(phrase), `缺少必讲内容：${phrase}`);
 }
 
+for (const implementationContract of [
+  /MAX_QUERY_CHARS\s*=\s*500/,
+  /ledger\.recordConflicts\(assessment\.conflicts\(\)\)/,
+  /ledger\.hasConflicts\(\)/,
+  /ledger\.covers\(request\.requiredClaimIds\(\)\)/,
+  /final class EvidenceProjection/,
+  /\.options\(ChatOptions\.builder\(\)\s*\.maxTokens\(/,
+]) {
+  assert.match(
+    note,
+    implementationContract,
+    `Java / Spring AI 示例未兑现实现契约：${implementationContract}`,
+  );
+}
+assert.ok(
+  (note.match(/RemainingBudget\.from\(/g) ?? []).length >= 4,
+  "必须在 planner 前后及每次查询前后重新计算预算",
+);
+
 assert.match(
   note,
   /class="agent-call-flow"[^>]*role="img"[^>]*aria-label="[^"]+"/,
@@ -114,6 +133,18 @@ for (const [, attributes] of externalLinks) {
     /\brel="noopener noreferrer"/,
     "外链缺少 rel=noopener noreferrer",
   );
+}
+assert.ok(
+  note.includes("检索于 <strong>2026-07-27</strong>"),
+  "参考资料必须记录检索日期",
+);
+for (const officialSource of [
+  "https://learn.microsoft.com/",
+  "https://arxiv.org/",
+  "https://docs.langchain.com/",
+  "https://docs.spring.io/",
+]) {
+  assert.ok(note.includes(officialSource), `缺少一手来源域名：${officialSource}`);
 }
 
 const noteFileName = path.basename(notePath);

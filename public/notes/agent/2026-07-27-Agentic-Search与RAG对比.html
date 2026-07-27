@@ -263,6 +263,16 @@ record Evidence(
         Set&lt;String&gt; supports,
         Map&lt;String, Object&gt; metadata) {}
 
+record Conflict(
+        String claimId,
+        String leftEvidenceId,
+        String rightEvidenceId,
+        String reason) {}
+
+record EvidenceAssessment(
+        List&lt;Evidence&gt; accepted,
+        List&lt;Conflict&gt; conflicts) {}
+
 record SearchOutcome(
         String answer,
         List&lt;Evidence&gt; evidence,
@@ -325,6 +335,13 @@ interface SearchGateway {
             Duration timeout);
 }
 
+interface EvidenceEvaluator {
+    EvidenceAssessment assess(
+            List&lt;Evidence&gt; existing,
+            List&lt;Evidence&gt; candidates,
+            Set&lt;String&gt; requiredClaimIds);
+}
+
 interface AnswerPublisher {
     SearchOutcome abstain(
             List&lt;Evidence&gt; evidence,
@@ -336,10 +353,13 @@ interface AnswerPublisher {
             Set&lt;String&gt; requiredClaimIds,
             EvidenceLedger ledger,
             int rounds,
-            int queriesUsed);
+            int queriesUsed,
+            RemainingBudget remaining);
 }
 
 final class DecisionValidator {
+    static final int MAX_QUERY_CHARS = 500;
+
     private DecisionValidator() {}
 
     static void validate(
@@ -361,6 +381,7 @@ final class DecisionValidator {
         for (SearchQuery query : queries) {
             if (!allowedSources.contains(query.source())
                     || query.text() == null || query.text().isBlank()
+                    || query.text().length() &gt; MAX_QUERY_CHARS
                     || query.evidenceGap() == null || query.evidenceGap().isBlank()) {
                 throw new IllegalArgumentException("invalid search query");
             }
@@ -375,7 +396,7 @@ import java.util.Set;
 
 public final class EvidenceLedger {
     private final Map&lt;String, Evidence&gt; accepted = new java.util.LinkedHashMap&lt;&gt;();
-    private final List&lt;String&gt; conflicts = new java.util.ArrayList&lt;&gt;();
+    private final List&lt;Conflict&gt; conflicts = new java.util.ArrayList&lt;&gt;();
 
     public void accept(Evidence evidence, Set&lt;String&gt; allowedSources) {
         if (!allowedSources.contains(evidence.source())) {
@@ -387,8 +408,16 @@ public final class EvidenceLedger {
         accepted.putIfAbsent(evidence.id(), evidence);
     }
 
+    public void recordConflicts(List&lt;Conflict&gt; detected) {
+        conflicts.addAll(detected);
+    }
+
     public List&lt;Evidence&gt; snapshot() {
         return List.copyOf(accepted.values());
+    }
+
+    public boolean hasConflicts() {
+        return !conflicts.isEmpty();
     }
 
     public boolean covers(Set&lt;String&gt; requiredClaimIds) {
@@ -408,6 +437,7 @@ import java.util.Set;
 public final class AgenticSearchService {
     private final SearchPlanner planner;
     private final SearchGateway gateway;
+    private final EvidenceEvaluator evaluator;
     private final AnswerPublisher publisher;
     private final UsageMeter usageMeter;
     private final java.time.Clock clock;
@@ -415,11 +445,13 @@ public final class AgenticSearchService {
     public AgenticSearchService(
             SearchPlanner planner,
             SearchGateway gateway,
+            EvidenceEvaluator evaluator,
             AnswerPublisher publisher,
             UsageMeter usageMeter,
             java.time.Clock clock) {
         this.planner = planner;
         this.gateway = gateway;
+        this.evaluator = evaluator;
         this.publisher = publisher;
         this.usageMeter = usageMeter;
         this.clock = clock;
@@ -434,41 +466,89 @@ public final class AgenticSearchService {
         int queriesUsed = 0;
 
         for (int round = 1; round &lt;= budget.maxRounds(); round++) {
-            RemainingBudget remaining = RemainingBudget.from(
+            RemainingBudget beforePlanning = RemainingBudget.from(
                     budget, queriesUsed, startedAt, clock.instant(), usageMeter.snapshot());
-            if (remaining.exhausted(budget)) {
+            if (beforePlanning.exhausted(budget)) {
                 return publisher.abstain(ledger.snapshot(), "BUDGET_EXHAUSTED", round, queriesUsed);
+            }
+            if (ledger.hasConflicts()) {
+                return publisher.abstain(ledger.snapshot(), "HUMAN_ESCALATION", round, queriesUsed);
+            }
+            if (ledger.covers(request.requiredClaimIds())) {
+                return publisher.publishIfSupported(
+                        request.requiredClaimIds(), ledger, round, queriesUsed, beforePlanning);
+            }
+            if (ledger.snapshot().size() &gt;= budget.maxEvidence()) {
+                return publisher.abstain(
+                        ledger.snapshot(), "EVIDENCE_BUDGET_EXHAUSTED", round, queriesUsed);
             }
 
             SearchDecision decision = planner.next(
-                    request.goal(), ledger.snapshot(), remaining, allowedSources);
-            DecisionValidator.validate(decision, allowedSources, remaining);
+                    request.goal(), ledger.snapshot(), beforePlanning, allowedSources);
+
+            RemainingBudget afterPlanning = RemainingBudget.from(
+                    budget, queriesUsed, startedAt, clock.instant(), usageMeter.snapshot());
+            if (afterPlanning.exhausted(budget)) {
+                return publisher.abstain(ledger.snapshot(), "BUDGET_EXHAUSTED", round, queriesUsed);
+            }
+            DecisionValidator.validate(decision, allowedSources, afterPlanning);
 
             if (decision.type() == DecisionType.ESCALATE) {
                 return publisher.abstain(ledger.snapshot(), "HUMAN_ESCALATION", round, queriesUsed);
             }
             if (decision.type() == DecisionType.ANSWER) {
+                if (ledger.hasConflicts() || !ledger.covers(request.requiredClaimIds())) {
+                    return publisher.abstain(
+                            ledger.snapshot(), "INSUFFICIENT_OR_CONFLICTING_EVIDENCE",
+                            round, queriesUsed);
+                }
                 return publisher.publishIfSupported(
-                        request.requiredClaimIds(), ledger, round, queriesUsed);
+                        request.requiredClaimIds(), ledger, round, queriesUsed, afterPlanning);
             }
 
             for (SearchQuery query : decision.queries()) {
-                if (++queriesUsed &gt; budget.maxQueries()) {
+                RemainingBudget beforeQuery = RemainingBudget.from(
+                        budget, queriesUsed, startedAt, clock.instant(), usageMeter.snapshot());
+                if (beforeQuery.exhausted(budget)) {
                     return publisher.abstain(
-                            ledger.snapshot(), "QUERY_BUDGET_EXHAUSTED", round, queriesUsed - 1);
+                            ledger.snapshot(), "BUDGET_EXHAUSTED", round, queriesUsed);
                 }
+                queriesUsed++;
                 List&lt;Evidence&gt; hits = gateway.search(
-                        query, request.principal(), remaining.perQueryTimeout());
-                hits.stream()
+                        query, request.principal(), beforeQuery.perQueryTimeout());
+                EvidenceAssessment assessment = evaluator.assess(
+                        ledger.snapshot(), hits, request.requiredClaimIds());
+                ledger.recordConflicts(assessment.conflicts());
+                assessment.accepted().stream()
                         .limit(budget.maxEvidence() - ledger.snapshot().size())
                         .forEach(hit -&gt; ledger.accept(hit, allowedSources));
+
+                RemainingBudget afterQuery = RemainingBudget.from(
+                        budget, queriesUsed, startedAt, clock.instant(), usageMeter.snapshot());
+                if (afterQuery.exhausted(budget)) {
+                    return publisher.abstain(
+                            ledger.snapshot(), "BUDGET_EXHAUSTED", round, queriesUsed);
+                }
+                if (ledger.hasConflicts()) {
+                    return publisher.abstain(
+                            ledger.snapshot(), "HUMAN_ESCALATION", round, queriesUsed);
+                }
+                if (ledger.covers(request.requiredClaimIds())) {
+                    return publisher.publishIfSupported(
+                            request.requiredClaimIds(), ledger, round, queriesUsed, afterQuery);
+                }
+                if (ledger.snapshot().size() &gt;= budget.maxEvidence()) {
+                    return publisher.abstain(
+                            ledger.snapshot(), "EVIDENCE_BUDGET_EXHAUSTED", round, queriesUsed);
+                }
             }
         }
         return publisher.abstain(
                 ledger.snapshot(), "ROUND_BUDGET_EXHAUSTED", budget.maxRounds(), queriesUsed);
     }
 }</code></pre>
-      <p><code>SearchGateway</code> 必须从服务端认证态获得 tenant / principal，不能接受模型在 <code>SearchQuery</code> 中声明权限。生产实现还应记录每个 planner 与 tool span、模型版本、prompt 版本、数据源 snapshot、缓存命中、token、费用和 stopReason。</p>
+      <p><code>SearchGateway</code> 必须从服务端认证态获得 tenant / principal，不能接受模型在 <code>SearchQuery</code> 中声明权限。<code>EvidenceEvaluator</code> 应由领域规则、来源版本和可测试的矛盾判据实现，而不是让同一个 planner 凭主观感觉决定；每批结果后，Java 先检查冲突与必要声明覆盖，再决定发布、升级或继续。</p>
+      <p><code>UsageMeter</code> 的模型和工具适配器必须在调用返回时同步记账；循环在 planner 前后、每次查询前后都重算预算，并把当时剩余时间作为本次 gateway timeout。这样顺序查询不会复用过期超时。生产实现还应记录每个 planner 与 tool span、模型版本、prompt 版本、数据源 snapshot、缓存命中、token、费用和 stopReason。若费用必须做到调用前绝不超额，还要在适配器中按最坏输入 / 输出费用做原子 reservation，而不能只做事后计量。</p>
 
       <h2 id="spring-ai-实现"><a class="heading-anchor" href="#spring-ai-实现" aria-label="链接到本节">#</a>Spring AI 2.0.0：组合能力，而不是寻找魔法注解</h2>
       <p>Spring AI 官方为经典 RAG 提供模块化 Advisor，为工具提供 Tool Calling 生命周期，并用 <code>ChatClient</code> 提供结构化输出。它们是构建块；本例故意让应用层持有 Agentic Search 循环、证据账本和预算，避免把生产控制边界交给模型或特定供应商。</p>
@@ -503,11 +583,19 @@ public final class AgenticSearchService {
   &lt;dependency&gt;
     &lt;groupId&gt;org.springframework.ai&lt;/groupId&gt;
     &lt;artifactId&gt;spring-ai-vector-store-advisor&lt;/artifactId&gt;
-  &lt;/dependency&gt;
+      &lt;/dependency&gt;
 &lt;/dependencies&gt;</code></pre>
 
       <h3 id="spring-ai-planner">用 ChatClient 产生候选计划</h3>
-      <pre><code>@Component
+      <pre><code>import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.prompt.ChatOptions;
+import org.springframework.stereotype.Component;
+
+@Component
 final class SpringAiSearchPlanner implements SearchPlanner {
     private final ChatClient chatClient;
 
@@ -531,6 +619,10 @@ final class SpringAiSearchPlanner implements SearchPlanner {
             RemainingBudget budget,
             Set&lt;String&gt; allowedSources) {
         return chatClient.prompt()
+                .options(ChatOptions.builder()
+                        .maxTokens(Math.toIntExact(
+                                Math.min(budget.modelTokensLeft(), 1_024L)))
+                        .build())
                 .user(spec -&gt; spec.text("""
                         Goal: {goal}
                         Allowed sources: {sources}
@@ -545,8 +637,23 @@ final class SpringAiSearchPlanner implements SearchPlanner {
                 .call()
                 .entity(SearchDecision.class);
     }
+}
+
+final class EvidenceProjection {
+    private EvidenceProjection() {}
+
+    static List&lt;Map&lt;String, Object&gt;&gt; safeSummary(List&lt;Evidence&gt; evidence) {
+        return evidence.stream()
+                .map(item -&gt; Map.&lt;String, Object&gt;of(
+                        "id", item.id(),
+                        "source", item.source(),
+                        "title", item.title(),
+                        "observedAt", item.observedAt().toString(),
+                        "supports", item.supports()))
+                .toList();
+    }
 }</code></pre>
-      <p><code>.entity(SearchDecision.class)</code> 解决“把响应映射为 Java 类型”，不等于响应已经可信。紧接着仍要执行 <code>DecisionValidator</code>，拒绝未知 source、空 evidenceGap、超量查询和不合法状态转换。</p>
+      <p><code>.entity(SearchDecision.class)</code> 解决“把响应映射为 Java 类型”，不等于响应已经可信。紧接着仍要执行 <code>DecisionValidator</code>，拒绝未知 source、空 evidenceGap、超过 500 字符的查询、超量查询，以及非 <code>SEARCH</code> 决策携带查询等非法组合。<code>ChatOptions.maxTokens</code> 用剩余 token 约束本次 planner 输出；模型客户端自身还要配置网络超时，调用返回后由搜索循环再次核验累计用量。</p>
 
       <h3 id="经典-rag-与-agentic-组合">经典 RAG 与 Agentic Search 如何组合</h3>
       <pre><code>@Bean
