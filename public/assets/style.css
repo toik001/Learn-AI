@@ -782,7 +782,7 @@ button {
   line-height: 1;
 }
 
-.agent-step:not(:nth-child(4n))::after {
+.agent-step:nth-child(-n + 3)::after {
   content: "→";
   top: 50%;
   right: -27px;
@@ -794,6 +794,33 @@ button {
   right: 50%;
   bottom: -28px;
   transform: translateX(50%);
+}
+
+.agent-step:nth-child(5) {
+  grid-column: 4;
+  grid-row: 2;
+}
+
+.agent-step:nth-child(6) {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+.agent-step:nth-child(7) {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.agent-step:nth-child(8) {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.agent-step:nth-child(n + 5):nth-child(-n + 7)::after {
+  content: "←";
+  top: 50%;
+  left: -27px;
+  transform: translateY(-50%);
 }
 
 .guardrail-band {
@@ -1094,11 +1121,17 @@ button {
     gap: 30px;
   }
 
-  .agent-step:not(:nth-child(8))::after {
+  .agent-call-flow .agent-step {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .agent-call-flow .agent-step:not(:nth-child(8))::after {
     content: "↓";
     top: auto;
     right: 50%;
     bottom: -25px;
+    left: auto;
     transform: translateX(50%);
   }
 

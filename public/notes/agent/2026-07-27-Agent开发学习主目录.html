@@ -114,12 +114,17 @@
       <pre><code class="language-java">import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 record AgentRequest(String goal, String userId) {}
 record ToolCall(String name, Map&lt;String, Object&gt; arguments) {}
 record ToolResult(boolean success, String observation) {}
-record ModelDecision(String finalAnswer, ToolCall toolCall) {
-    boolean isFinal() { return finalAnswer != null; }
+sealed interface ModelDecision permits FinalAnswer, ToolRequest {}
+record FinalAnswer(String text) implements ModelDecision {
+    FinalAnswer { Objects.requireNonNull(text, "text"); }
+}
+record ToolRequest(ToolCall toolCall) implements ModelDecision {
+    ToolRequest { Objects.requireNonNull(toolCall, "toolCall"); }
 }
 
 interface AgentModel {
@@ -139,6 +144,8 @@ final class AgentState {
 
 final class AgentRuntime {
     private static final int MAX_STEPS = 8;
+    private static final String SAFE_TOOL_FAILURE_MESSAGE =
+            "暂时无法取得所需信息，请稍后重试或联系人工支持。";
     private final AgentModel model;
     private final ToolRegistry tools;
 
@@ -151,24 +158,30 @@ final class AgentRuntime {
         AgentState state = new AgentState();
         for (int step = 0; step &lt; MAX_STEPS; step++) {
             ModelDecision decision = model.decide(request, state, tools.allowedToolNames());
-            if (decision.isFinal()) return decision.finalAnswer();
-            ToolCall call = decision.toolCall();
-            if (call == null || !tools.allowedToolNames().contains(call.name())) {
-                return "无法执行该请求：工具不在白名单中。";
+            switch (decision) {
+                case FinalAnswer answer -&gt; {
+                    return answer.text();
+                }
+                case ToolRequest toolRequest -&gt; {
+                    ToolCall call = toolRequest.toolCall();
+                    if (!tools.allowedToolNames().contains(call.name())) {
+                        return "无法执行该请求：工具不在白名单中。";
+                    }
+                    ToolResult result = tools.execute(call, request.userId());
+                    state.addObservation(result.observation()); // 仅供内部状态或私有 trace 使用
+                    if (!result.success()) return SAFE_TOOL_FAILURE_MESSAGE;
+                }
             }
-            ToolResult result = tools.execute(call, request.userId());
-            state.addObservation(result.observation());
-            if (!result.success()) return "工具执行失败，已安全降级：" + result.observation();
         }
         return "已达到最多 8 步限制；请缩小目标或由人工继续处理。";
     }
 }</code></pre>
-      <p>最小代码刻意省略了真实的超时、预算计量、JSON Schema 校验、审批和持久化；它展示的边界是：模型决定“请求什么”，运行时决定“是否以及如何执行”。</p>
+      <p>最小代码刻意省略了真实的超时、预算计量、JSON Schema 校验、审批和持久化；它展示的边界是：模型决定“请求什么”，运行时决定“是否以及如何执行”。工具返回的 Observation 可能包含内部诊断、敏感信息或不可信外部文本，只能保留在 Agent 内部状态或经过访问控制的私有日志与 trace 中。面向用户的公开错误文案必须来自固定白名单；示例中的 <code>SAFE_TOOL_FAILURE_MESSAGE</code> 不拼接 Observation，私有诊断与公开错误文本必须严格分离。</p>
 
       <h2 id="主学习路线"><a class="heading-anchor" href="#主学习路线" aria-label="链接到本节">#</a>主学习路线</h2>
       <div class="learning-roadmap">
         <section class="roadmap-stage"><h3>1. Agent 基础概念与边界 <span class="status-tag">待建设</span></h3><p><strong>目标：</strong>区分 Agent、聊天、工作流与 Agentic System。<br><strong>关键问题：</strong>何时不该用 Agent？<br><strong>Java 实践：</strong>为需求写出目标、状态、工具、护栏四栏设计。<br><strong>验收：</strong>能解释一次工具调用为何必须由应用执行。</p></section>
-        <section class="roadmap-stage"><h3>2. 模型 API、结构化输出与 Tool Calling <span class="status-tag">待建设</span></h3><p><strong>目标：</strong>让模型输出可校验的决策。<br><strong>关键问题：</strong>如何区分文本答复和工具请求？<br><strong>Java 实践：</strong>用 record 表达 <code>ModelDecision</code> 与工具参数。<br><strong>验收：</strong>拒绝未知工具与不合法参数。</p></section>
+        <section class="roadmap-stage"><h3>2. 模型 API、结构化输出与 Tool Calling <span class="status-tag">待建设</span></h3><p><strong>目标：</strong>让模型输出可校验的决策。<br><strong>关键问题：</strong>如何区分文本答复和工具请求？<br><strong>Java 实践：</strong>用 sealed interface 与 record 表达互斥的 <code>ModelDecision</code> 分支和工具参数。<br><strong>验收：</strong>拒绝未知工具与不合法参数。</p></section>
         <section class="roadmap-stage"><h3>3. 状态、上下文与记忆 <span class="status-tag">待建设</span></h3><p><strong>目标：</strong>管理会话事实、Observation 与长期记忆。<br><strong>关键问题：</strong>哪些信息可进上下文，哪些必须脱敏或过期？<br><strong>Java 实践：</strong>实现可序列化的 <code>AgentState</code>。<br><strong>验收：</strong>中断后能恢复且不泄露敏感数据。</p></section>
         <section class="roadmap-stage"><h3>4. 知识检索与 RAG <span class="status-tag">待建设</span></h3><p><strong>目标：</strong>把检索结果作为受引用约束的上下文。<br><strong>关键问题：</strong>检索失败时如何诚实降级？<br><strong>Java 实践：</strong>实现检索工具及来源记录。<br><strong>验收：</strong>答案能追溯到召回文档。</p></section>
         <section class="roadmap-stage"><h3>5. 规划、反思与任务分解 <span class="status-tag">待建设</span></h3><p><strong>目标：</strong>将复杂目标拆为可验证步骤。<br><strong>关键问题：</strong>反思何时有用，何时只会增加成本？<br><strong>Java 实践：</strong>加入计划状态与步骤预算。<br><strong>验收：</strong>失败步骤可定位、可重试或可转人工。</p></section>
@@ -199,8 +212,13 @@ final class AgentRuntime {
         <li><a href="https://www.nist.gov/itl/ai-risk-management-framework" target="_blank" rel="noopener noreferrer">NIST — AI Risk Management Framework</a>：治理、风险管理与可信 AI 的权威框架。</li>
       </ul>
     </article>
-    <nav class="pager" aria-label="文档导航"><a href="../../index.html">← 返回知识库首页</a><span>后续专题：待建设</span></nav>
-    <p class="source-path">来源路径：<code>public/notes/agent/2026-07-27-Agent开发学习主目录.html</code></p>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/agent/2026-07-27-Agent开发学习主目录.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <span class="pager-spacer"></span>
+        <a class="pager-link next" href="../codex/2026-07-24-AI开发工作流选型与小团队沉淀指南.html"><small>下一篇</small><span>AI 开发工作流选型与小团队沉淀指南</span></a>
+      </nav>
+    </footer>
   </main>
   <aside class="toc-sidebar">
     <div class="toc-title">本页目录</div>
