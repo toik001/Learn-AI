@@ -54,6 +54,7 @@
         <dt>Agentic System</dt>
         <dd>由一个或多个 Agent、工具、状态、控制逻辑与人类协作组成的完整系统。</dd>
       </dl>
+      <p>上述 Software Agent 边界与 NIST CSRC 术语表所述的 Agent 一致：软件程序能够与环境交互、接收信息，并为外部指定目标采取自主行动。本文在此基础上，将决策策略使用机器学习、生成式模型或大语言模型的情况分别称为 AI Agent 与 LLM Agent。<a href="https://csrc.nist.gov/glossary/term/agent" target="_blank" rel="noopener noreferrer">NIST CSRC Glossary — Agent</a></p>
       <p>这些是用于工程沟通的厂商无关工作定义。实现时应把“模型能提出请求”与“系统允许执行请求”分开：Spring AI 的官方说明同样强调，模型只能请求工具调用，客户端应用负责执行并回传结果。<a href="https://docs.spring.io/spring-ai/reference/api/tools.html" target="_blank" rel="noopener noreferrer">Spring AI Tool Calling</a></p>
 
       <h2 id="agent-不是什么"><a class="heading-anchor" href="#agent-不是什么" aria-label="链接到本节">#</a>Agent 不是什么</h2>
@@ -191,6 +192,7 @@ final class AgentRuntime {
       <h2 id="参考资料"><a class="heading-anchor" href="#参考资料" aria-label="链接到本节">#</a>参考资料</h2>
       <p>以下均为一手论文、标准机构或项目官方文档，检索于 2026-07-27：</p>
       <ul>
+        <li><a href="https://csrc.nist.gov/glossary/term/agent" target="_blank" rel="noopener noreferrer">NIST CSRC Glossary — Agent</a>：NIST AI 100-2e2025 所收录的 Agent 定义，说明软件程序与环境交互、接收信息并为外部目标采取自主行动。</li>
         <li><a href="https://arxiv.org/abs/2210.03629" target="_blank" rel="noopener noreferrer">Yao et al. — ReAct: Synergizing Reasoning and Acting in Language Models</a>：交错 Reasoning 与 Action，并使用环境反馈更新任务轨迹。</li>
         <li><a href="https://docs.spring.io/spring-ai/reference/api/tools.html" target="_blank" rel="noopener noreferrer">Spring AI — Tool Calling</a>：Java/Spring 工具定义、调用生命周期与应用侧执行责任。</li>
         <li><a href="https://docs.langchain4j.dev/tutorials/tools/" target="_blank" rel="noopener noreferrer">LangChain4j — Tools (Function Calling)</a>：Java 工具调用的官方教程与实现入口。</li>
