@@ -747,6 +747,108 @@ button {
   background: var(--surface);
 }
 
+.agent-call-flow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 34px 34px;
+  margin: 24px 0;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.agent-step {
+  position: relative;
+  display: grid;
+  min-height: 72px;
+  place-items: center;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-muted);
+  color: var(--text);
+  font-weight: 720;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.agent-step::after {
+  position: absolute;
+  z-index: 1;
+  color: var(--accent);
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.agent-step:not(:nth-child(4n))::after {
+  content: "→";
+  top: 50%;
+  right: -27px;
+  transform: translateY(-50%);
+}
+
+.agent-step:nth-child(4)::after {
+  content: "↓";
+  right: 50%;
+  bottom: -28px;
+  transform: translateX(50%);
+}
+
+.guardrail-band {
+  grid-column: 1 / -1;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.learning-roadmap {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.roadmap-stage {
+  min-width: 0;
+  padding: 19px 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.roadmap-stage h3 {
+  margin: 0 0 10px;
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+.roadmap-stage p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 14px;
+}
+
+.status-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 7px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .markdown-body table {
   width: 100%;
   border-collapse: collapse;
@@ -985,6 +1087,23 @@ button {
 
   .article-column {
     padding-top: 36px;
+  }
+
+  .agent-call-flow {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+
+  .agent-step:not(:nth-child(8))::after {
+    content: "↓";
+    top: auto;
+    right: 50%;
+    bottom: -25px;
+    transform: translateX(50%);
+  }
+
+  .learning-roadmap {
+    grid-template-columns: 1fr;
   }
 }
 
