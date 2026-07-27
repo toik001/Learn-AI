@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>知识库分类导航优化设计</title>
+</head>
+<body>
+  <main>
+    <article>
+      <h1>知识库分类导航优化设计</h1>
+      <p>日期：2026-07-27</p>
+
+      <h2>目标</h2>
+      <ul>
+        <li>学习页面左侧只展示当前 <code>study-category</code> 下的文档。</li>
+        <li>侧栏固定保留知识库首页入口，并提供当前分类在首页中的锚点入口。</li>
+        <li>知识库首页以大分类卡片作为第一层入口，同时保留分类文档列表和全库搜索。</li>
+        <li>右侧页内目录统一结构；长标题自然换行，层级、活动项和移动端行为清晰。</li>
+      </ul>
+
+      <h2>信息架构</h2>
+      <h3>学习页面左侧</h3>
+      <ol>
+        <li>固定操作区：知识库首页。</li>
+        <li>分类摘要：当前分类名、文档数，以及指向首页对应分类区的链接。</li>
+        <li>当前分类文档列表：只包含同分类页面，当前文档用 <code>aria-current="page"</code> 标识。</li>
+        <li>分类内搜索：仅过滤当前分类文档。</li>
+      </ol>
+
+      <h3>知识库首页</h3>
+      <ol>
+        <li>英雄区和全库统计保持不变。</li>
+        <li>搜索区下方增加大分类入口网格；每张卡显示分类名、文档数、章节数和简短说明。</li>
+        <li>分类入口跳转至同页稳定锚点；锚点下继续展示该分类的全部文档卡。</li>
+        <li>搜索时分类入口卡保持可见，文档区按现有逻辑过滤。</li>
+      </ol>
+
+      <h3>右侧页内目录</h3>
+      <ol>
+        <li>生成器根据正文 <code>h2</code>～<code>h4</code> 统一生成 <code>ol.toc-list</code>。</li>
+        <li>每个条目带 <code>toc-level-2</code>～<code>toc-level-4</code>，沿用活动项观察逻辑。</li>
+        <li>链接使用 <code>white-space: normal</code>、<code>overflow-wrap: anywhere</code> 和合理行高。</li>
+        <li>目录容器独立滚动；窄屏继续隐藏右侧目录，不挤压正文。</li>
+      </ol>
+
+      <h2>实现边界</h2>
+      <ul>
+        <li><code>scripts/build-html-index.mjs</code> 是导航和首页结构的唯一生成源。</li>
+        <li><code>public/assets/style.css</code> 负责分类入口和目录可读性。</li>
+        <li><code>public/assets/app.js</code> 只保留搜索、移动侧栏和目录高亮交互，不承担分类权限或结构过滤。</li>
+        <li>分类依据页面元数据，不根据目录名或标题做启发式判断。</li>
+      </ul>
+
+      <h2>错误与退化处理</h2>
+      <ul>
+        <li>分类为空时沿用现有 fallback 分类；生成器仍必须输出可用分类入口。</li>
+        <li>正文没有 <code>h2</code>～<code>h4</code> 时输出“本页暂无分节”。</li>
+        <li>已有目录标记不一致时统一替换整个 <code>toc-sidebar</code>，避免新旧结构并存。</li>
+        <li>若页面不存在左右侧栏容器，生成器不猜测布局，只更新可识别区域。</li>
+      </ul>
+
+      <h2>验收与测试</h2>
+      <ul>
+        <li>每篇文档的左侧文档集合恰好等于当前分类集合，且只有一个活动项。</li>
+        <li>每篇文档可一跳返回知识库首页，并可跳到当前分类首页锚点。</li>
+        <li>首页大分类卡数量等于 manifest 中唯一分类数，链接锚点存在。</li>
+        <li>所有右侧目录使用统一列表结构，链接目标存在且长标题具备换行规则。</li>
+        <li>桌面与移动端无水平溢出；索引生成连续运行两次除时间戳外不产生变化。</li>
+      </ul>
+    </article>
+  </main>
+</body>
+</html>
