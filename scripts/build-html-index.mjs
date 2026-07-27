@@ -171,6 +171,13 @@ function pager(documents, currentIndex, currentDocument) {
       </nav>`;
 }
 
+function articleFooter(documents, currentIndex, currentDocument) {
+  return `    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>${htmlEscape(currentDocument.relativePath)}</code></div>
+      ${pager(documents, currentIndex, currentDocument)}
+    </footer>`;
+}
+
 function ensureMeta(html, name, value) {
   const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const existing = new RegExp(
@@ -190,14 +197,12 @@ function updateDocumentHtml(document, documents, currentIndex) {
     /<nav class="doc-nav" aria-label="文档列表">[\s\S]*?<\/nav>/i,
     `<nav class="doc-nav" aria-label="文档列表">\n      ${documentNavigation(documents, document)}\n    </nav>`,
   );
-  updated = updated.replace(
-    /<nav class="pager" aria-label="上一篇和下一篇">[\s\S]*?<\/nav>/i,
-    pager(documents, currentIndex, document),
-  );
-  updated = updated.replace(
-    /<div class="source-path">[\s\S]*?<\/div>/i,
-    `<div class="source-path">HTML 页面：<code>${htmlEscape(document.relativePath)}</code></div>`,
-  );
+  const footer = articleFooter(documents, currentIndex, document);
+  const existingFooter =
+    /^[ \t]*<footer class="article-footer">[\s\S]*?<\/footer>/im;
+  updated = existingFooter.test(updated)
+    ? updated.replace(existingFooter, footer)
+    : updated.replace(/^([ \t]*)<\/main>/im, `${footer}\n$1</main>`);
   return updated;
 }
 
