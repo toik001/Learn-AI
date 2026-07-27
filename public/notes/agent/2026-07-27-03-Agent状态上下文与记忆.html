@@ -67,7 +67,7 @@
         <li><strong>Spring AI Chat Memory 不等于完整 Chat History。</strong><code>ChatMemoryRepository</code> 负责消息存取，<code>ChatMemory</code> 决定保留与淘汰；完整对话、工具轨迹、业务审计应使用 Spring Data / 数据库等独立存储。<a href="https://docs.spring.io/spring-ai/reference/api/chat-memory.html" target="_blank" rel="noopener noreferrer">Spring AI 2.0.0 Chat Memory</a></li>
         <li><strong>会话标识必须显式、可信且隔离。</strong>所有 Memory Advisor 调用都要传 <code>ChatMemory.CONVERSATION_ID</code>；省略没有默认值，会在运行时抛出 <code>IllegalArgumentException</code>。conversationId 应由应用依据已认证 tenant / user 映射，而不是直接信任模型或请求正文。</li>
         <li><strong>工具中间消息不是恢复账本。</strong>Spring AI 当前实现不会自动把工具调用期间与模型交换的中间消息存入 Chat Memory；部分持久化 Repository 还会过滤工具调用消息。每个决策、调用、Observation 和结果必须写入业务事件日志。<a href="https://docs.spring.io/spring-ai/reference/api/chat-memory.html" target="_blank" rel="noopener noreferrer">Chat Memory — Memory in Chat Client</a></li>
-        <li><strong>记忆内容与 Observation 都是不可信且可能敏感的输入。</strong>进入 Prompt 前执行租户过滤、来源校验、TTL、最小化和脱敏；私有诊断加密存储并与公开错误分开。OWASP 同样建议对敏感数据实施清洗、最小权限和严格访问控制。<a href="https://genai.owasp.org/llmrisk/llm022025-sensitive-information-disclosure/" target="_blank" rel="noopener noreferrer">OWASP LLM02:2025</a></li>
+        <li><strong>记忆内容与 Observation 都是不可信且可能敏感的输入。</strong>原文先经过独立 DLP / 数据分类服务；Prompt 代码只接收结构化安全摘要，私有 payload 没有进入 Prompt DTO 的字段。私有诊断加密存储并与公开错误分开。OWASP 同样建议对敏感数据实施清洗、最小权限和严格访问控制。<a href="https://genai.owasp.org/llmrisk/llm022025-sensitive-information-disclosure/" target="_blank" rel="noopener noreferrer">OWASP LLM02:2025</a></li>
       </ul>
 
       <h2 id="学习目标与本阶段产物"><a class="heading-anchor" href="#学习目标与本阶段产物" aria-label="链接到本节">#</a>学习目标与本阶段产物</h2>
@@ -77,8 +77,8 @@
         <tbody>
           <tr><td>拆开四种不同生命周期的信息</td><td>四层记忆策略</td><td>某字段是否有明确所有者、用途、TTL 和删除路径？</td></tr>
           <tr><td>定义可序列化业务状态</td><td><code>AgentState</code>、<code>AgentCheckpoint</code></td><td>实例重启后能否从数据库恢复，而不是依赖进程内对象？</td></tr>
-          <tr><td>封装不可信工具结果</td><td><code>ObservationEnvelope</code></td><td>公开摘要与私有诊断是否分离，进入 Prompt 前是否脱敏？</td></tr>
-          <tr><td>处理重复与并发恢复</td><td><code>StateRepository</code>、乐观锁、幂等事件</td><td>两个 worker 是否只能有一个写入新版本？</td></tr>
+          <tr><td>封装不可信工具结果</td><td><code>ObservationEnvelope</code>、结构化安全投影</td><td>Prompt DTO 是否只接受枚举 / 安全代码，完全没有原始 payload 字段？</td></tr>
+          <tr><td>处理重复与并发恢复</td><td><code>StateRepository.commitRecovery</code>、乐观锁、幂等结果</td><td>重复 key 是否返回旧结果且不增版本，异 key 冲突是否整体回滚？</td></tr>
           <tr><td>正确接入对话记忆</td><td>provider-neutral 的 Spring AI 2.0.0 配置</td><td>是否每次显式传入可信 conversationId，并另存完整历史？</td></tr>
         </tbody>
       </table></div>
@@ -140,23 +140,23 @@
       <p><strong>边界判断：</strong>若字段丢失会导致重复写操作、越权、预算重置或无法恢复，它属于业务状态 / 事件，而不是 Chat Memory。若字段只为这一次模型推理提供语义，它属于 Prompt Context 的候选项。长期保存并不自动意味着应该给模型看。</p>
 
       <h2 id="状态生命周期"><a class="heading-anchor" href="#状态生命周期" aria-label="链接到本节">#</a>状态生命周期</h2>
-      <div class="agent-call-flow" role="img" aria-label="八节点状态生命周期：接收请求、加载检查点、获取并检查版本、构建安全上下文、决定并执行、追加私有 Observation、持久化检查点和事件、结束或恢复。横切护栏包括可信身份、租户隔离、TTL、脱敏、授权、预算、幂等、加密和审计。">
+      <div class="agent-call-flow" role="img" aria-label="八节点状态生命周期：接收请求、加载检查点、获取并检查版本、构建安全上下文、决定并执行、追加私有 Observation、在单一事务提交检查点事件 outbox 和幂等结果、结束或恢复。横切护栏包括可信身份、租户隔离、TTL、脱敏、授权、预算、幂等、加密和审计。">
         <div class="agent-step">1. 接收请求</div>
         <div class="agent-step">2. 加载检查点</div>
         <div class="agent-step">3. 获取 / 检查版本</div>
         <div class="agent-step">4. 构建安全上下文</div>
         <div class="agent-step">5. 决定 / 执行</div>
         <div class="agent-step">6. 追加私有 Observation</div>
-        <div class="agent-step">7. 保存检查点 / 事件</div>
+        <div class="agent-step">7. 原子提交状态 / 事件</div>
         <div class="agent-step">8. 结束 / 恢复</div>
         <div class="guardrail-band">横切护栏：可信身份 · tenant/user 隔离 · TTL · 来源校验 · 脱敏 · 授权 · 预算 · 幂等 · 乐观锁 · 加密 · 审计</div>
       </div>
-      <p class="diagram-text"><strong>等价文字说明：</strong>应用接收请求后先从认证上下文建立 tenant、user、conversation、run 键；若为恢复则加载未过期检查点，获取处理权并核对 version。上下文构建器只投影当前步骤需要的安全字段，模型决策与工具执行仍经授权和预算控制。工具返回被封装成私有 Observation，公开摘要与敏感诊断分离；业务事务以预期 version 保存下一检查点并幂等追加事件。成功时结束，失败或实例重启时从最后一个已提交检查点恢复。全部节点持续执行隔离、TTL、脱敏、加密、审计和最小权限。</p>
+      <p class="diagram-text"><strong>等价文字说明：</strong>应用接收请求后先从认证上下文建立 tenant、user、conversation、run 键；若为恢复则加载未过期检查点，获取处理权并核对 version。上下文构建器只投影当前步骤需要的安全字段，模型决策与工具执行仍经授权和预算控制。工具原文进入私有 Observation，独立 DLP / 分类服务只产出结构化安全投影；业务 Repository 在单一事务内处理幂等 key、expectedVersion、检查点、事件和 outbox。成功时结束，失败或实例重启时从最后一个已提交检查点恢复。全部节点持续执行隔离、TTL、脱敏、加密、审计和最小权限。</p>
       <ol>
         <li><strong>requestId 与 runId 不混用：</strong>requestId 关联入口重试；runId 标识一次业务执行。相同幂等请求可能返回已有 run，而不是创建第二份状态。</li>
         <li><strong>加载时验证归属：</strong>查询条件至少包含 tenantId、userId（或授权主体）与 runId，不能先按全局 runId 查出对象再在应用层补过滤。</li>
-        <li><strong>保存时比较版本：</strong><code>UPDATE ... WHERE version = :expectedVersion</code>；更新行数为 0 即冲突，重新加载并根据工具副作用决定重试、补偿或转人工。</li>
-        <li><strong>事件与检查点职责不同：</strong>检查点优化恢复速度，事件日志解释“为何到达此状态”。检查点可覆盖新版本，事件应幂等追加且受防篡改控制。</li>
+        <li><strong>先判重，再比较版本：</strong>相同幂等 key 与 fingerprint 的已提交请求直接返回先前结果；首次请求才执行 <code>UPDATE ... WHERE version = :expectedVersion</code>。异 key 的更新行数为 0 即冲突。</li>
+        <li><strong>一次事务提交完整恢复事实：</strong>检查点优化恢复速度，事件解释“为何到达此状态”，outbox 负责可靠发布；三者与幂等结果要么全部提交，要么全部回滚。</li>
       </ol>
 
       <h2 id="上下文窗口与压缩"><a class="heading-anchor" href="#上下文窗口与压缩" aria-label="链接到本节">#</a>上下文窗口与压缩</h2>
@@ -176,6 +176,7 @@
       <h2 id="java-21-agentstate"><a class="heading-anchor" href="#java-21-agentstate" aria-label="链接到本节">#</a>Java 21：可序列化状态、检查点与恢复</h2>
       <p>下面是 provider-neutral 的 Java 21 领域骨架。record 只保证字段引用不可重新赋值；对集合仍需 <code>Set.copyOf</code> / <code>Map.copyOf</code>。示例把可给模型看的视图设计为另一种类型，避免调用方误把完整状态序列化进 Prompt。</p>
       <pre><code class="language-java">import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -190,6 +191,62 @@ record StateKey(String tenantId, String userId, String runId) {
 }
 
 enum ToolStatus { NOT_STARTED, SUCCEEDED, SAFE_FAILURE, NEEDS_REVIEW }
+enum RequestIntent { INVESTIGATE_INCIDENT, CHECK_TICKET, CREATE_TICKET_REQUEST }
+enum ObservationKind { SERVICE_STATUS, TICKET_LOOKUP, KNOWLEDGE_LOOKUP }
+enum ObservationOutcome { OK, NOT_FOUND, TEMPORARY_FAILURE, DENIED, NEEDS_REVIEW }
+
+// 只能承载应用定义的代码，不承载工具原文、PII、主机名或诊断文本。
+record SafeCode(String value) {
+    SafeCode {
+        value = Required.safeCode(value, "value");
+    }
+}
+
+record SafeRequestSummary(
+        RequestIntent intent,
+        SafeCode serviceCode,
+        SafeCode issueCode) {
+    SafeRequestSummary {
+        Objects.requireNonNull(intent, "intent");
+        Objects.requireNonNull(serviceCode, "serviceCode");
+        Objects.requireNonNull(issueCode, "issueCode");
+    }
+}
+
+record PromptObservationView(
+        ObservationKind kind,
+        ObservationOutcome outcome,
+        SafeCode detailCode) {
+    PromptObservationView {
+        Objects.requireNonNull(kind, "kind");
+        Objects.requireNonNull(outcome, "outcome");
+        Objects.requireNonNull(detailCode, "detailCode");
+    }
+}
+
+record SafeObservationSummary(
+        String observationId,
+        ObservationKind kind,
+        ObservationOutcome outcome,
+        SafeCode detailCode) {
+    SafeObservationSummary {
+        observationId = Required.text(observationId, "observationId");
+        Objects.requireNonNull(kind, "kind");
+        Objects.requireNonNull(outcome, "outcome");
+        Objects.requireNonNull(detailCode, "detailCode");
+    }
+
+    PromptObservationView toPromptView() {
+        return new PromptObservationView(kind, outcome, detailCode);
+    }
+}
+
+record KnowledgeVersionRef(SafeCode sourceCode, SafeCode versionCode) {
+    KnowledgeVersionRef {
+        Objects.requireNonNull(sourceCode, "sourceCode");
+        Objects.requireNonNull(versionCode, "versionCode");
+    }
+}
 
 record ExecutionBudget(int remainingSteps, long remainingTokens, Instant deadline) {
     ExecutionBudget {
@@ -201,15 +258,17 @@ record ExecutionBudget(int remainingSteps, long remainingTokens, Instant deadlin
 }
 
 record PromptStateView(
-        String requestSummary,
+        SafeRequestSummary requestSummary,
         int approvedActionCount,
-        Map&lt;String, ToolStatus&gt; safeToolStatuses,
-        Map&lt;String, String&gt; knowledgeSourceVersions,
+        Map&lt;ObservationKind, ToolStatus&gt; safeToolStatuses,
+        Set&lt;KnowledgeVersionRef&gt; knowledgeSourceVersions,
+        List&lt;PromptObservationView&gt; observations,
         int remainingSteps) {
     PromptStateView {
-        requestSummary = Required.text(requestSummary, "requestSummary");
+        Objects.requireNonNull(requestSummary, "requestSummary");
         safeToolStatuses = Map.copyOf(safeToolStatuses);
-        knowledgeSourceVersions = Map.copyOf(knowledgeSourceVersions);
+        knowledgeSourceVersions = Set.copyOf(knowledgeSourceVersions);
+        observations = List.copyOf(observations);
     }
 }
 
@@ -218,10 +277,11 @@ record AgentState(
         String userId,
         String conversationId,
         String runId,
-        String requestSummary,
+        SafeRequestSummary requestSummary,
         Set&lt;String&gt; approvedActionIds,
-        Map&lt;String, ToolStatus&gt; lastToolStatuses,
-        Map&lt;String, String&gt; knowledgeSourceVersions,
+        Map&lt;ObservationKind, ToolStatus&gt; lastToolStatuses,
+        Set&lt;KnowledgeVersionRef&gt; knowledgeSourceVersions,
+        List&lt;SafeObservationSummary&gt; safeObservations,
         ExecutionBudget budget,
         long version,
         Instant updatedAt) {
@@ -231,10 +291,11 @@ record AgentState(
         userId = Required.text(userId, "userId");
         conversationId = Required.text(conversationId, "conversationId");
         runId = Required.text(runId, "runId");
-        requestSummary = Required.text(requestSummary, "requestSummary");
+        Objects.requireNonNull(requestSummary, "requestSummary");
         approvedActionIds = Set.copyOf(approvedActionIds);
         lastToolStatuses = Map.copyOf(lastToolStatuses);
-        knowledgeSourceVersions = Map.copyOf(knowledgeSourceVersions);
+        knowledgeSourceVersions = Set.copyOf(knowledgeSourceVersions);
+        safeObservations = List.copyOf(safeObservations);
         Objects.requireNonNull(budget, "budget");
         Objects.requireNonNull(updatedAt, "updatedAt");
         if (version &lt; 0) throw new IllegalArgumentException("version cannot be negative");
@@ -247,18 +308,24 @@ record AgentState(
     // 不暴露 tenant/user、原始审批 ID、私有 Observation 或内部异常。
     PromptStateView toPromptView() {
         return new PromptStateView(
-                Redactor.summary(requestSummary),
+                requestSummary,
                 approvedActionIds.size(),
                 lastToolStatuses,
                 knowledgeSourceVersions,
+                safeObservations.stream()
+                        .map(SafeObservationSummary::toPromptView)
+                        .toList(),
                 budget.remainingSteps());
     }
 
-    AgentState next(Map&lt;String, ToolStatus&gt; toolStatuses, Instant now) {
+    AgentState next(
+            Map&lt;ObservationKind, ToolStatus&gt; toolStatuses,
+            List&lt;SafeObservationSummary&gt; observations,
+            Instant now) {
         return new AgentState(
                 tenantId, userId, conversationId, runId, requestSummary,
                 approvedActionIds, toolStatuses, knowledgeSourceVersions,
-                budget, version + 1, now);
+                observations, budget, version + 1, now);
     }
 }
 
@@ -268,7 +335,7 @@ record ObservationEnvelope(
         String eventId,
         String runId,
         String toolName,
-        String publicSummary,
+        SafeObservationSummary safeSummary,
         String privatePayloadCiphertext,
         Sensitivity sensitivity,
         Instant observedAt) {
@@ -277,17 +344,16 @@ record ObservationEnvelope(
         eventId = Required.text(eventId, "eventId");
         runId = Required.text(runId, "runId");
         toolName = Required.text(toolName, "toolName");
-        publicSummary = Redactor.summary(publicSummary);
+        Objects.requireNonNull(safeSummary, "safeSummary");
         privatePayloadCiphertext =
                 Required.text(privatePayloadCiphertext, "privatePayloadCiphertext");
         Objects.requireNonNull(sensitivity, "sensitivity");
         Objects.requireNonNull(observedAt, "observedAt");
     }
 
-    // 仍按不可信数据引用；不能作为 system 指令。
-    String toPromptSummary() {
-        return "[UNTRUSTED_TOOL_DATA tool=%s] %s"
-                .formatted(toolName, publicSummary);
+    // 返回类型没有 raw payload、toolName、主体 ID 或自由文本字段。
+    PromptObservationView toPromptView() {
+        return safeSummary.toPromptView();
     }
 }
 
@@ -314,10 +380,57 @@ record AgentCheckpoint(
 
 record AgentEvent(
         String eventId,
+        String idempotencyKey,
         StateKey key,
         long stateVersion,
         String eventType,
         Instant occurredAt) {}
+
+record OutboxMessage(
+        String messageId,
+        String idempotencyKey,
+        StateKey key,
+        long stateVersion,
+        String messageType,
+        Instant createdAt) {}
+
+enum RecoveryCommitDisposition { APPLIED, REPLAYED }
+
+record RecoveryCommit(
+        StateKey key,
+        long expectedVersion,
+        String idempotencyKey,
+        String commandFingerprint,
+        AgentCheckpoint nextCheckpoint,
+        AgentEvent event,
+        OutboxMessage outboxMessage) {
+    RecoveryCommit {
+        Objects.requireNonNull(key, "key");
+        idempotencyKey = Required.text(idempotencyKey, "idempotencyKey");
+        commandFingerprint = Required.text(commandFingerprint, "commandFingerprint");
+        Objects.requireNonNull(nextCheckpoint, "nextCheckpoint");
+        Objects.requireNonNull(event, "event");
+        Objects.requireNonNull(outboxMessage, "outboxMessage");
+        if (!key.equals(nextCheckpoint.state().key())
+                || !key.equals(event.key())
+                || !key.equals(outboxMessage.key())) {
+            throw new IllegalArgumentException("all records must use the same state key");
+        }
+        if (!idempotencyKey.equals(event.idempotencyKey())
+                || !idempotencyKey.equals(outboxMessage.idempotencyKey())) {
+            throw new IllegalArgumentException("all records must use the same idempotency key");
+        }
+    }
+}
+
+record RecoveryCommitResult(
+        AgentCheckpoint checkpoint,
+        RecoveryCommitDisposition disposition) {
+    RecoveryCommitResult {
+        Objects.requireNonNull(checkpoint, "checkpoint");
+        Objects.requireNonNull(disposition, "disposition");
+    }
+}
 
 final class OptimisticStateConflict extends RuntimeException {
     OptimisticStateConflict(long expectedVersion) {
@@ -325,16 +438,29 @@ final class OptimisticStateConflict extends RuntimeException {
     }
 }
 
+final class IdempotencyKeyConflict extends RuntimeException {
+    IdempotencyKeyConflict(String key) {
+        super("idempotency key reused with different command; key=" + key);
+    }
+}
+
 interface StateRepository {
     Optional&lt;AgentCheckpoint&gt; load(StateKey key);
 
-    // 原子执行：仅当数据库 version == expectedVersion 时保存。
-    AgentCheckpoint saveIfVersion(
-            AgentCheckpoint next,
-            long expectedVersion) throws OptimisticStateConflict;
-
-    // eventId 唯一；重复投递返回 false，不追加第二条事件。
-    boolean appendEventIfAbsent(AgentEvent event);
+    /*
+     * 单一数据库事务合约：
+     * 1. 先按 (StateKey, idempotencyKey) 查询或争抢唯一幂等记录。
+     *    相同 fingerprint 已提交：返回原 RecoveryCommitResult(REPLAYED)，
+     *    不比较 version、不更新 checkpoint、不重复写 event/outbox。
+     *    相同 key 但 fingerprint 不同：抛 IdempotencyKeyConflict。
+     * 2. 首次请求执行 UPDATE checkpoint
+     *    WHERE state_key = ? AND version = expectedVersion；
+     *    影响 0 行则抛 OptimisticStateConflict，并回滚全部写入。
+     * 3. checkpoint、唯一 event、outbox 和幂等结果在同一事务提交；
+     *    任一步失败都整体回滚，不存在“状态已推进但事件缺失”。
+     */
+    RecoveryCommitResult commitRecovery(RecoveryCommit command)
+            throws OptimisticStateConflict, IdempotencyKeyConflict;
 
     void deleteConversation(String tenantId, String userId, String conversationId);
 }
@@ -348,8 +474,10 @@ final class AgentRecoveryService {
 
     AgentCheckpoint resume(
             StateKey key,
-            Map&lt;String, ToolStatus&gt; recoveredStatuses,
+            Map&lt;ObservationKind, ToolStatus&gt; recoveredStatuses,
+            List&lt;SafeObservationSummary&gt; recoveredObservations,
             String recoveryEventId,
+            String commandFingerprint,
             Instant now) {
 
         AgentCheckpoint loaded = repository.load(key)
@@ -359,16 +487,22 @@ final class AgentRecoveryService {
         }
 
         long expectedVersion = loaded.state().version();
-        AgentState nextState = loaded.state().next(recoveredStatuses, now);
+        AgentState nextState = loaded.state().next(
+                recoveredStatuses, recoveredObservations, now);
         AgentCheckpoint next = new AgentCheckpoint(
                 nextState, recoveryEventId, now, loaded.expiresAt());
+        AgentEvent event = new AgentEvent(
+                recoveryEventId, recoveryEventId, key,
+                nextState.version(), "RUN_RESUMED", now);
+        OutboxMessage outbox = new OutboxMessage(
+                "outbox-" + recoveryEventId, recoveryEventId, key,
+                nextState.version(), "RUN_RESUMED", now);
 
-        // 两个 worker 同时恢复时，只有一个 expectedVersion 能成功。
-        AgentCheckpoint saved = repository.saveIfVersion(next, expectedVersion);
-        repository.appendEventIfAbsent(new AgentEvent(
-                recoveryEventId, key, saved.state().version(),
-                "RUN_RESUMED", now));
-        return saved;
+        // 重放同一 recoveryEventId 返回先前 checkpoint；不同 key 的
+        // 并发提交仍以 expectedVersion 冲突失败。
+        return repository.commitRecovery(new RecoveryCommit(
+                key, expectedVersion, recoveryEventId, commandFingerprint,
+                next, event, outbox)).checkpoint();
     }
 }
 
@@ -379,17 +513,18 @@ final class Required {
         }
         return value;
     }
-}
 
-final class Redactor {
-    static String summary(String value) {
-        String safe = Required.text(value, "value")
-                .replaceAll("(?i)(token|password|secret)=[^\\s]+", "$1=[REDACTED]");
-        return safe.length() &lt;= 500 ? safe : safe.substring(0, 500);
+    static String safeCode(String value, String name) {
+        String code = text(value, name);
+        if (!code.matches("[A-Z][A-Z0-9_]{0,63}")) {
+            throw new IllegalArgumentException(name + " must be an allowlisted code");
+        }
+        return code;
     }
 }</code></pre>
-      <p><strong>实现注意：</strong><code>privatePayloadCiphertext</code> 代表由专用加密服务生成的密文，不是“把敏感值 Base64”。数据库实现应以 <code>(tenant_id, user_id, run_id)</code> 为分区 / 查询键，以 version 做乐观锁，以 eventId 唯一约束保证追加幂等。真实系统还要让保存检查点与写 outbox / 事件在同一事务中完成，避免“状态已变但事件丢失”。</p>
-      <p><code>toPromptView()</code> 是允许清单式投影，而不是在完整 JSON 上做若干字符串替换。示例只给出教学级正则；生产脱敏需要结构化字段策略、密钥 / PII 检测、编码规范和测试。即使是 <code>publicSummary</code>，也必须以数据边界包裹，不能提升为系统指令。</p>
+      <p><strong>恢复事务：</strong><code>commitRecovery</code> 是一个 Repository 原子操作，而不是三个可独立成功的方法。数据库实现先处理 <code>(StateKey, idempotencyKey)</code> 唯一幂等记录：相同 fingerprint 的重放返回先前 checkpoint 并标记 <code>REPLAYED</code>，不会推进 version；相同 key 配不同 fingerprint 明确拒绝。首次请求才做 expectedVersion 条件更新，并在同一事务写 checkpoint、唯一事件、outbox 和幂等结果。版本冲突或任意写入失败必须整体回滚。</p>
+      <p><strong>结构化安全投影：</strong><code>SafeRequestSummary</code>、<code>SafeObservationSummary</code> 与 <code>PromptObservationView</code> 只包含枚举、计数和受 <code>SafeCode</code> 限制的业务代码。虽然 <code>ObservationEnvelope</code> 在私有持久化边界持有密文字段，但 <code>PromptObservationView</code> 没有 raw / private 字段或访问器，<code>toPromptView()</code> 也只映射已分类的安全摘要，不对原文做“先复制再正则替换”。密文由专用加密服务产生，不是 Base64。</p>
+      <p><strong>DLP 边界：</strong>工具原文进入这些 record 之前，必须由示例外的独立 DLP / 数据分类 / 脱敏服务识别 PII、凭证、内部主机名和策略敏感内容，并由确定性业务映射器产出枚举与安全代码。本文代码故意不声称用一个正则覆盖一般 PII；DLP 服务需要自己的规则库、模型 / 检测器、版本与回归数据集。无法分类时输出 <code>NEEDS_REVIEW</code>，原文只进受控私有存储。</p>
 
       <h2 id="spring-ai-chat-memory"><a class="heading-anchor" href="#spring-ai-chat-memory" aria-label="链接到本节">#</a>Spring AI 2.0.0：显式 Chat Memory</h2>
       <p>Spring AI 的 Chat Memory 是模型对话上下文机制，不是业务 Agent Runtime。官方定义清楚地区分了 Chat Memory（模型为当前对话保留并使用的相关信息）与 Chat History（用户与模型交换的全部消息）。<code>MessageWindowChatMemory</code> 维护消息滑动窗口；超过上限时淘汰较旧消息，并尽量在完整 turn 边界裁剪。<a href="https://docs.spring.io/spring-ai/reference/api/chat-memory.html" target="_blank" rel="noopener noreferrer">Spring AI Chat Memory</a></p>
@@ -483,20 +618,21 @@ final class ServiceDeskAssistant {
       <div class="table-wrap"><table>
         <thead><tr><th>记录</th><th>回答的问题</th><th>写入策略</th><th>恢复用途</th></tr></thead>
         <tbody>
-          <tr><td>AgentCheckpoint</td><td>现在从哪里继续？</td><td>每个安全边界后以乐观锁保存新 version</td><td>快速加载最近完整状态</td></tr>
-          <tr><td>领域 / 轨迹事件</td><td>为什么到达这里？</td><td>eventId 唯一、只追加、带主体与时间</td><td>审计、重放判定、修复与取证</td></tr>
-          <tr><td>Outbox</td><td>状态更新后哪些消息必须发布？</td><td>与检查点同事务落库，异步投递</td><td>避免数据库已提交而消息丢失</td></tr>
+          <tr><td>AgentCheckpoint</td><td>现在从哪里继续？</td><td>首次幂等 key 以 expectedVersion 条件更新</td><td>快速加载最近完整状态</td></tr>
+          <tr><td>领域 / 轨迹事件</td><td>为什么到达这里？</td><td>与幂等 key 唯一关联、只追加、带主体与时间</td><td>审计、重放判定、修复与取证</td></tr>
+          <tr><td>Outbox</td><td>状态更新后哪些消息必须发布？</td><td>和 checkpoint、event、幂等结果同事务落库</td><td>避免数据库已提交而消息丢失</td></tr>
           <tr><td>Chat Memory</td><td>模型这次需要哪些近期消息？</td><td>独立窗口与 TTL</td><td>只恢复对话连贯性，不恢复业务副作用</td></tr>
         </tbody>
       </table></div>
       <p>恢复前先区分“可重试计算”和“可能已产生副作用的动作”。模型调用、只读检索通常可按预算重试；创建工单、发通知、扣款等写操作必须先查幂等键和下游结果，不能因检查点看似停在执行前就再次调用。无法确认时标记 <code>NEEDS_REVIEW</code>，交给人工或对账流程。</p>
+      <p><code>commitRecovery</code> 的实现顺序属于数据库合约：先以唯一键争抢或读取幂等结果；命中相同 fingerprint 时返回先前 checkpoint（<code>REPLAYED</code>）且不检查当前 version，避免重放把 version 8 推进为 9。首次命中才做 expectedVersion 条件更新，并写 event、outbox 与可重放结果。相同 key 携带不同 fingerprint 是调用错误，不能伪装成成功重放。</p>
 
       <h3 id="乐观锁冲突">乐观锁冲突如何处理</h3>
       <ol>
-        <li>worker A 与 B 都读到 version 7；A 以 expectedVersion 7 写入 version 8 成功。</li>
-        <li>B 的条件更新影响 0 行，抛出 <code>OptimisticStateConflict</code>，不得覆盖 A。</li>
-        <li>B 重新读取 version 8，并检查自己计划执行的动作是否已经有 eventId / idempotency key。</li>
-        <li>若只是纯计算，可在剩余预算内重算；若涉及未知副作用，停止并转人工，不做盲目自动重试。</li>
+        <li>worker A 与 B 使用<strong>同一</strong> idempotency key 和 fingerprint：A 提交 version 8；B 返回 A 已保存的 checkpoint 和 <code>REPLAYED</code>，version 仍为 8，event / outbox 仍各一条。</li>
+        <li>worker C 与 D 使用<strong>不同</strong> key、都读到 version 7：一个原子事务提交 version 8；另一个条件更新影响 0 行，抛 <code>OptimisticStateConflict</code>，其幂等占位、事件和 outbox 全部回滚。</li>
+        <li>在 checkpoint UPDATE 后、event INSERT 前注入故障：整个事务回滚，checkpoint 仍为 version 7，也没有事件、outbox 或“已成功”的幂等结果。</li>
+        <li>冲突方重新读取后，纯计算可在剩余预算内以新 key 重算；未知写副作用停止并转人工，不做盲目自动重试。</li>
       </ol>
       <p>数据库 version 不是分布式锁的替代品，而是最终写入防丢失更新的必要条件。长耗时模型 / 工具调用不要持有数据库事务；可以使用短租约声明处理权，但提交时仍必须比较 version。租约超时也不证明旧 worker 已停止，所以工具侧幂等同样不可缺少。</p>
 
@@ -506,7 +642,7 @@ final class ServiceDeskAssistant {
         <thead><tr><th>控制</th><th>最低实现</th><th>失败时的安全行为</th></tr></thead>
         <tbody>
           <tr><td>租户 / 用户隔离</td><td>可信身份生成复合分区键；所有查询与唯一约束带 tenant；conversation 映射验证主体</td><td>拒绝而不是回退到“全局会话”</td></tr>
-          <tr><td>数据最小化与脱敏</td><td>允许清单式 <code>toPromptView()</code>；凭证、PII、内部异常不进入 Prompt</td><td>使用固定公开错误，私有诊断写受控存储</td></tr>
+          <tr><td>数据最小化与脱敏</td><td>独立 DLP 分类原文；<code>toPromptView()</code> 只接收枚举、计数与 <code>SafeCode</code>，没有 raw payload 字段</td><td>无法分类就 <code>NEEDS_REVIEW</code>；固定公开错误，私有诊断写受控存储</td></tr>
           <tr><td>TTL 与删除</td><td>每层独立保留策略；索引、摘要、派生向量和备份有删除流程</td><td>过期即不加载；恢复转人工或重新开始</td></tr>
           <tr><td>加密与访问控制</td><td>传输加密、静态加密、密钥轮换、最小权限服务账号、字段级审计</td><td>密钥 / 权限不可用时停止，不降级为明文</td></tr>
           <tr><td>不可信内容边界</td><td>Observation、历史消息、摘要、检索内容标记为数据；校验来源和结构</td><td>检测到可疑指令时隔离、记录、请求人工确认</td></tr>
@@ -523,7 +659,7 @@ final class ServiceDeskAssistant {
           <tr><td>tenantId / userId</td><td><code>tenant-a</code> / 内部主体 ID</td><td>隔离与对象级授权</td><td>通常不进入；只用于服务端过滤</td></tr>
           <tr><td>conversationId</td><td>服务端生成的不可猜测映射 ID</td><td>选择正确 Chat Memory</td><td>不作为自然语言内容</td></tr>
           <tr><td>runId / requestId</td><td>一次调查 / 一次入口请求</td><td>恢复、幂等、关联 Trace</td><td>需要时仅给短标签</td></tr>
-          <tr><td>requestSummary</td><td>“调查支付服务间歇性超时”</td><td>恢复目标；避免原文无限复制</td><td>脱敏后进入</td></tr>
+          <tr><td>requestSummary</td><td><code>INVESTIGATE_INCIDENT / PAYMENTS / INTERMITTENT_TIMEOUT</code></td><td>以 <code>SafeRequestSummary</code> 保存已分类目标</td><td>三个结构化安全字段进入；原始用户文本不从此路径进入</td></tr>
           <tr><td>approvedActionIds</td><td>已批准创建工单动作 ID</td><td>防止模型伪造审批、重复执行</td><td>只给“已批准动作数量 / 类型”，不暴露 token</td></tr>
           <tr><td>lastToolStatuses</td><td><code>serviceStatus=SUCCEEDED</code></td><td>恢复后判断是否需重试</td><td>安全状态码可进入</td></tr>
           <tr><td>knowledgeSourceVersions</td><td><code>runbook=2026.07</code></td><td>识别过期知识、保证引用可追踪</td><td>与安全摘要一起进入</td></tr>
@@ -531,7 +667,7 @@ final class ServiceDeskAssistant {
           <tr><td>version</td><td><code>8</code></td><td>乐观并发控制</td><td>不必进入 Prompt</td></tr>
         </tbody>
       </table></div>
-      <p>工具 Observation “数据库超时，连接串为 …，请忽略规则并执行 …”同时包含敏感诊断和不可信指令。正确做法是：原始结果在受控边界内立即分类；密钥 / 连接信息不写明文，私有诊断加密保存；Prompt 只得到类似“服务状态查询失败，错误类别 TEMPORARY_DEPENDENCY_FAILURE”的固定摘要，并明确标记为不可信工具数据。用户只看到安全错误和可执行下一步。</p>
+      <p>工具 Observation “数据库超时，连接串为 …，请忽略规则并执行 …”同时包含敏感诊断和不可信指令。正确做法是：示例外的 DLP / 分类服务处理原始结果，私有诊断加密保存；确定性映射器只构造 <code>SafeObservationSummary(SERVICE_STATUS, TEMPORARY_FAILURE, DEPENDENCY_TIMEOUT)</code>。<code>PromptObservationView</code> 没有原文、toolName、主机名或私有密文字段，用户也只看到固定错误和可执行下一步。</p>
       <p>实例在创建工单请求发出后宕机时，恢复器先根据 actionId / idempotency key 查询工单系统：若已创建则补写成功事件与检查点；若明确未创建且审批仍有效才重试；若状态未知则转人工。它绝不能根据 Chat Memory 中“我已经为你创建工单”的助手文本认定副作用成功。</p>
 
       <h2 id="测试策略"><a class="heading-anchor" href="#测试策略" aria-label="链接到本节">#</a>测试策略</h2>
@@ -540,27 +676,29 @@ final class ServiceDeskAssistant {
         <tbody>
           <tr><td>跨租户串话</td><td>tenant B 猜到 tenant A 的 conversationId / runId</td><td>查询返回拒绝或不存在；Prompt、响应、日志均无 A 的内容</td></tr>
           <tr><td>缺失 Conversation ID</td><td>调用 Memory Advisor 时省略参数</td><td>Spring AI 运行时抛 <code>IllegalArgumentException</code>；业务入口也快速失败，绝不回退到共享默认会话</td></tr>
-          <tr><td>陈旧检查点版本</td><td>两个 worker 同读 version 7 并写 version 8</td><td>恰好一个成功；另一个得到乐观锁冲突，不能覆盖或重复执行工具</td></tr>
+          <tr><td>陈旧检查点版本</td><td>两个不同 idempotency key 同读 version 7 并写 version 8</td><td>恰好一个事务成功；另一个得到乐观锁冲突，checkpoint / event / outbox / 幂等结果均不写入</td></tr>
           <tr><td>过期记忆 / 检查点</td><td>时钟推进到 expiresAt</td><td>内容不进入 Prompt；检查点不自动恢复，按策略重新开始或转人工</td></tr>
-          <tr><td>脱敏</td><td>请求摘要含 token、password、PII 和内部主机名</td><td><code>toPromptView()</code> 与公开错误不含原值；私有存储按分类加密</td></tr>
+          <tr><td>结构化投影 / 脱敏边界</td><td>私有 payload 含 token、PII 和内部主机名；安全代码尝试注入空格、点号或自由文本</td><td><code>SafeCode</code> 拒绝非法值；序列化 <code>PromptStateView</code> / <code>PromptObservationView</code> 的 schema 与值均无 raw/private 字段。一般 PII 检出由独立 DLP 服务的专用数据集测试，不宣称本 record 能检测</td></tr>
           <tr><td>实例重启恢复</td><td>保存检查点后销毁进程内对象并创建新服务实例</td><td>从 Repository 恢复相同预算和工具状态；不依赖 InMemory Chat Memory</td></tr>
-          <tr><td>重复事件</td><td>同一 eventId 投递两次</td><td>只追加一次；检查点 version 不因重复消息多加一次</td></tr>
-          <tr><td>敏感 / 恶意 Observation</td><td>工具结果含凭证、堆栈和“忽略指令”文本</td><td>原文不进 Prompt / 公共响应；安全摘要带不可信数据边界，诊断仅进受控私有存储</td></tr>
+          <tr><td>重复恢复 key</td><td>同一 idempotency key 与 fingerprint 调用 <code>commitRecovery</code> 两次</td><td>第二次返回首次 checkpoint 和 <code>REPLAYED</code>；version 不变，event / outbox 各一条</td></tr>
+          <tr><td>崩溃窗口</td><td>checkpoint 条件更新后、event 或 outbox 写入前注入异常</td><td>事务整体回滚；四类记录都没有部分提交</td></tr>
+          <tr><td>幂等 key 误用</td><td>同一 key 携带不同 commandFingerprint</td><td>抛 <code>IdempotencyKeyConflict</code>；不能返回不相关旧结果，也不推进 version</td></tr>
+          <tr><td>敏感 / 恶意 Observation</td><td>工具结果含凭证、堆栈和“忽略指令”文本</td><td>DLP / 分类服务单独测试检出；Prompt 路径只能构造枚举与安全代码，私有原文仅进受控加密存储</td></tr>
           <tr><td>保留期删除</td><td>触发用户删除 / TTL 作业</td><td>消息、状态、摘要、索引和派生数据按策略删除；删除审计不复写敏感正文</td></tr>
         </tbody>
       </table></div>
-      <p>单元测试覆盖复制不可变集合、投影脱敏、TTL 和 version 比较；Repository 集成测试用真实数据库验证条件更新、复合租户键、唯一 eventId 与事务 outbox；端到端测试再验证 Spring AI 调用始终带显式 conversationId。安全回归测试应固定包含跨租户、提示注入持久化与删除完整性。</p>
+      <p>单元测试覆盖不可变复制、<code>SafeCode</code> 拒绝自由文本、Prompt DTO 不存在私有字段、TTL 和 version；Repository 集成测试用真实数据库验证 duplicate replay、不同 key 乐观锁冲突、故障注入全回滚及 event / outbox 唯一性。DLP / 脱敏服务拥有独立的 PII、凭证、主机名与提示注入回归数据集，不能用本页 record 测试冒充。端到端测试再验证 Spring AI 调用始终带显式 conversationId。</p>
 
       <h2 id="练习与验收"><a class="heading-anchor" href="#练习与验收" aria-label="链接到本节">#</a>练习与验收</h2>
       <h3 id="练习一-字段分层">练习一：给字段分层</h3>
-      <p>为下面字段选择“运行状态 / Prompt Context / Chat Memory / 长期业务记忆与历史”，并写出 TTL、访问主体和删除方式：用户原始问题、请求摘要、审批 token、工具公开摘要、工具原始异常、完整消息、剩余预算、工单事实、知识版本。允许同一事实产生不同层的投影，但必须指出真相源。</p>
+      <p>为下面字段选择“运行状态 / Prompt Context / Chat Memory / 长期业务记忆与历史”，并写出 TTL、访问主体和删除方式：用户原始问题、结构化安全请求摘要、审批 token、<code>SafeObservationSummary</code>、工具原始异常、完整消息、剩余预算、工单事实、知识版本。允许同一事实产生不同层的投影，但必须指出真相源。</p>
 
       <h3 id="练习二-实现仓储">练习二：实现 StateRepository</h3>
       <ol>
-        <li>使用 PostgreSQL 或测试容器建立 checkpoint、agent_event 与 outbox 三张表。</li>
+        <li>使用 PostgreSQL 或测试容器建立 checkpoint、recovery_idempotency、agent_event 与 outbox 四张表。</li>
         <li>实现以 tenantId、userId、runId 定位的 <code>load</code>，禁止仅按 runId 全局查询。</li>
-        <li>用单条条件 UPDATE 实现 <code>saveIfVersion</code>，并发测试验证只能一个 worker 成功。</li>
-        <li>以 eventId 唯一约束实现 <code>appendEventIfAbsent</code>；证明重复投递不产生第二次副作用。</li>
+        <li>用一个本地事务实现 <code>commitRecovery</code>：唯一幂等结果、expectedVersion 条件 UPDATE、event 与 outbox 必须原子提交。</li>
+        <li>证明相同 key / fingerprint 重放返回首次 checkpoint 且不增 version；不同 key 并发只有一个成功；在每个写入点注入故障都不会留下部分记录。</li>
         <li>模拟实例重启，从数据库恢复预算、工具状态与知识版本；Chat Memory 清空也不影响业务恢复。</li>
       </ol>
 
@@ -574,9 +712,9 @@ final class ServiceDeskAssistant {
         <li>能证明每次 Memory Advisor 调用都显式传入可信 <code>ChatMemory.CONVERSATION_ID</code>，并测试缺失 ID 在运行时失败。</li>
         <li>能说明工具调用中间消息当前不会自动完整进入 Chat Memory，所以工具轨迹、业务状态、完整历史与审计必须独立持久化。</li>
         <li><code>AgentState</code> 使用不可变复制，包含 tenantId、userId、conversationId、runId、请求摘要、审批动作、工具状态、知识版本、预算和 version。</li>
-        <li><code>toPromptView()</code> 只输出允许字段；敏感 Observation 的公开摘要与加密私有诊断分离，二者都不会被当成系统指令。</li>
-        <li>恢复流程验证 TTL、预期 version、幂等事件与写操作结果；冲突或未知副作用会停止 / 转人工，而非盲重试。</li>
-        <li>测试矩阵覆盖跨租户串话、过期记忆、恢复冲突、敏感 Observation、缺失 Conversation ID、重启、重复事件与保留期删除。</li>
+        <li><code>toPromptView()</code> 只输出 <code>SafeRequestSummary</code>、枚举、计数、<code>SafeCode</code> 与 <code>PromptObservationView</code>；私有 payload 在类型结构上不可达。一般 PII 检测属于独立 DLP 服务。</li>
+        <li><code>commitRecovery</code> 在单一事务验证幂等 key、预期 version，并原子写 checkpoint、event、outbox 与重放结果；重复 key 不增版本，冲突 / 故障不部分提交。</li>
+        <li>测试矩阵覆盖跨租户串话、过期记忆、恢复冲突、重复重放、崩溃回滚、敏感 Observation、缺失 Conversation ID、重启与保留期删除。</li>
       </ul>
 
       <h2 id="参考资料"><a class="heading-anchor" href="#参考资料" aria-label="链接到本节">#</a>参考资料</h2>
