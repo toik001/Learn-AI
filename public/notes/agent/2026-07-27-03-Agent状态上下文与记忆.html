@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="面向 Java 开发者区分 Agent 状态、提示上下文、Chat Memory 与完整业务历史，并用 Java 21 和 Spring AI 2.0.0 实现可恢复、隔离且可审计的状态管理。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="Agent 开发">
+  <meta name="study-date" content="2026-07-27">
+  <title>Agent 状态、上下文与记忆｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="2026-07-27-Agent开发学习主目录.html"><span class="brand-mark">J</span><span>Agent 开发学习主目录</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a href="2026-07-27-Agent开发学习主目录.html">课程主目录</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <label class="sidebar-search"><span class="sr-only">筛选文档</span><input type="search" placeholder="筛选文档…" data-sidebar-search></label>
+    <nav class="doc-nav" aria-label="文档列表">
+      <a class="doc-nav-item" href="2026-07-27-Agent开发学习主目录.html"><span>Agent 开发学习主目录</span><small>Agent 开发</small></a>
+      <a class="doc-nav-item is-active" href="#agent-状态上下文与记忆"><span>3. Agent 状态、上下文与记忆</span><small>当前页面</small></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta">
+      <a href="2026-07-27-Agent开发学习主目录.html">Agent 开发学习主目录</a>
+      <span>·</span><span>第 3 课</span><span>·</span>
+      <time datetime="2026-07-27">2026-07-27</time>
+    </div>
+    <article class="markdown-body">
+      <h1 id="agent-状态上下文与记忆"><a class="heading-anchor" href="#agent-状态上下文与记忆" aria-label="链接到本节">#</a>Agent 状态、上下文与记忆</h1>
+      <blockquote>
+        <p>Chat Memory 解决“这次给模型看哪些对话消息”，业务状态解决“任务现在执行到哪里”。二者不能共用一个模糊的 history 字段，更不能互相替代。</p>
+        <p>本文使用 Java 21、Spring AI 2.0.0 与 Spring Boot 4.0.x / 4.1.x，并保持模型供应商中立。整理日期与官方资料检索日期：2026-07-27。</p>
+      </blockquote>
+
+      <nav aria-label="本课快速目录">
+        <strong>学习路径：</strong>
+        <a href="#核心结论">核心结论</a> ·
+        <a href="#学习目标与本阶段产物">目标与产物</a> ·
+        <a href="#四类信息不要混在一起">四类信息</a> ·
+        <a href="#状态生命周期">状态生命周期</a> ·
+        <a href="#上下文窗口与压缩">窗口与压缩</a> ·
+        <a href="#java-21-agentstate">Java 21</a> ·
+        <a href="#spring-ai-chat-memory">Spring AI</a> ·
+        <a href="#持久化恢复与并发">恢复与并发</a> ·
+        <a href="#安全与隐私">安全与隐私</a> ·
+        <a href="#企业服务台案例">服务台案例</a> ·
+        <a href="#测试策略">测试策略</a> ·
+        <a href="#练习与验收">练习与验收</a> ·
+        <a href="#参考资料">参考资料</a>
+      </nav>
+
+      <h2 id="核心结论"><a class="heading-anchor" href="#核心结论" aria-label="链接到本节">#</a>核心结论</h2>
+      <ul>
+        <li><strong>AgentState 是业务事实，Prompt Context 是一次模型调用的投影。</strong>检查点、审批结果、工具执行状态、预算和版本必须独立持久化；不能寄希望于模型从聊天消息中“记住”。</li>
+        <li><strong>Spring AI Chat Memory 不等于完整 Chat History。</strong><code>ChatMemoryRepository</code> 负责消息存取，<code>ChatMemory</code> 决定保留与淘汰；完整对话、工具轨迹、业务审计应使用 Spring Data / 数据库等独立存储。<a href="https://docs.spring.io/spring-ai/reference/api/chat-memory.html" target="_blank" rel="noopener noreferrer">Spring AI 2.0.0 Chat Memory</a></li>
+        <li><strong>会话标识必须显式、可信且隔离。</strong>所有 Memory Advisor 调用都要传 <code>ChatMemory.CONVERSATION_ID</code>；省略没有默认值，会在运行时抛出 <code>IllegalArgumentException</code>。conversationId 应由应用依据已认证 tenant / user 映射，而不是直接信任模型或请求正文。</li>
+        <li><strong>工具中间消息不是恢复账本。</strong>Spring AI 当前实现不会自动把工具调用期间与模型交换的中间消息存入 Chat Memory；部分持久化 Repository 还会过滤工具调用消息。每个决策、调用、Observation 和结果必须写入业务事件日志。<a href="https://docs.spring.io/spring-ai/reference/api/chat-memory.html" target="_blank" rel="noopener noreferrer">Chat Memory — Memory in Chat Client</a></li>
+        <li><strong>记忆内容与 Observation 都是不可信且可能敏感的输入。</strong>进入 Prompt 前执行租户过滤、来源校验、TTL、最小化和脱敏；私有诊断加密存储并与公开错误分开。OWASP 同样建议对敏感数据实施清洗、最小权限和严格访问控制。<a href="https://genai.owasp.org/llmrisk/llm022025-sensitive-information-disclosure/" target="_blank" rel="noopener noreferrer">OWASP LLM02:2025</a></li>
+      </ul>
+
+      <h2 id="学习目标与本阶段产物"><a class="heading-anchor" href="#学习目标与本阶段产物" aria-label="链接到本节">#</a>学习目标与本阶段产物</h2>
+      <p>上一课已经建立模型决策、工具调用、Observation、requestId 与 runId 的边界；可回看<a href="2026-07-27-02-模型API结构化输出与Tool-Calling.html">模型 API、结构化输出与 Tool Calling</a>。本课把这些短暂轨迹变成可恢复、可并发控制、可审计的状态。</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>学习目标</th><th>阶段产物</th><th>验收问题</th></tr></thead>
+        <tbody>
+          <tr><td>拆开四种不同生命周期的信息</td><td>四层记忆策略</td><td>某字段是否有明确所有者、用途、TTL 和删除路径？</td></tr>
+          <tr><td>定义可序列化业务状态</td><td><code>AgentState</code>、<code>AgentCheckpoint</code></td><td>实例重启后能否从数据库恢复，而不是依赖进程内对象？</td></tr>
+          <tr><td>封装不可信工具结果</td><td><code>ObservationEnvelope</code></td><td>公开摘要与私有诊断是否分离，进入 Prompt 前是否脱敏？</td></tr>
+          <tr><td>处理重复与并发恢复</td><td><code>StateRepository</code>、乐观锁、幂等事件</td><td>两个 worker 是否只能有一个写入新版本？</td></tr>
+          <tr><td>正确接入对话记忆</td><td>provider-neutral 的 Spring AI 2.0.0 配置</td><td>是否每次显式传入可信 conversationId，并另存完整历史？</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="四类信息不要混在一起"><a class="heading-anchor" href="#四类信息不要混在一起" aria-label="链接到本节">#</a>四类信息不要混在一起</h2>
+      <div class="learning-roadmap" role="img" aria-label="四层信息模型：运行状态作为可恢复业务事实；提示上下文作为单次模型调用的最小安全投影；Chat Memory 作为模型维持对话连贯性的有限消息窗口；长期业务记忆与完整历史作为有治理和访问控制的持久记录。">
+        <section class="roadmap-stage">
+          <h3>1. Run State</h3>
+          <p>步骤、审批、预算、工具状态、版本；每一步持久化，可恢复。</p>
+        </section>
+        <section class="roadmap-stage">
+          <h3>2. Prompt Context</h3>
+          <p>本次调用所需的脱敏、相关、未过期投影；调用后可丢弃。</p>
+        </section>
+        <section class="roadmap-stage">
+          <h3>3. Chat Memory</h3>
+          <p>给模型维持连贯性的有限消息窗口；不是完整历史或审计账本。</p>
+        </section>
+        <section class="roadmap-stage">
+          <h3>4. Business Memory / History</h3>
+          <p>工单事实、完整对话、事件和审计；按法规、租户与业务策略治理。</p>
+        </section>
+      </div>
+      <p class="diagram-text"><strong>等价文字说明：</strong>运行状态记录任务当前可恢复位置；Prompt Context 从可信状态与候选资料中选择最少、相关、脱敏且未过期的信息；Chat Memory 只为模型保留有限对话上下文；长期业务记忆与完整历史由数据库持久化并接受访问控制、保留和删除策略。四层可以互相投影，但不能用同一份无边界消息列表代替。</p>
+
+      <div class="table-wrap"><table>
+        <thead><tr><th>层</th><th>典型内容</th><th>写入者 / 真相源</th><th>生命周期</th><th>绝不能承担</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>运行状态（Run State）</td>
+            <td>tenantId、userId、runId、步骤、审批 ID、工具状态、知识版本、预算、version</td>
+            <td>业务 Agent Runtime；事务数据库是真相源</td>
+            <td>一次 run，可有合规保留期</td>
+            <td>不能让模型消息反推真实审批或执行结果</td>
+          </tr>
+          <tr>
+            <td>提示上下文（Prompt Context）</td>
+            <td>请求摘要、允许公开的状态、相关知识片段、安全 Observation 摘要</td>
+            <td>上下文构建器从可信源生成</td>
+            <td>单次模型调用；通常不单独持久化原文</td>
+            <td>不能携带凭证、内部堆栈、无关 PII 或权限规则秘密</td>
+          </tr>
+          <tr>
+            <td>对话记忆（Chat Memory）</td>
+            <td>为当前 conversation 选择的用户与助手消息</td>
+            <td><code>ChatMemory</code> 管保留策略，<code>ChatMemoryRepository</code> 管存取</td>
+            <td>滑动窗口 / TTL / token 策略</td>
+            <td>不能当完整 Chat History、工具审计或恢复检查点</td>
+          </tr>
+          <tr>
+            <td>长期业务记忆 / 完整历史</td>
+            <td>工单记录、用户授权事实、完整消息、不可变领域事件、审计记录</td>
+            <td>业务服务与 Spring Data / 数据库</td>
+            <td>由目的、法规、合同和删除请求决定</td>
+            <td>不能未经检索授权与脱敏就整批塞入 Prompt</td>
+          </tr>
+        </tbody>
+      </table></div>
+      <p><strong>边界判断：</strong>若字段丢失会导致重复写操作、越权、预算重置或无法恢复，它属于业务状态 / 事件，而不是 Chat Memory。若字段只为这一次模型推理提供语义，它属于 Prompt Context 的候选项。长期保存并不自动意味着应该给模型看。</p>
+
+      <h2 id="状态生命周期"><a class="heading-anchor" href="#状态生命周期" aria-label="链接到本节">#</a>状态生命周期</h2>
+      <div class="agent-call-flow" role="img" aria-label="八节点状态生命周期：接收请求、加载检查点、获取并检查版本、构建安全上下文、决定并执行、追加私有 Observation、持久化检查点和事件、结束或恢复。横切护栏包括可信身份、租户隔离、TTL、脱敏、授权、预算、幂等、加密和审计。">
+        <div class="agent-step">1. 接收请求</div>
+        <div class="agent-step">2. 加载检查点</div>
+        <div class="agent-step">3. 获取 / 检查版本</div>
+        <div class="agent-step">4. 构建安全上下文</div>
+        <div class="agent-step">5. 决定 / 执行</div>
+        <div class="agent-step">6. 追加私有 Observation</div>
+        <div class="agent-step">7. 保存检查点 / 事件</div>
+        <div class="agent-step">8. 结束 / 恢复</div>
+        <div class="guardrail-band">横切护栏：可信身份 · tenant/user 隔离 · TTL · 来源校验 · 脱敏 · 授权 · 预算 · 幂等 · 乐观锁 · 加密 · 审计</div>
+      </div>
+      <p class="diagram-text"><strong>等价文字说明：</strong>应用接收请求后先从认证上下文建立 tenant、user、conversation、run 键；若为恢复则加载未过期检查点，获取处理权并核对 version。上下文构建器只投影当前步骤需要的安全字段，模型决策与工具执行仍经授权和预算控制。工具返回被封装成私有 Observation，公开摘要与敏感诊断分离；业务事务以预期 version 保存下一检查点并幂等追加事件。成功时结束，失败或实例重启时从最后一个已提交检查点恢复。全部节点持续执行隔离、TTL、脱敏、加密、审计和最小权限。</p>
+      <ol>
+        <li><strong>requestId 与 runId 不混用：</strong>requestId 关联入口重试；runId 标识一次业务执行。相同幂等请求可能返回已有 run，而不是创建第二份状态。</li>
+        <li><strong>加载时验证归属：</strong>查询条件至少包含 tenantId、userId（或授权主体）与 runId，不能先按全局 runId 查出对象再在应用层补过滤。</li>
+        <li><strong>保存时比较版本：</strong><code>UPDATE ... WHERE version = :expectedVersion</code>；更新行数为 0 即冲突，重新加载并根据工具副作用决定重试、补偿或转人工。</li>
+        <li><strong>事件与检查点职责不同：</strong>检查点优化恢复速度，事件日志解释“为何到达此状态”。检查点可覆盖新版本，事件应幂等追加且受防篡改控制。</li>
+      </ol>
+
+      <h2 id="上下文窗口与压缩"><a class="heading-anchor" href="#上下文窗口与压缩" aria-label="链接到本节">#</a>上下文窗口与压缩</h2>
+      <p>模型上下文有 token 上限和成本。把所有历史原样拼接既可能超窗，也会把过期事实、其他租户内容、提示注入和敏感诊断带入当前决策。安全上下文构建应先做访问控制，再做相关性选择，最后才考虑压缩。</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>策略</th><th>收益</th><th>固有损失 / 风险</th><th>工程补偿</th></tr></thead>
+        <tbody>
+          <tr><td>最近 N 条消息</td><td>简单、成本可预测</td><td>较早但关键的约束会被淘汰；N 条不等于 N 个完整 turn</td><td>系统不变量不依赖消息窗口；关键业务事实从状态库重建</td></tr>
+          <tr><td>摘要压缩</td><td>显著减少 token</td><td>摘要会遗漏否定、时间、来源、不确定性或审批条件</td><td>保存摘要版本、来源事件 ID、生成时间与置信标记；关键字段结构化保留</td></tr>
+          <tr><td>相关性检索</td><td>只选当前问题相关片段</td><td>可能漏召回，也可能召回被污染内容</td><td>先按 tenant、权限、TTL、版本过滤，再排序；保留来源引用</td></tr>
+          <tr><td>分层组合</td><td>系统约束 + 状态投影 + 少量消息 + 相关知识</td><td>需要预算分配与冲突策略</td><td>为每层设 token 预算、优先级和冲突时的可信度顺序</td></tr>
+        </tbody>
+      </table></div>
+      <p><strong>推荐构建顺序：</strong>固定安全规则 → 当前业务状态的 <code>toPromptView()</code> → 未过期且属于当前 conversation 的有限 Chat Memory → 经授权检索的知识 → 当前用户请求。若总量超预算，优先删低相关历史，不删除授权、预算、停止条件等应用侧不变量；这些不变量还必须在模型外再次强制执行。</p>
+      <p>TTL 不是单一缓存参数。应分别定义：Prompt 候选资料的时效、Chat Memory 的产品保留时长、检查点的可恢复窗口、完整历史的合规期限和事件审计的法定期限。删除请求必须遍历所有副本、索引、摘要、备份策略与向量化派生数据，并留下不含已删除内容的删除审计。</p>
+
+      <h2 id="java-21-agentstate"><a class="heading-anchor" href="#java-21-agentstate" aria-label="链接到本节">#</a>Java 21：可序列化状态、检查点与恢复</h2>
+      <p>下面是 provider-neutral 的 Java 21 领域骨架。record 只保证字段引用不可重新赋值；对集合仍需 <code>Set.copyOf</code> / <code>Map.copyOf</code>。示例把可给模型看的视图设计为另一种类型，避免调用方误把完整状态序列化进 Prompt。</p>
+      <pre><code class="language-java">import java.time.Instant;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+
+record StateKey(String tenantId, String userId, String runId) {
+    StateKey {
+        tenantId = Required.text(tenantId, "tenantId");
+        userId = Required.text(userId, "userId");
+        runId = Required.text(runId, "runId");
+    }
+}
+
+enum ToolStatus { NOT_STARTED, SUCCEEDED, SAFE_FAILURE, NEEDS_REVIEW }
+
+record ExecutionBudget(int remainingSteps, long remainingTokens, Instant deadline) {
+    ExecutionBudget {
+        if (remainingSteps &lt; 0 || remainingTokens &lt; 0) {
+            throw new IllegalArgumentException("budget cannot be negative");
+        }
+        Objects.requireNonNull(deadline, "deadline");
+    }
+}
+
+record PromptStateView(
+        String requestSummary,
+        int approvedActionCount,
+        Map&lt;String, ToolStatus&gt; safeToolStatuses,
+        Map&lt;String, String&gt; knowledgeSourceVersions,
+        int remainingSteps) {
+    PromptStateView {
+        requestSummary = Required.text(requestSummary, "requestSummary");
+        safeToolStatuses = Map.copyOf(safeToolStatuses);
+        knowledgeSourceVersions = Map.copyOf(knowledgeSourceVersions);
+    }
+}
+
+record AgentState(
+        String tenantId,
+        String userId,
+        String conversationId,
+        String runId,
+        String requestSummary,
+        Set&lt;String&gt; approvedActionIds,
+        Map&lt;String, ToolStatus&gt; lastToolStatuses,
+        Map&lt;String, String&gt; knowledgeSourceVersions,
+        ExecutionBudget budget,
+        long version,
+        Instant updatedAt) {
+
+    AgentState {
+        tenantId = Required.text(tenantId, "tenantId");
+        userId = Required.text(userId, "userId");
+        conversationId = Required.text(conversationId, "conversationId");
+        runId = Required.text(runId, "runId");
+        requestSummary = Required.text(requestSummary, "requestSummary");
+        approvedActionIds = Set.copyOf(approvedActionIds);
+        lastToolStatuses = Map.copyOf(lastToolStatuses);
+        knowledgeSourceVersions = Map.copyOf(knowledgeSourceVersions);
+        Objects.requireNonNull(budget, "budget");
+        Objects.requireNonNull(updatedAt, "updatedAt");
+        if (version &lt; 0) throw new IllegalArgumentException("version cannot be negative");
+    }
+
+    StateKey key() {
+        return new StateKey(tenantId, userId, runId);
+    }
+
+    // 不暴露 tenant/user、原始审批 ID、私有 Observation 或内部异常。
+    PromptStateView toPromptView() {
+        return new PromptStateView(
+                Redactor.summary(requestSummary),
+                approvedActionIds.size(),
+                lastToolStatuses,
+                knowledgeSourceVersions,
+                budget.remainingSteps());
+    }
+
+    AgentState next(Map&lt;String, ToolStatus&gt; toolStatuses, Instant now) {
+        return new AgentState(
+                tenantId, userId, conversationId, runId, requestSummary,
+                approvedActionIds, toolStatuses, knowledgeSourceVersions,
+                budget, version + 1, now);
+    }
+}
+
+enum Sensitivity { INTERNAL, CONFIDENTIAL, RESTRICTED }
+
+record ObservationEnvelope(
+        String eventId,
+        String runId,
+        String toolName,
+        String publicSummary,
+        String privatePayloadCiphertext,
+        Sensitivity sensitivity,
+        Instant observedAt) {
+
+    ObservationEnvelope {
+        eventId = Required.text(eventId, "eventId");
+        runId = Required.text(runId, "runId");
+        toolName = Required.text(toolName, "toolName");
+        publicSummary = Redactor.summary(publicSummary);
+        privatePayloadCiphertext =
+                Required.text(privatePayloadCiphertext, "privatePayloadCiphertext");
+        Objects.requireNonNull(sensitivity, "sensitivity");
+        Objects.requireNonNull(observedAt, "observedAt");
+    }
+
+    // 仍按不可信数据引用；不能作为 system 指令。
+    String toPromptSummary() {
+        return "[UNTRUSTED_TOOL_DATA tool=%s] %s"
+                .formatted(toolName, publicSummary);
+    }
+}
+
+record AgentCheckpoint(
+        AgentState state,
+        String lastEventId,
+        Instant createdAt,
+        Instant expiresAt) {
+
+    AgentCheckpoint {
+        Objects.requireNonNull(state, "state");
+        lastEventId = Required.text(lastEventId, "lastEventId");
+        Objects.requireNonNull(createdAt, "createdAt");
+        Objects.requireNonNull(expiresAt, "expiresAt");
+        if (!expiresAt.isAfter(createdAt)) {
+            throw new IllegalArgumentException("expiresAt must be after createdAt");
+        }
+    }
+
+    boolean expiredAt(Instant now) {
+        return !now.isBefore(expiresAt);
+    }
+}
+
+record AgentEvent(
+        String eventId,
+        StateKey key,
+        long stateVersion,
+        String eventType,
+        Instant occurredAt) {}
+
+final class OptimisticStateConflict extends RuntimeException {
+    OptimisticStateConflict(long expectedVersion) {
+        super("state version conflict; expected=" + expectedVersion);
+    }
+}
+
+interface StateRepository {
+    Optional&lt;AgentCheckpoint&gt; load(StateKey key);
+
+    // 原子执行：仅当数据库 version == expectedVersion 时保存。
+    AgentCheckpoint saveIfVersion(
+            AgentCheckpoint next,
+            long expectedVersion) throws OptimisticStateConflict;
+
+    // eventId 唯一；重复投递返回 false，不追加第二条事件。
+    boolean appendEventIfAbsent(AgentEvent event);
+
+    void deleteConversation(String tenantId, String userId, String conversationId);
+}
+
+final class AgentRecoveryService {
+    private final StateRepository repository;
+
+    AgentRecoveryService(StateRepository repository) {
+        this.repository = repository;
+    }
+
+    AgentCheckpoint resume(
+            StateKey key,
+            Map&lt;String, ToolStatus&gt; recoveredStatuses,
+            String recoveryEventId,
+            Instant now) {
+
+        AgentCheckpoint loaded = repository.load(key)
+                .orElseThrow(() -&gt; new IllegalStateException("checkpoint not found"));
+        if (loaded.expiredAt(now)) {
+            throw new IllegalStateException("checkpoint expired; manual review required");
+        }
+
+        long expectedVersion = loaded.state().version();
+        AgentState nextState = loaded.state().next(recoveredStatuses, now);
+        AgentCheckpoint next = new AgentCheckpoint(
+                nextState, recoveryEventId, now, loaded.expiresAt());
+
+        // 两个 worker 同时恢复时，只有一个 expectedVersion 能成功。
+        AgentCheckpoint saved = repository.saveIfVersion(next, expectedVersion);
+        repository.appendEventIfAbsent(new AgentEvent(
+                recoveryEventId, key, saved.state().version(),
+                "RUN_RESUMED", now));
+        return saved;
+    }
+}
+
+final class Required {
+    static String text(String value, String name) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(name + " is required");
+        }
+        return value;
+    }
+}
+
+final class Redactor {
+    static String summary(String value) {
+        String safe = Required.text(value, "value")
+                .replaceAll("(?i)(token|password|secret)=[^\\s]+", "$1=[REDACTED]");
+        return safe.length() &lt;= 500 ? safe : safe.substring(0, 500);
+    }
+}</code></pre>
+      <p><strong>实现注意：</strong><code>privatePayloadCiphertext</code> 代表由专用加密服务生成的密文，不是“把敏感值 Base64”。数据库实现应以 <code>(tenant_id, user_id, run_id)</code> 为分区 / 查询键，以 version 做乐观锁，以 eventId 唯一约束保证追加幂等。真实系统还要让保存检查点与写 outbox / 事件在同一事务中完成，避免“状态已变但事件丢失”。</p>
+      <p><code>toPromptView()</code> 是允许清单式投影，而不是在完整 JSON 上做若干字符串替换。示例只给出教学级正则；生产脱敏需要结构化字段策略、密钥 / PII 检测、编码规范和测试。即使是 <code>publicSummary</code>，也必须以数据边界包裹，不能提升为系统指令。</p>
+
+      <h2 id="spring-ai-chat-memory"><a class="heading-anchor" href="#spring-ai-chat-memory" aria-label="链接到本节">#</a>Spring AI 2.0.0：显式 Chat Memory</h2>
+      <p>Spring AI 的 Chat Memory 是模型对话上下文机制，不是业务 Agent Runtime。官方定义清楚地区分了 Chat Memory（模型为当前对话保留并使用的相关信息）与 Chat History（用户与模型交换的全部消息）。<code>MessageWindowChatMemory</code> 维护消息滑动窗口；超过上限时淘汰较旧消息，并尽量在完整 turn 边界裁剪。<a href="https://docs.spring.io/spring-ai/reference/api/chat-memory.html" target="_blank" rel="noopener noreferrer">Spring AI Chat Memory</a></p>
+
+      <h3 id="spring-ai-职责边界">框架能力与业务责任</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>能力</th><th>Spring AI 2.0.0 提供</th><th>业务应用仍必须提供</th></tr></thead>
+        <tbody>
+          <tr><td>消息存取与保留</td><td><code>ChatMemoryRepository</code> 存取消息；<code>ChatMemory</code> 决定保留 / 删除策略</td><td>租户键生成、访问控制、业务 TTL、删除编排与合规证明</td></tr>
+          <tr><td>有限对话上下文</td><td><code>MessageWindowChatMemory</code> 滑动消息窗口</td><td>业务状态、审批、预算、版本和恢复检查点</td></tr>
+          <tr><td>Prompt 增强</td><td><code>MessageChatMemoryAdvisor</code> 取回消息并加入 Prompt</td><td>可信 conversationId、上下文脱敏、来源 / 时效校验</td></tr>
+          <tr><td>完整记录</td><td>Chat Memory 并非为完整 Chat History 设计</td><td>用 Spring Data / 数据库存完整消息、工具轨迹、领域事件与审计</td></tr>
+          <tr><td>工具中间过程</td><td>当前实现不会自动把工具调用中间消息存入 Chat Memory</td><td>用户控制执行或业务事件记录；绝不依赖 Chat Memory 恢复副作用</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="maven-bom">版本与依赖管理</h3>
+      <p>示例锁定稳定版 Spring AI 2.0.0，并通过 BOM 管理模块版本；Spring Boot 使用 4.0.x 或 4.1.x。具体模型 starter 由部署方选择，领域代码只依赖 <code>ChatModel</code> 抽象。</p>
+      <pre><code class="language-xml">&lt;dependencyManagement&gt;
+  &lt;dependencies&gt;
+    &lt;dependency&gt;
+      &lt;groupId&gt;org.springframework.ai&lt;/groupId&gt;
+      &lt;artifactId&gt;spring-ai-bom&lt;/artifactId&gt;
+      &lt;version&gt;2.0.0&lt;/version&gt;
+      &lt;type&gt;pom&lt;/type&gt;
+      &lt;scope&gt;import&lt;/scope&gt;
+    &lt;/dependency&gt;
+  &lt;/dependencies&gt;
+&lt;/dependencyManagement&gt;</code></pre>
+
+      <h3 id="provider-neutral-配置">Provider-neutral 配置与调用</h3>
+      <pre><code class="language-java">import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.memory.MessageWindowChatMemory;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+class ServiceDeskAiConfiguration {
+
+    @Bean
+    ChatMemory chatMemory() {
+        return MessageWindowChatMemory.builder()
+                .maxMessages(20)
+                .build();
+    }
+
+    @Bean
+    ChatClient serviceDeskChatClient(
+            ChatModel chatModel,
+            ChatMemory chatMemory) {
+
+        return ChatClient.builder(chatModel)
+                .defaultAdvisors(
+                        MessageChatMemoryAdvisor.builder(chatMemory).build())
+                .build();
+    }
+}
+
+final class ServiceDeskAssistant {
+    private final ChatClient chatClient;
+
+    ServiceDeskAssistant(ChatClient chatClient) {
+        this.chatClient = chatClient;
+    }
+
+    String answer(String conversationId, String safeUserText) {
+        if (conversationId == null || conversationId.isBlank()) {
+            throw new IllegalArgumentException("conversationId is required");
+        }
+
+        return chatClient.prompt()
+                .user(safeUserText)
+                .advisors(a -&gt; a.param(
+                        ChatMemory.CONVERSATION_ID,
+                        conversationId))
+                .call()
+                .content();
+    }
+}</code></pre>
+      <p>三处调用形态是本课验收重点：<code>MessageWindowChatMemory.builder()</code> 定义消息窗口，<code>MessageChatMemoryAdvisor.builder(chatMemory)</code> 把该窗口接入 client，<code>ChatClient.builder(chatModel)</code> 保持模型供应商中立；每次调用再通过 <code>.advisors(a -&gt; a.param(ChatMemory.CONVERSATION_ID, conversationId))</code> 显式选择会话。</p>
+      <p><strong>缺失 ID 必须快速失败：</strong>官方文档明确说明所有 Memory Advisor 都要求 <code>ChatMemory.CONVERSATION_ID</code>，没有默认 conversation ID；省略会在运行时抛出 <code>IllegalArgumentException</code>。示例在业务边界先校验，是为了给出更明确的错误，但不能因此删掉运行时参数。<a href="https://docs.spring.io/spring-ai/reference/api/chat-memory.html" target="_blank" rel="noopener noreferrer">Conversation ID 要求</a></p>
+      <p><strong>不要直接使用前端传来的 conversationId。</strong>应用应根据已认证 tenantId、userId 和内部会话主键生成不可猜测的映射 ID，并在数据库查询中再次限定租户与主体。模型、消息内容和工具参数都无权覆盖该 ID。</p>
+      <p><strong>默认内存实现不等于生产持久化。</strong>未提供其他 Repository 时，Spring AI 默认使用进程内 <code>InMemoryChatMemoryRepository</code>；实例重启会丢失，而且它仍不提供业务检查点、完整历史或审计语义。可以按需要配置持久化 ChatMemoryRepository，但业务 <code>AgentState</code>、完整 Chat History 和审计事件仍应有独立 Spring Data / 数据库模型。</p>
+      <p><strong>工具消息限制要按当前实现设计：</strong>官方说明工具调用期间与模型交换的中间消息当前不会自动存入 memory。另有部分 Repository 对工具消息存在过滤限制。因此即使“最后回答看起来连贯”，也不能据此判断某工具是否真正执行、执行几次或已经提交副作用；这些事实只认业务事件与检查点。</p>
+
+      <h2 id="持久化恢复与并发"><a class="heading-anchor" href="#持久化恢复与并发" aria-label="链接到本节">#</a>持久化、恢复与并发</h2>
+      <h3 id="检查点与事件日志">检查点与事件日志</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>记录</th><th>回答的问题</th><th>写入策略</th><th>恢复用途</th></tr></thead>
+        <tbody>
+          <tr><td>AgentCheckpoint</td><td>现在从哪里继续？</td><td>每个安全边界后以乐观锁保存新 version</td><td>快速加载最近完整状态</td></tr>
+          <tr><td>领域 / 轨迹事件</td><td>为什么到达这里？</td><td>eventId 唯一、只追加、带主体与时间</td><td>审计、重放判定、修复与取证</td></tr>
+          <tr><td>Outbox</td><td>状态更新后哪些消息必须发布？</td><td>与检查点同事务落库，异步投递</td><td>避免数据库已提交而消息丢失</td></tr>
+          <tr><td>Chat Memory</td><td>模型这次需要哪些近期消息？</td><td>独立窗口与 TTL</td><td>只恢复对话连贯性，不恢复业务副作用</td></tr>
+        </tbody>
+      </table></div>
+      <p>恢复前先区分“可重试计算”和“可能已产生副作用的动作”。模型调用、只读检索通常可按预算重试；创建工单、发通知、扣款等写操作必须先查幂等键和下游结果，不能因检查点看似停在执行前就再次调用。无法确认时标记 <code>NEEDS_REVIEW</code>，交给人工或对账流程。</p>
+
+      <h3 id="乐观锁冲突">乐观锁冲突如何处理</h3>
+      <ol>
+        <li>worker A 与 B 都读到 version 7；A 以 expectedVersion 7 写入 version 8 成功。</li>
+        <li>B 的条件更新影响 0 行，抛出 <code>OptimisticStateConflict</code>，不得覆盖 A。</li>
+        <li>B 重新读取 version 8，并检查自己计划执行的动作是否已经有 eventId / idempotency key。</li>
+        <li>若只是纯计算，可在剩余预算内重算；若涉及未知副作用，停止并转人工，不做盲目自动重试。</li>
+      </ol>
+      <p>数据库 version 不是分布式锁的替代品，而是最终写入防丢失更新的必要条件。长耗时模型 / 工具调用不要持有数据库事务；可以使用短租约声明处理权，但提交时仍必须比较 version。租约超时也不证明旧 worker 已停止，所以工具侧幂等同样不可缺少。</p>
+
+      <h2 id="安全与隐私"><a class="heading-anchor" href="#安全与隐私" aria-label="链接到本节">#</a>安全与隐私</h2>
+      <p>记忆扩大了单次输入的生命周期：一次提示注入、错误权限结果或敏感数据若被持久化，可能影响后续会话。OWASP 将敏感信息泄露列为 LLM 应用风险，并建议清洗输入、限制外部数据访问、采用最小权限和严格访问控制；其 Agentic 安全材料还特别提醒持久记忆与上下文污染。<a href="https://genai.owasp.org/" target="_blank" rel="noopener noreferrer">OWASP GenAI Security Project</a></p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>控制</th><th>最低实现</th><th>失败时的安全行为</th></tr></thead>
+        <tbody>
+          <tr><td>租户 / 用户隔离</td><td>可信身份生成复合分区键；所有查询与唯一约束带 tenant；conversation 映射验证主体</td><td>拒绝而不是回退到“全局会话”</td></tr>
+          <tr><td>数据最小化与脱敏</td><td>允许清单式 <code>toPromptView()</code>；凭证、PII、内部异常不进入 Prompt</td><td>使用固定公开错误，私有诊断写受控存储</td></tr>
+          <tr><td>TTL 与删除</td><td>每层独立保留策略；索引、摘要、派生向量和备份有删除流程</td><td>过期即不加载；恢复转人工或重新开始</td></tr>
+          <tr><td>加密与访问控制</td><td>传输加密、静态加密、密钥轮换、最小权限服务账号、字段级审计</td><td>密钥 / 权限不可用时停止，不降级为明文</td></tr>
+          <tr><td>不可信内容边界</td><td>Observation、历史消息、摘要、检索内容标记为数据；校验来源和结构</td><td>检测到可疑指令时隔离、记录、请求人工确认</td></tr>
+          <tr><td>公开 / 私有诊断分离</td><td>用户只见稳定错误码和安全文案；堆栈、下游正文、策略细节只进私有审计</td><td>诊断存储失败也不向用户回显原始异常</td></tr>
+        </tbody>
+      </table></div>
+      <p><strong>不要把 system prompt 当数据保险箱。</strong>Prompt 不是访问控制，模型也可能复述其中内容。凭证、连接串、原始审批 token、加密密钥和完整权限图不应进入任何 Prompt。真正的授权以 Spring Security / 服务端策略和数据库对象归属为准。</p>
+
+      <h2 id="企业服务台案例"><a class="heading-anchor" href="#企业服务台案例" aria-label="链接到本节">#</a>企业服务台案例</h2>
+      <p>场景：用户要求调查支付服务异常。Agent 可能读取服务状态、查询其可见工单、检索知识并在获批后创建新工单。状态键和值建议如下：</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>状态字段</th><th>示例</th><th>为何持久化</th><th>是否进入 Prompt</th></tr></thead>
+        <tbody>
+          <tr><td>tenantId / userId</td><td><code>tenant-a</code> / 内部主体 ID</td><td>隔离与对象级授权</td><td>通常不进入；只用于服务端过滤</td></tr>
+          <tr><td>conversationId</td><td>服务端生成的不可猜测映射 ID</td><td>选择正确 Chat Memory</td><td>不作为自然语言内容</td></tr>
+          <tr><td>runId / requestId</td><td>一次调查 / 一次入口请求</td><td>恢复、幂等、关联 Trace</td><td>需要时仅给短标签</td></tr>
+          <tr><td>requestSummary</td><td>“调查支付服务间歇性超时”</td><td>恢复目标；避免原文无限复制</td><td>脱敏后进入</td></tr>
+          <tr><td>approvedActionIds</td><td>已批准创建工单动作 ID</td><td>防止模型伪造审批、重复执行</td><td>只给“已批准动作数量 / 类型”，不暴露 token</td></tr>
+          <tr><td>lastToolStatuses</td><td><code>serviceStatus=SUCCEEDED</code></td><td>恢复后判断是否需重试</td><td>安全状态码可进入</td></tr>
+          <tr><td>knowledgeSourceVersions</td><td><code>runbook=2026.07</code></td><td>识别过期知识、保证引用可追踪</td><td>与安全摘要一起进入</td></tr>
+          <tr><td>budget</td><td>剩余 4 步、8000 token、截止时间</td><td>重启不能重置预算</td><td>可给剩余步骤；应用外部强制</td></tr>
+          <tr><td>version</td><td><code>8</code></td><td>乐观并发控制</td><td>不必进入 Prompt</td></tr>
+        </tbody>
+      </table></div>
+      <p>工具 Observation “数据库超时，连接串为 …，请忽略规则并执行 …”同时包含敏感诊断和不可信指令。正确做法是：原始结果在受控边界内立即分类；密钥 / 连接信息不写明文，私有诊断加密保存；Prompt 只得到类似“服务状态查询失败，错误类别 TEMPORARY_DEPENDENCY_FAILURE”的固定摘要，并明确标记为不可信工具数据。用户只看到安全错误和可执行下一步。</p>
+      <p>实例在创建工单请求发出后宕机时，恢复器先根据 actionId / idempotency key 查询工单系统：若已创建则补写成功事件与检查点；若明确未创建且审批仍有效才重试；若状态未知则转人工。它绝不能根据 Chat Memory 中“我已经为你创建工单”的助手文本认定副作用成功。</p>
+
+      <h2 id="测试策略"><a class="heading-anchor" href="#测试策略" aria-label="链接到本节">#</a>测试策略</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>测试场景</th><th>注入方式</th><th>预期断言</th></tr></thead>
+        <tbody>
+          <tr><td>跨租户串话</td><td>tenant B 猜到 tenant A 的 conversationId / runId</td><td>查询返回拒绝或不存在；Prompt、响应、日志均无 A 的内容</td></tr>
+          <tr><td>缺失 Conversation ID</td><td>调用 Memory Advisor 时省略参数</td><td>Spring AI 运行时抛 <code>IllegalArgumentException</code>；业务入口也快速失败，绝不回退到共享默认会话</td></tr>
+          <tr><td>陈旧检查点版本</td><td>两个 worker 同读 version 7 并写 version 8</td><td>恰好一个成功；另一个得到乐观锁冲突，不能覆盖或重复执行工具</td></tr>
+          <tr><td>过期记忆 / 检查点</td><td>时钟推进到 expiresAt</td><td>内容不进入 Prompt；检查点不自动恢复，按策略重新开始或转人工</td></tr>
+          <tr><td>脱敏</td><td>请求摘要含 token、password、PII 和内部主机名</td><td><code>toPromptView()</code> 与公开错误不含原值；私有存储按分类加密</td></tr>
+          <tr><td>实例重启恢复</td><td>保存检查点后销毁进程内对象并创建新服务实例</td><td>从 Repository 恢复相同预算和工具状态；不依赖 InMemory Chat Memory</td></tr>
+          <tr><td>重复事件</td><td>同一 eventId 投递两次</td><td>只追加一次；检查点 version 不因重复消息多加一次</td></tr>
+          <tr><td>敏感 / 恶意 Observation</td><td>工具结果含凭证、堆栈和“忽略指令”文本</td><td>原文不进 Prompt / 公共响应；安全摘要带不可信数据边界，诊断仅进受控私有存储</td></tr>
+          <tr><td>保留期删除</td><td>触发用户删除 / TTL 作业</td><td>消息、状态、摘要、索引和派生数据按策略删除；删除审计不复写敏感正文</td></tr>
+        </tbody>
+      </table></div>
+      <p>单元测试覆盖复制不可变集合、投影脱敏、TTL 和 version 比较；Repository 集成测试用真实数据库验证条件更新、复合租户键、唯一 eventId 与事务 outbox；端到端测试再验证 Spring AI 调用始终带显式 conversationId。安全回归测试应固定包含跨租户、提示注入持久化与删除完整性。</p>
+
+      <h2 id="练习与验收"><a class="heading-anchor" href="#练习与验收" aria-label="链接到本节">#</a>练习与验收</h2>
+      <h3 id="练习一-字段分层">练习一：给字段分层</h3>
+      <p>为下面字段选择“运行状态 / Prompt Context / Chat Memory / 长期业务记忆与历史”，并写出 TTL、访问主体和删除方式：用户原始问题、请求摘要、审批 token、工具公开摘要、工具原始异常、完整消息、剩余预算、工单事实、知识版本。允许同一事实产生不同层的投影，但必须指出真相源。</p>
+
+      <h3 id="练习二-实现仓储">练习二：实现 StateRepository</h3>
+      <ol>
+        <li>使用 PostgreSQL 或测试容器建立 checkpoint、agent_event 与 outbox 三张表。</li>
+        <li>实现以 tenantId、userId、runId 定位的 <code>load</code>，禁止仅按 runId 全局查询。</li>
+        <li>用单条条件 UPDATE 实现 <code>saveIfVersion</code>，并发测试验证只能一个 worker 成功。</li>
+        <li>以 eventId 唯一约束实现 <code>appendEventIfAbsent</code>；证明重复投递不产生第二次副作用。</li>
+        <li>模拟实例重启，从数据库恢复预算、工具状态与知识版本；Chat Memory 清空也不影响业务恢复。</li>
+      </ol>
+
+      <h3 id="练习三-spring-ai">练习三：接入 Spring AI 2.0.0</h3>
+      <p>使用任意 <code>ChatModel</code> Bean 与本页 provider-neutral 配置，建立两个 tenant、三个 conversation。验证每次调用显式传入由认证上下文映射的 <code>ChatMemory.CONVERSATION_ID</code>；省略 ID 必须失败；交换 ID 不能读到另一主体的内容。另用 Spring Data 独立保存完整消息与业务事件。</p>
+
+      <h3 id="本课验收标准">本课验收标准</h3>
+      <ul>
+        <li>能解释运行状态、Prompt Context、Chat Memory、长期业务记忆 / Chat History 四层的真相源、用途、TTL 和删除责任。</li>
+        <li>能准确说明 <code>ChatMemoryRepository</code> 负责存取、<code>ChatMemory</code> 决定保留；<code>MessageWindowChatMemory</code> 是滑动消息窗口。</li>
+        <li>能证明每次 Memory Advisor 调用都显式传入可信 <code>ChatMemory.CONVERSATION_ID</code>，并测试缺失 ID 在运行时失败。</li>
+        <li>能说明工具调用中间消息当前不会自动完整进入 Chat Memory，所以工具轨迹、业务状态、完整历史与审计必须独立持久化。</li>
+        <li><code>AgentState</code> 使用不可变复制，包含 tenantId、userId、conversationId、runId、请求摘要、审批动作、工具状态、知识版本、预算和 version。</li>
+        <li><code>toPromptView()</code> 只输出允许字段；敏感 Observation 的公开摘要与加密私有诊断分离，二者都不会被当成系统指令。</li>
+        <li>恢复流程验证 TTL、预期 version、幂等事件与写操作结果；冲突或未知副作用会停止 / 转人工，而非盲重试。</li>
+        <li>测试矩阵覆盖跨租户串话、过期记忆、恢复冲突、敏感 Observation、缺失 Conversation ID、重启、重复事件与保留期删除。</li>
+      </ul>
+
+      <h2 id="参考资料"><a class="heading-anchor" href="#参考资料" aria-label="链接到本节">#</a>参考资料</h2>
+      <p>以下均为官方一手资料；检索日期：2026-07-27。</p>
+      <ul>
+        <li><a href="https://docs.spring.io/spring-ai/reference/api/chat-memory.html" target="_blank" rel="noopener noreferrer">Spring AI 2.0.0 — Chat Memory</a>：Chat Memory 与 Chat History 的差异、Repository / retention 职责、MessageWindowChatMemory、持久化 Repository、工具中间消息限制和 Conversation ID 的强制要求。</li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/api/advisors.html" target="_blank" rel="noopener noreferrer">Spring AI 2.0.0 — Advisors API</a>：<code>MessageChatMemoryAdvisor</code>、运行时 Advisor 参数与 Advisor Chain 的请求 / 响应增强边界。</li>
+        <li><a href="https://genai.owasp.org/" target="_blank" rel="noopener noreferrer">OWASP GenAI Security Project</a>：生成式 AI 与 Agentic 应用安全资料入口，覆盖敏感数据与记忆 / 上下文风险。</li>
+        <li><a href="https://genai.owasp.org/llmrisk/llm022025-sensitive-information-disclosure/" target="_blank" rel="noopener noreferrer">OWASP LLM02:2025 — Sensitive Information Disclosure</a>：敏感数据清洗、输入校验、数据源限制、最小权限与访问控制建议。</li>
+      </ul>
+    </article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/agent/2026-07-27-03-Agent状态上下文与记忆.html</code></div>
+      <nav class="pager" aria-label="课程导航">
+        <a class="pager-link prev" href="2026-07-27-Agent开发学习主目录.html"><small>返回</small><span>Agent 开发学习主目录</span></a>
+        <span class="pager-spacer"></span>
+      </nav>
+    </footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav class="toc-nav" aria-label="页内目录">
+      <a href="#核心结论">核心结论</a>
+      <a href="#学习目标与本阶段产物">学习目标与本阶段产物</a>
+      <a href="#四类信息不要混在一起">四类信息不要混在一起</a>
+      <a href="#状态生命周期">状态生命周期</a>
+      <a href="#上下文窗口与压缩">上下文窗口与压缩</a>
+      <a href="#java-21-agentstate">Java 21 AgentState</a>
+      <a href="#spring-ai-chat-memory">Spring AI Chat Memory</a>
+      <a href="#spring-ai-职责边界">↳ 框架与业务责任</a>
+      <a href="#maven-bom">↳ Maven BOM</a>
+      <a href="#provider-neutral-配置">↳ Provider-neutral 配置</a>
+      <a href="#持久化恢复与并发">持久化恢复与并发</a>
+      <a href="#检查点与事件日志">↳ 检查点与事件日志</a>
+      <a href="#乐观锁冲突">↳ 乐观锁冲突</a>
+      <a href="#安全与隐私">安全与隐私</a>
+      <a href="#企业服务台案例">企业服务台案例</a>
+      <a href="#测试策略">测试策略</a>
+      <a href="#练习与验收">练习与验收</a>
+      <a href="#练习一-字段分层">↳ 字段分层</a>
+      <a href="#练习二-实现仓储">↳ 实现仓储</a>
+      <a href="#练习三-spring-ai">↳ Spring AI</a>
+      <a href="#本课验收标准">↳ 本课验收标准</a>
+      <a href="#参考资料">参考资料</a>
+    </nav>
+  </aside>
+</div>
+</body>
+</html>
