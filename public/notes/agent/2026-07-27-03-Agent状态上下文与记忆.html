@@ -77,7 +77,7 @@
         <tbody>
           <tr><td>拆开四种不同生命周期的信息</td><td>四层记忆策略</td><td>某字段是否有明确所有者、用途、TTL 和删除路径？</td></tr>
           <tr><td>定义可序列化业务状态</td><td><code>AgentState</code>、<code>AgentCheckpoint</code></td><td>实例重启后能否从数据库恢复，而不是依赖进程内对象？</td></tr>
-          <tr><td>封装不可信工具结果</td><td><code>ObservationEnvelope</code>、结构化安全投影</td><td>Prompt DTO 是否只接受枚举 / 安全代码，完全没有原始 payload 字段？</td></tr>
+          <tr><td>封装不可信工具结果</td><td><code>ObservationEnvelope</code>、结构化安全投影</td><td>Prompt DTO 是否只接受显式领域枚举 / 受信类型，完全没有原始 payload 字段？</td></tr>
           <tr><td>处理重复与并发恢复</td><td><code>StateRepository.commitRecovery</code>、乐观锁、幂等结果</td><td>重复 key 是否返回旧结果且不增版本，异 key 冲突是否整体回滚？</td></tr>
           <tr><td>正确接入对话记忆</td><td>provider-neutral 的 Spring AI 2.0.0 配置</td><td>是否每次显式传入可信 conversationId，并另存完整历史？</td></tr>
         </tbody>
@@ -194,18 +194,20 @@ enum ToolStatus { NOT_STARTED, SUCCEEDED, SAFE_FAILURE, NEEDS_REVIEW }
 enum RequestIntent { INVESTIGATE_INCIDENT, CHECK_TICKET, CREATE_TICKET_REQUEST }
 enum ObservationKind { SERVICE_STATUS, TICKET_LOOKUP, KNOWLEDGE_LOOKUP }
 enum ObservationOutcome { OK, NOT_FOUND, TEMPORARY_FAILURE, DENIED, NEEDS_REVIEW }
-
-// 只能承载应用定义的代码，不承载工具原文、PII、主机名或诊断文本。
-record SafeCode(String value) {
-    SafeCode {
-        value = Required.safeCode(value, "value");
-    }
+enum ServiceCode { PAYMENTS, IDENTITY, ORDERING }
+enum IssueCode { INTERMITTENT_TIMEOUT, DEGRADED_SERVICE, ACCESS_FAILURE }
+enum DetailCode {
+    DEPENDENCY_TIMEOUT, TICKET_NOT_FOUND, KNOWLEDGE_VERSION_MISSING,
+    POLICY_DENIED, NO_ADDITIONAL_DETAIL
+}
+enum KnowledgeSourceCode {
+    PAYMENTS_RUNBOOK, INCIDENT_CATALOG, TICKETING_POLICY
 }
 
 record SafeRequestSummary(
         RequestIntent intent,
-        SafeCode serviceCode,
-        SafeCode issueCode) {
+        ServiceCode serviceCode,
+        IssueCode issueCode) {
     SafeRequestSummary {
         Objects.requireNonNull(intent, "intent");
         Objects.requireNonNull(serviceCode, "serviceCode");
@@ -216,7 +218,7 @@ record SafeRequestSummary(
 record PromptObservationView(
         ObservationKind kind,
         ObservationOutcome outcome,
-        SafeCode detailCode) {
+        DetailCode detailCode) {
     PromptObservationView {
         Objects.requireNonNull(kind, "kind");
         Objects.requireNonNull(outcome, "outcome");
@@ -228,7 +230,7 @@ record SafeObservationSummary(
         String observationId,
         ObservationKind kind,
         ObservationOutcome outcome,
-        SafeCode detailCode) {
+        DetailCode detailCode) {
     SafeObservationSummary {
         observationId = Required.text(observationId, "observationId");
         Objects.requireNonNull(kind, "kind");
@@ -241,10 +243,12 @@ record SafeObservationSummary(
     }
 }
 
-record KnowledgeVersionRef(SafeCode sourceCode, SafeCode versionCode) {
+record KnowledgeVersionRef(KnowledgeSourceCode sourceCode, long revision) {
     KnowledgeVersionRef {
         Objects.requireNonNull(sourceCode, "sourceCode");
-        Objects.requireNonNull(versionCode, "versionCode");
+        if (revision &lt; 1) {
+            throw new IllegalArgumentException("revision must be positive");
+        }
     }
 }
 
@@ -513,18 +517,10 @@ final class Required {
         }
         return value;
     }
-
-    static String safeCode(String value, String name) {
-        String code = text(value, name);
-        if (!code.matches("[A-Z][A-Z0-9_]{0,63}")) {
-            throw new IllegalArgumentException(name + " must be an allowlisted code");
-        }
-        return code;
-    }
 }</code></pre>
       <p><strong>恢复事务：</strong><code>commitRecovery</code> 是一个 Repository 原子操作，而不是三个可独立成功的方法。数据库实现先处理 <code>(StateKey, idempotencyKey)</code> 唯一幂等记录：相同 fingerprint 的重放返回先前 checkpoint 并标记 <code>REPLAYED</code>，不会推进 version；相同 key 配不同 fingerprint 明确拒绝。首次请求才做 expectedVersion 条件更新，并在同一事务写 checkpoint、唯一事件、outbox 和幂等结果。版本冲突或任意写入失败必须整体回滚。</p>
-      <p><strong>结构化安全投影：</strong><code>SafeRequestSummary</code>、<code>SafeObservationSummary</code> 与 <code>PromptObservationView</code> 只包含枚举、计数和受 <code>SafeCode</code> 限制的业务代码。虽然 <code>ObservationEnvelope</code> 在私有持久化边界持有密文字段，但 <code>PromptObservationView</code> 没有 raw / private 字段或访问器，<code>toPromptView()</code> 也只映射已分类的安全摘要，不对原文做“先复制再正则替换”。密文由专用加密服务产生，不是 Base64。</p>
-      <p><strong>DLP 边界：</strong>工具原文进入这些 record 之前，必须由示例外的独立 DLP / 数据分类 / 脱敏服务识别 PII、凭证、内部主机名和策略敏感内容，并由确定性业务映射器产出枚举与安全代码。本文代码故意不声称用一个正则覆盖一般 PII；DLP 服务需要自己的规则库、模型 / 检测器、版本与回归数据集。无法分类时输出 <code>NEEDS_REVIEW</code>，原文只进受控私有存储。</p>
+      <p><strong>结构化安全投影：</strong><code>SafeRequestSummary</code>、<code>SafeObservationSummary</code> 与 <code>PromptObservationView</code> 只包含显式领域枚举、计数和 <code>KnowledgeVersionRef</code> 等受信类型。<code>ServiceCode</code>、<code>IssueCode</code>、<code>DetailCode</code>、<code>KnowledgeSourceCode</code> 的常量集合就是不可变 allowlist；仅仅长得像 <code>UPPER_SNAKE_CASE</code> 并不能成为合法值。虽然 <code>ObservationEnvelope</code> 在私有持久化边界持有密文字段，但 <code>PromptObservationView</code> 没有 raw / private 字段或访问器，<code>toPromptView()</code> 也只映射已分类的安全摘要。密文由专用加密服务产生，不是 Base64。</p>
+      <p><strong>DLP 与映射边界：</strong>工具原文进入这些 record 之前，必须由示例外的独立 DLP / 数据分类 / 脱敏服务识别 PII、凭证、内部主机名和策略敏感内容，再由服务器端确定性映射器转换成领域枚举。未知 service、issue、detail 或 knowledge source 必须拒绝或映射为预先定义的 <code>NEEDS_REVIEW</code> 结果，不能把原字符串包装后放行。DLP 服务仍需要自己的规则库、检测器版本与回归数据集。</p>
 
       <h2 id="spring-ai-chat-memory"><a class="heading-anchor" href="#spring-ai-chat-memory" aria-label="链接到本节">#</a>Spring AI 2.0.0：显式 Chat Memory</h2>
       <p>Spring AI 的 Chat Memory 是模型对话上下文机制，不是业务 Agent Runtime。官方定义清楚地区分了 Chat Memory（模型为当前对话保留并使用的相关信息）与 Chat History（用户与模型交换的全部消息）。<code>MessageWindowChatMemory</code> 维护消息滑动窗口；超过上限时淘汰较旧消息，并尽量在完整 turn 边界裁剪。<a href="https://docs.spring.io/spring-ai/reference/api/chat-memory.html" target="_blank" rel="noopener noreferrer">Spring AI Chat Memory</a></p>
@@ -642,7 +638,7 @@ final class ServiceDeskAssistant {
         <thead><tr><th>控制</th><th>最低实现</th><th>失败时的安全行为</th></tr></thead>
         <tbody>
           <tr><td>租户 / 用户隔离</td><td>可信身份生成复合分区键；所有查询与唯一约束带 tenant；conversation 映射验证主体</td><td>拒绝而不是回退到“全局会话”</td></tr>
-          <tr><td>数据最小化与脱敏</td><td>独立 DLP 分类原文；<code>toPromptView()</code> 只接收枚举、计数与 <code>SafeCode</code>，没有 raw payload 字段</td><td>无法分类就 <code>NEEDS_REVIEW</code>；固定公开错误，私有诊断写受控存储</td></tr>
+          <tr><td>数据最小化与脱敏</td><td>独立 DLP 分类原文；<code>toPromptView()</code> 只接收显式领域枚举、计数与受信 record，没有 raw payload 字段</td><td>未知值拒绝或映射到预定义 <code>NEEDS_REVIEW</code>；固定公开错误，私有诊断写受控存储</td></tr>
           <tr><td>TTL 与删除</td><td>每层独立保留策略；索引、摘要、派生向量和备份有删除流程</td><td>过期即不加载；恢复转人工或重新开始</td></tr>
           <tr><td>加密与访问控制</td><td>传输加密、静态加密、密钥轮换、最小权限服务账号、字段级审计</td><td>密钥 / 权限不可用时停止，不降级为明文</td></tr>
           <tr><td>不可信内容边界</td><td>Observation、历史消息、摘要、检索内容标记为数据；校验来源和结构</td><td>检测到可疑指令时隔离、记录、请求人工确认</td></tr>
@@ -662,7 +658,7 @@ final class ServiceDeskAssistant {
           <tr><td>requestSummary</td><td><code>INVESTIGATE_INCIDENT / PAYMENTS / INTERMITTENT_TIMEOUT</code></td><td>以 <code>SafeRequestSummary</code> 保存已分类目标</td><td>三个结构化安全字段进入；原始用户文本不从此路径进入</td></tr>
           <tr><td>approvedActionIds</td><td>已批准创建工单动作 ID</td><td>防止模型伪造审批、重复执行</td><td>只给“已批准动作数量 / 类型”，不暴露 token</td></tr>
           <tr><td>lastToolStatuses</td><td><code>serviceStatus=SUCCEEDED</code></td><td>恢复后判断是否需重试</td><td>安全状态码可进入</td></tr>
-          <tr><td>knowledgeSourceVersions</td><td><code>runbook=2026.07</code></td><td>识别过期知识、保证引用可追踪</td><td>与安全摘要一起进入</td></tr>
+          <tr><td>knowledgeSourceVersions</td><td><code>PAYMENTS_RUNBOOK / revision 202607</code></td><td>来源使用 <code>KnowledgeSourceCode</code> allowlist，revision 为正整数</td><td>受信来源枚举与版本号进入</td></tr>
           <tr><td>budget</td><td>剩余 4 步、8000 token、截止时间</td><td>重启不能重置预算</td><td>可给剩余步骤；应用外部强制</td></tr>
           <tr><td>version</td><td><code>8</code></td><td>乐观并发控制</td><td>不必进入 Prompt</td></tr>
         </tbody>
@@ -678,16 +674,16 @@ final class ServiceDeskAssistant {
           <tr><td>缺失 Conversation ID</td><td>调用 Memory Advisor 时省略参数</td><td>Spring AI 运行时抛 <code>IllegalArgumentException</code>；业务入口也快速失败，绝不回退到共享默认会话</td></tr>
           <tr><td>陈旧检查点版本</td><td>两个不同 idempotency key 同读 version 7 并写 version 8</td><td>恰好一个事务成功；另一个得到乐观锁冲突，checkpoint / event / outbox / 幂等结果均不写入</td></tr>
           <tr><td>过期记忆 / 检查点</td><td>时钟推进到 expiresAt</td><td>内容不进入 Prompt；检查点不自动恢复，按策略重新开始或转人工</td></tr>
-          <tr><td>结构化投影 / 脱敏边界</td><td>私有 payload 含 token、PII 和内部主机名；安全代码尝试注入空格、点号或自由文本</td><td><code>SafeCode</code> 拒绝非法值；序列化 <code>PromptStateView</code> / <code>PromptObservationView</code> 的 schema 与值均无 raw/private 字段。一般 PII 检出由独立 DLP 服务的专用数据集测试，不宣称本 record 能检测</td></tr>
+          <tr><td>领域 allowlist / 脱敏边界</td><td>私有 payload 含 token、PII 和内部主机名；分类结果尝试使用形状合法但未注册的 <code>IGNORE_PREVIOUS_RULES</code></td><td><code>assertThrows(IllegalArgumentException.class, () -&gt; ServiceCode.valueOf("IGNORE_PREVIOUS_RULES"))</code>；<code>DetailCode</code> 与 knowledge source 做同类测试。序列化 Prompt DTO 无 raw/private 字段；一般 PII 检出由独立 DLP 数据集测试</td></tr>
           <tr><td>实例重启恢复</td><td>保存检查点后销毁进程内对象并创建新服务实例</td><td>从 Repository 恢复相同预算和工具状态；不依赖 InMemory Chat Memory</td></tr>
           <tr><td>重复恢复 key</td><td>同一 idempotency key 与 fingerprint 调用 <code>commitRecovery</code> 两次</td><td>第二次返回首次 checkpoint 和 <code>REPLAYED</code>；version 不变，event / outbox 各一条</td></tr>
           <tr><td>崩溃窗口</td><td>checkpoint 条件更新后、event 或 outbox 写入前注入异常</td><td>事务整体回滚；四类记录都没有部分提交</td></tr>
           <tr><td>幂等 key 误用</td><td>同一 key 携带不同 commandFingerprint</td><td>抛 <code>IdempotencyKeyConflict</code>；不能返回不相关旧结果，也不推进 version</td></tr>
-          <tr><td>敏感 / 恶意 Observation</td><td>工具结果含凭证、堆栈和“忽略指令”文本</td><td>DLP / 分类服务单独测试检出；Prompt 路径只能构造枚举与安全代码，私有原文仅进受控加密存储</td></tr>
+          <tr><td>敏感 / 恶意 Observation</td><td>工具结果含凭证、堆栈和“忽略指令”文本</td><td>DLP / 分类服务单独测试检出；Prompt 路径只能构造受信领域枚举，私有原文仅进受控加密存储</td></tr>
           <tr><td>保留期删除</td><td>触发用户删除 / TTL 作业</td><td>消息、状态、摘要、索引和派生数据按策略删除；删除审计不复写敏感正文</td></tr>
         </tbody>
       </table></div>
-      <p>单元测试覆盖不可变复制、<code>SafeCode</code> 拒绝自由文本、Prompt DTO 不存在私有字段、TTL 和 version；Repository 集成测试用真实数据库验证 duplicate replay、不同 key 乐观锁冲突、故障注入全回滚及 event / outbox 唯一性。DLP / 脱敏服务拥有独立的 PII、凭证、主机名与提示注入回归数据集，不能用本页 record 测试冒充。端到端测试再验证 Spring AI 调用始终带显式 conversationId。</p>
+      <p>单元测试覆盖不可变复制、每个领域枚举拒绝未注册值、<code>KnowledgeVersionRef</code> 拒绝非正 revision、Prompt DTO 不存在私有字段、TTL 和 version；Repository 集成测试用真实数据库验证 duplicate replay、不同 key 乐观锁冲突、故障注入全回滚及 event / outbox 唯一性。DLP / 脱敏服务拥有独立的 PII、凭证、主机名与提示注入回归数据集，不能用枚举测试冒充。端到端测试再验证 Spring AI 调用始终带显式 conversationId。</p>
 
       <h2 id="练习与验收"><a class="heading-anchor" href="#练习与验收" aria-label="链接到本节">#</a>练习与验收</h2>
       <h3 id="练习一-字段分层">练习一：给字段分层</h3>
@@ -712,7 +708,7 @@ final class ServiceDeskAssistant {
         <li>能证明每次 Memory Advisor 调用都显式传入可信 <code>ChatMemory.CONVERSATION_ID</code>，并测试缺失 ID 在运行时失败。</li>
         <li>能说明工具调用中间消息当前不会自动完整进入 Chat Memory，所以工具轨迹、业务状态、完整历史与审计必须独立持久化。</li>
         <li><code>AgentState</code> 使用不可变复制，包含 tenantId、userId、conversationId、runId、请求摘要、审批动作、工具状态、知识版本、预算和 version。</li>
-        <li><code>toPromptView()</code> 只输出 <code>SafeRequestSummary</code>、枚举、计数、<code>SafeCode</code> 与 <code>PromptObservationView</code>；私有 payload 在类型结构上不可达。一般 PII 检测属于独立 DLP 服务。</li>
+        <li><code>toPromptView()</code> 只输出 <code>SafeRequestSummary</code>、显式领域枚举、计数、<code>KnowledgeVersionRef</code> 与 <code>PromptObservationView</code>；形状合法但未注册的值也会被拒绝，私有 payload 在类型结构上不可达。一般 PII 检测属于独立 DLP 服务。</li>
         <li><code>commitRecovery</code> 在单一事务验证幂等 key、预期 version，并原子写 checkpoint、event、outbox 与重放结果；重复 key 不增版本，冲突 / 故障不部分提交。</li>
         <li>测试矩阵覆盖跨租户串话、过期记忆、恢复冲突、重复重放、崩溃回滚、敏感 Observation、缺失 Conversation ID、重启与保留期删除。</li>
       </ul>
