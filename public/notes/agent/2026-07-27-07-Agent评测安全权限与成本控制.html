@@ -248,6 +248,8 @@ record UsageDelta(
         int toolCalls,
         int modelCalls,
         long costMicros) {
+    static final UsageDelta ZERO = new UsageDelta(0, 0, 0, 0, 0);
+
     UsageDelta {
         if (inputTokens &lt; 0 || outputTokens &lt; 0 || toolCalls &lt; 0
                 || modelCalls &lt; 0 || costMicros &lt; 0) {
@@ -346,6 +348,8 @@ interface AtomicBudgetLedger {
     // 实现必须用数据库条件更新 / CAS；不能“先读剩余、稍后再减”。
     BudgetDecision tryReserve(
             String runId, Instant now, UsageDelta worstCaseIncrement);
+    // 以 (runId, reservationId) 幂等：相同 actual 重试不重复扣费；
+    // 不得把已确认消费量“结算”为更小值，也不能用 settle 释放已消费资源。
     void settle(String runId, UUID reservationId, UsageDelta actual);
 }
 
@@ -470,16 +474,19 @@ final class GovernanceAdvisor implements CallAdvisor {
 
     private final TrustedContextStore contexts;
     private final ModelCallPolicy policy;
+    private final AtomicBudgetLedger budgets;
     private final AppendOnlyAuditStore audit;
     private final ObservationRegistry observations;
 
     GovernanceAdvisor(
             TrustedContextStore contexts,
             ModelCallPolicy policy,
+            AtomicBudgetLedger budgets,
             AppendOnlyAuditStore audit,
             ObservationRegistry observations) {
         this.contexts = contexts;
         this.policy = policy;
+        this.budgets = budgets;
         this.audit = audit;
         this.observations = observations;
     }
@@ -501,20 +508,74 @@ final class GovernanceAdvisor implements CallAdvisor {
         TrustedRunContext context = contexts.requireBoundToCurrentPrincipal(opaqueRef);
         PolicyDecision decision = policy.authorizeModelCall(context);
 
-        return Observation.createNotStarted("agent.governance", observations)
-                // 只有有界枚举进入低基数标签；不放 run / user / tenant / prompt。
-                .lowCardinalityKeyValue("agent.operation", "model_call")
-                .lowCardinalityKeyValue(
-                        "agent.risk_tier", context.riskTier().metricValue())
-                .lowCardinalityKeyValue(
-                        "agent.policy.outcome", decision.effect().name())
-                .observe(() -&gt; {
-                    appendDecisionOrFailClosed(context, decision);
-                    if (!decision.allowedToExecute()) {
-                        throw new SafeDenialException("Request not permitted");
-                    }
-                    return chain.nextCall(request);
-                });
+        appendDecisionOrFailClosed(context, decision);
+        if (!decision.allowedToExecute()) {
+            throw new SafeDenialException("Request not permitted");
+        }
+        context.requireTimeForModelCall(); // 校验绝对 deadline 与清理余量。
+
+        BudgetDecision budget = budgets.tryReserve(
+                context.runId(),
+                context.clock().instant(),
+                context.modelCallWorstCaseUsage());
+        if (budget instanceof BudgetDecision.Denied denied) {
+            // 先追加仅含固定原因码的 BUDGET_DECIDED；失败则 fail-closed。
+            appendBudgetDecisionOrFailClosed(context, denied);
+            throw new SafeDenialException("Execution budget exhausted");
+        }
+
+        BudgetDecision.Reserved reservation =
+                (BudgetDecision.Reserved) budget;
+        try {
+            appendBudgetDecisionOrFailClosed(context, reservation);
+        }
+        catch (AuditUnavailableException auditFailure) {
+            // 模型尚未调用，幂等关闭零消费 reservation。
+            budgets.settle(
+                    context.runId(), reservation.reservationId(), UsageDelta.ZERO);
+            throw auditFailure;
+        }
+
+        // 若供应商没有返回 usage，保守按 reservation 结算，绝不按零释放。
+        UsageDelta actual = reservation.reserved();
+        try {
+            ChatClientResponse response =
+                    Observation.createNotStarted("agent.governance", observations)
+                            // 只有有界枚举进入低基数标签；不放 run / user / tenant / prompt。
+                            .lowCardinalityKeyValue("agent.operation", "model_call")
+                            .lowCardinalityKeyValue(
+                                    "agent.risk_tier",
+                                    context.riskTier().metricValue())
+                            .lowCardinalityKeyValue(
+                                    "agent.policy.outcome",
+                                    decision.effect().name())
+                            .observe(() -&gt; chain.nextCall(request));
+            actual = ModelUsageExtractor.actualOrReserved(
+                    response, reservation.reserved());
+            appendModelOutcomeOrFailClosed(context, "SUCCESS", actual);
+            return response;
+        }
+        catch (AuditUnavailableException auditFailure) {
+            // 调用结果不能在强制审计缺失时对外宣称成功；finally 仍结算。
+            throw auditFailure;
+        }
+        catch (ModelTimeoutException timeout) {
+            actual = ModelUsageExtractor.timeoutOrReserved(
+                    timeout, reservation.reserved());
+            appendModelOutcomeOrFailClosed(context, "TIMEOUT", actual);
+            throw timeout;
+        }
+        catch (RuntimeException failure) {
+            actual = ModelUsageExtractor.failureOrReserved(
+                    failure, reservation.reserved());
+            appendModelOutcomeOrFailClosed(context, "FAILED", actual);
+            throw failure;
+        }
+        finally {
+            // success / failure / timeout 恰好走一个 finally；settle 可幂等重试。
+            budgets.settle(
+                    context.runId(), reservation.reservationId(), actual);
+        }
     }
 
     private String requireOpaqueRef(Map&lt;String, Object&gt; context) {
@@ -528,6 +589,16 @@ final class GovernanceAdvisor implements CallAdvisor {
     private void appendDecisionOrFailClosed(
             TrustedRunContext context, PolicyDecision decision) {
         // 生成 SafeAuditPayload；append 失败向上抛出，模型调用次数保持为 0。
+    }
+
+    private void appendBudgetDecisionOrFailClosed(
+            TrustedRunContext context, BudgetDecision decision) {
+        // AuditAction.BUDGET_DECIDED + 固定原因码 / reservation ref；无 prompt。
+    }
+
+    private void appendModelOutcomeOrFailClosed(
+            TrustedRunContext context, String outcomeCode, UsageDelta usage) {
+        // 安全 TrajectoryEvent：仅 outcome、usage、model ref，不含回复正文。
     }
 }</code></pre>
       <pre><code class="language-java">@Configuration
@@ -547,11 +618,12 @@ class GovernedChatConfiguration {
 
 // Web / service 层先创建与当前认证主体绑定的服务器上下文。
 String contextRef = trustedContexts.create(authenticatedPrincipal, budget);
+ToolCallback[] callbacks = guardedTools.callbacksFor(contextRef);
 String answer = serviceDeskChatClient.prompt()
         .advisors(spec -&gt; spec.param(
                 GovernanceAdvisor.TRUSTED_CONTEXT_REF, contextRef))
-        // callbacks 是按本次可信上下文包装后的最小集合，不用宽权限 defaultTools。
-        .tools(guardedTools.callbacksFor(contextRef))
+        // helper 明确返回 ToolCallback[]；按请求传最小集合，不用宽权限 defaultTools。
+        .tools(callbacks)
         .user(untrustedUserText)
         .call()
         .content();</code></pre>
@@ -626,18 +698,73 @@ final class PreauthorizedToolCallback implements ToolCallback {
                 trustedContext.runId(),
                 trustedContext.clock().instant(),
                 metadata.worstCaseUsage());
-        if (budget instanceof BudgetDecision.Denied) {
+        if (budget instanceof BudgetDecision.Denied denied) {
+            // BUDGET_DECIDED 只含固定 reasonCode；审计失败直接抛出，delegate=0。
+            appendBudgetDecisionOrFailClosed(definition, metadata, denied);
             throw denied(definition);
         }
 
-        return Observation.createNotStarted("agent.tool.execution", observations)
-                // 工具名来自受控注册表且集合有界；参数、结果、tenant 不作标签。
-                .lowCardinalityKeyValue("agent.operation", "tool_call")
-                .lowCardinalityKeyValue("agent.tool.name", definition.name())
-                .lowCardinalityKeyValue("agent.policy.outcome", "ALLOW")
-                .observe(() -&gt; toolContext == null
-                        ? delegate.call(toolInput)
-                        : delegate.call(toolInput, toolContext));
+        BudgetDecision.Reserved reservation =
+                (BudgetDecision.Reserved) budget;
+        try {
+            appendBudgetDecisionOrFailClosed(definition, metadata, reservation);
+        }
+        catch (AuditUnavailableException auditFailure) {
+            // delegate 尚未调用；关闭零消费 reservation，不留下悬挂额度。
+            budgets.settle(
+                    trustedContext.runId(),
+                    reservation.reservationId(),
+                    UsageDelta.ZERO);
+            throw auditFailure;
+        }
+
+        // 保守默认：拿不到真实用量时按 reservation 结算，不能记为零。
+        UsageDelta actual = reservation.reserved();
+        try {
+            String result =
+                    Observation.createNotStarted(
+                                    "agent.tool.execution", observations)
+                            // 工具名来自受控注册表且集合有界；参数、结果、tenant 不作标签。
+                            .lowCardinalityKeyValue(
+                                    "agent.operation", "tool_call")
+                            .lowCardinalityKeyValue(
+                                    "agent.tool.name", definition.name())
+                            .lowCardinalityKeyValue(
+                                    "agent.policy.outcome", "ALLOW")
+                            .observe(() -&gt; toolContext == null
+                                    ? delegate.call(toolInput)
+                                    : delegate.call(toolInput, toolContext));
+            actual = metadata.successUsageOrReserved(
+                    result, reservation.reserved());
+            appendToolOutcomeOrFailClosed(
+                    definition, metadata, "SUCCESS", actual);
+            return result;
+        }
+        catch (AuditUnavailableException auditFailure) {
+            throw auditFailure; // finally 仍按已知 / 保守用量结算。
+        }
+        catch (ToolTimeoutException timeout) {
+            actual = metadata.timeoutUsageOrReserved(
+                    timeout, reservation.reserved());
+            appendToolOutcomeOrFailClosed(
+                    definition, metadata, "TIMEOUT", actual);
+            throw timeout;
+        }
+        catch (RuntimeException failure) {
+            actual = metadata.failureUsageOrReserved(
+                    failure, reservation.reserved());
+            appendToolOutcomeOrFailClosed(
+                    definition, metadata, "FAILED", actual);
+            throw failure;
+        }
+        finally {
+            // settle 只在这一处：success / failure / timeout 均恰好一次。
+            // 若网络使 settle 结果未知，可用同 reservationId 幂等重试。
+            budgets.settle(
+                    trustedContext.runId(),
+                    reservation.reservationId(),
+                    actual);
+        }
     }
 
     private ToolExecutionException denied(ToolDefinition definition) {
@@ -652,8 +779,24 @@ final class PreauthorizedToolCallback implements ToolCallback {
             PolicyDecision decision) {
         // append 的 SafeAuditPayload 仅含工具 ref、动作枚举和原因码。
     }
+
+    private void appendBudgetDecisionOrFailClosed(
+            ToolDefinition definition,
+            NormalizedToolMetadata metadata,
+            BudgetDecision decision) {
+        // AuditAction.BUDGET_DECIDED；只存固定 reasonCode / reservation ref。
+    }
+
+    private void appendToolOutcomeOrFailClosed(
+            ToolDefinition definition,
+            NormalizedToolMetadata metadata,
+            String outcomeCode,
+            UsageDelta usage) {
+        // TrajectoryEvent + EXTERNAL_EFFECT_RECORDED：仅保存幂等引用与安全结果码，
+        // 不保存 toolInput、result 或异常 message。
+    }
 }</code></pre>
-      <p><strong>关键边界：</strong>工具 wrapper 使用实际 <code>ToolDefinition.name()</code>，且策略决定发生在 <code>delegate.call(...)</code> 之前；拒绝、预算不足或审计缺失时 delegate 调用必须为零。对不可逆动作，<code>PolicyDecision.REQUIRE_APPROVAL</code> 不能在此处被当作允许；只有独立审批服务验证绑定的 proposal hash、主体和时效后，才能构造 <code>ALLOW</code> 上下文。生产实现还要在 <code>finally</code> 中结算预算，并让策略异常终止工具循环而不是把可继续尝试的细节发给模型。</p>
+      <p><strong>关键边界：</strong>工具 wrapper 使用实际 <code>ToolDefinition.name()</code>，且策略决定、预算决定与强制审计发生在 <code>delegate.call(...)</code> 之前；拒绝、预算不足或审计缺失时 delegate 调用必须为零。成功预占后，成功、失败与 timeout 共享唯一 <code>finally</code> 结算点；未知用量按 reservation 保守结算，同一 reservation ID 的结算重试必须幂等且不能释放已消费量。工具终态只记录固定结果码、用量和幂等引用。对不可逆动作，<code>PolicyDecision.REQUIRE_APPROVAL</code> 不能在此处被当作允许；只有独立审批服务验证绑定的 proposal hash、主体和时效后，才能构造 <code>ALLOW</code> 上下文。策略或审计异常要终止工具循环，不能把可继续尝试的细节发给模型。</p>
 
       <h3 id="micrometer-observation-标签">Micrometer Observation 与低基数标签</h3>
       <p>Micrometer Observation 把一次操作的生命周期交给 handler，可同时产生 meter、trace 与日志。低基数值必须来自小而有界的集合，例如 <code>operation=model_call|tool_call</code>、<code>outcome=ALLOW|DENY|ERROR</code>、<code>risk_tier=LOW|MEDIUM|HIGH</code>；它们进入指标与 Trace。用户 ID、run ID、ticket ID、tenant、原始 URL、Prompt、参数和结果具有高基数或敏感性，不进入 meter 标签；必要关联使用 trace 上下文或受控审计引用。<a href="https://docs.micrometer.io/micrometer/reference/observation/introduction.html" target="_blank" rel="noopener noreferrer">Micrometer Observation Introduction</a></p>
@@ -721,6 +864,10 @@ final class PreauthorizedToolCallback implements ToolCallback {
           <tr><td>Token 预算</td><td>下一次最坏 token 使总量越界</td><td>原子预占为 <code>INPUT_TOKEN_LIMIT</code> / <code>OUTPUT_TOKEN_LIMIT</code>；模型调用=0</td><td>调用后才发现超额</td></tr>
           <tr><td>工具 / 模型预算</td><td>并发分支同时抢最后一个调用名额</td><td>只有一个 CAS / 条件更新成功；另一分支 delegate=0；原因码稳定</td><td>读—改—写竞态导致双花</td></tr>
           <tr><td>成本预算</td><td>剩余额度低于模型 / 工具最坏增量</td><td><code>COST_LIMIT</code>；失败也计已用成本；不降级到未知更贵路径</td><td>异常与重试不计费</td></tr>
+          <tr><td>预算结算生命周期</td><td>同一 reservation 分别注入 success、failure、timeout</td><td>成功、失败、超时结算恰好一次；实际用量可得则使用实际值，否则不低于保守 reservation；均有安全终态轨迹</td><td>只在成功结算、catch / finally 双重结算、未知用量按零释放</td></tr>
+          <tr><td>预算拒绝审计</td><td><code>tryReserve</code> 返回每种 <code>BudgetDecision.Denied</code></td><td>执行前追加一个 <code>BUDGET_DECIDED</code>，只含固定 reason code；model / delegate=0</td><td>拒绝无审计，或审计包含 Prompt、参数、结果 / 异常正文</td></tr>
+          <tr><td>预算审计故障</td><td>拒绝或成功 reservation 后 append-only store 失败</td><td>fail-closed；model / delegate=0；成功 reservation 用零消费幂等关闭；发出运维告警</td><td>审计不可用仍执行，或留下永久悬挂 reservation</td></tr>
+          <tr><td>结算重试幂等</td><td>第一次 settle 响应丢失，以同 run / reservation / actual 重试</td><td>最终消费量只记一次；同值重试成功；更小 actual 不能释放已消费量</td><td>重复扣费、重复释放或覆盖已确认用量</td></tr>
           <tr><td>Trace 敏感性</td><td>Prompt、参数、结果、异常含 canary secret / PII</td><td>导出 span、metric、log 不含 canary；<code>include-content=false</code></td><td>把 user / tenant / run / 内容放入标签</td></tr>
           <tr><td>审计缺失</td><td>append-only store 不可用或摘要链断裂</td><td>高风险模型 / 工具 / writer 调用=0；终态 <code>AUDIT_UNAVAILABLE</code>；运维告警</td><td>先执行后补日志，或静默丢审计</td></tr>
           <tr><td>模型拒绝</td><td>合法请求被模型拒绝、空答或安全分类误杀</td><td>结构化 <code>MODEL_REFUSAL</code>；无臆造结果；按策略转人工且计入质量分母</td><td>无限换 Prompt / 模型重试绕过安全</td></tr>
@@ -763,6 +910,89 @@ void concurrentBranchesCannotSpendLastToolCallTwice() {
     assertThat(decisions)
             .filteredOn(BudgetDecision.Denied.class::isInstance)
             .hasSize(1);
+}
+
+@Test
+void concurrentModelBranchesCannotSpendLastModelCallTwice() {
+    AtomicBudgetLedger ledger = realTransactionalTestLedger(
+            budgetWithOneRemainingModelCall());
+
+    List&lt;BudgetDecision&gt; decisions = runConcurrently(
+            () -&gt; ledger.tryReserve("run-7", now(), oneModelCallWorstCase()),
+            () -&gt; ledger.tryReserve("run-7", now(), oneModelCallWorstCase()));
+
+    assertThat(decisions)
+            .filteredOn(BudgetDecision.Reserved.class::isInstance)
+            .hasSize(1);
+    assertThat(decisions)
+            .filteredOn(BudgetDecision.Denied.class::isInstance)
+            .hasSize(1);
+}
+
+@ParameterizedTest
+@EnumSource(ToolTerminal.class)
+void successFailureAndTimeoutSettleExactlyOnce(ToolTerminal terminal) {
+    var ledger = new RecordingAtomicBudgetLedger(oneToolCallBudget());
+    var delegate = new TerminalToolCallback(terminal);
+    var callback = guardedCallback(ledger, availableAudit(), delegate);
+
+    invokeAndCaptureTerminal(callback);
+
+    assertThat(ledger.settleCalls()).hasSize(1);
+    assertThat(ledger.settleCalls().getFirst().actual())
+            .isEqualTo(terminal.actualOrConservativeUsage());
+    assertThat(audit.safeTrajectoryOutcomes()).containsExactly(terminal.code());
+}
+
+@Test
+void budgetDenialIsAuditedBeforeDelegate() {
+    var delegate = new CountingTicketTool();
+    var callback = guardedCallback(denyingLedger(COST_LIMIT), audit, delegate);
+
+    assertThatThrownBy(() -&gt; callback.call(validArguments()))
+            .isInstanceOf(ToolExecutionException.class);
+
+    assertThat(delegate.calls()).isZero();
+    assertThat(audit.events())
+            .singleElement()
+            .satisfies(event -&gt; {
+                assertThat(event.payload().action())
+                        .isEqualTo(AuditAction.BUDGET_DECIDED);
+                assertThat(event.payload().decisionCode()).isEqualTo("COST_LIMIT");
+                assertThat(event).doesNotExposeContent();
+            });
+}
+
+@Test
+void budgetAuditFailureFailsClosedBeforeDelegate() {
+    var ledger = new RecordingAtomicBudgetLedger(oneToolCallBudget());
+    var delegate = new CountingTicketTool();
+    var callback = guardedCallback(ledger, unavailableAudit(), delegate);
+
+    assertThatThrownBy(() -&gt; callback.call(validArguments()))
+            .isInstanceOf(AuditUnavailableException.class);
+
+    assertThat(delegate.calls()).isZero();
+    assertThat(ledger.settleCalls())
+            .singleElement()
+            .extracting(SettleCall::actual)
+            .isEqualTo(UsageDelta.ZERO);
+}
+
+@Test
+void settleRetryIsIdempotentAndCannotReleaseConsumedUsage() {
+    var ledger = realTransactionalTestLedger(oneToolCallBudget());
+    var reservation = requireReserved(ledger.tryReserve(
+            "run-7", now(), oneToolCall()));
+    UsageDelta actual = oneConsumedToolCall();
+
+    ledger.settle("run-7", reservation.reservationId(), actual);
+    ledger.settle("run-7", reservation.reservationId(), actual); // 响应丢失后的重试
+
+    assertThat(ledger.consumed("run-7")).isEqualTo(actual);
+    assertThatThrownBy(() -&gt; ledger.settle(
+            "run-7", reservation.reservationId(), UsageDelta.ZERO))
+            .isInstanceOf(ConflictingSettlementException.class);
 }</code></pre>
 
       <h2 id="练习与验收"><a class="heading-anchor" href="#练习与验收" aria-label="链接到本节">#</a>练习与验收</h2>
@@ -785,7 +1015,7 @@ void concurrentBranchesCannotSpendLastToolCallTwice() {
         <li>RBAC、ABAC 和上下文策略绑定可信主体、tenant、资源、动作、风险、审批和预算；用户 / 检索 / 模型字段不能改变这些值。</li>
         <li>不可逆动作先产生不可变提案，再由独立人工批准；审批绑定 proposal hash、版本、主体和时效，合法写入具有幂等键。</li>
         <li><code>EvaluationCase</code>、<code>ExpectedConstraint</code>、<code>TrajectoryEvent</code>、<code>PolicyDecision</code>、<code>ExecutionBudget</code>、<code>BudgetDecision</code> 和审计事件不可变，集合防御性复制，决定携带固定原因码。</li>
-        <li>工具 callback 在 delegate 前做实际工具名授权、预算预占与强制审计；拒绝、预算耗尽、审批缺失或审计缺失时 delegate 调用为零。</li>
+        <li>模型 Advisor 与工具 callback 都在下游调用前做授权、原子预算预占与强制审计；工具使用实际工具名。拒绝、预算耗尽、审批缺失或审计缺失时 model / delegate 调用为零；成功、失败与 timeout 在唯一 <code>finally</code> 中按实际或保守用量幂等结算。</li>
         <li>Micrometer meter 只使用有界低基数标签，不包含 user、tenant、run、ticket、Prompt 或内容；Spring AI 工具参数 / 结果导出显式保持 <code>false</code>。</li>
         <li>测试矩阵覆盖注入、间接注入、角色 / 工具越权、tenant 泄露、不安全写、timeout、token / tool / model / cost 预算、Trace 敏感性、审计缺失和模型拒绝。</li>
         <li>页面外链安全、标题锚点唯一、八节点图示有等价文字说明，Java 泛型与 Lambda 箭头已正确转义。</li>
