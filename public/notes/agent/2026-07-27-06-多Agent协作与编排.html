@@ -546,12 +546,15 @@ class RoleChatClientConfiguration {
       <p><strong>工具边界：</strong><code>TriageTools</code> 只查 taxonomy；<code>KnowledgeTools</code> 只做带 tenant / ACL / version 过滤的 runbook 检索；<code>ActionProposalTools</code> 只校验草稿。三组工具先由 <code>ToolCallbacks.from(...)</code> 转为实际 callback，再逐一包裹 <code>PolicyEnforcingToolCallback</code> 后接入 role client；裸 callback 不注册为 default tool。它们依赖的后端适配器在服务器端使用各自 workload identity，密钥不进入工具返回、Prompt 或角色之间的 handoff。实时状态由确定性的 <code>StatusReader</code> Service Bean 查询，不需要为每个函数增加一次模型调用。</p>
 
       <h3 id="工具执行前策略门">工具执行前策略门</h3>
-      <p><code>ToolCallback</code> 同时承载工具定义和执行逻辑；因此包装器必须透传 definition / metadata，但在两种 <code>call</code> 重载进入 delegate 前执行同一授权。拒绝时先记录安全审计，再抛出异常；配合 always-throw 的异常处理器，delegate 调用次数保持为 0，当前工具循环终止。结果里的 <code>reportedToolsUsed</code> 只供合并端做防御性复核，绝不能充当执行授权或证明某工具真的执行过。</p>
+      <p><code>ToolCallback</code> 同时承载工具定义和执行逻辑；因此包装器必须透传 definition / metadata，但在两种 <code>call</code> 重载进入 delegate 前共享同一 <code>authorize()</code>。Spring AI 2.0.0 的 <code>DefaultToolCallingManager</code> 只捕获 <code>ToolExecutionException</code> 并交给 <code>ToolExecutionExceptionProcessor</code>，所以自定义 callback 不能直接抛普通 <code>SecurityException</code>。拒绝时先用真实角色和 callback name 写安全审计，再用真实 <code>ToolDefinition</code> 与不含输入、租户、凭证或内部策略细节的固定 cause 构造框架异常；always-throw processor 随后向调用方重抛，不生成可发送给模型的普通工具错误。delegate 调用次数保持为 0。结果里的 <code>reportedToolsUsed</code> 只供合并端做防御性复核，绝不能充当执行授权或证明某工具真的执行过。<a href="https://docs.spring.io/spring-ai/docs/current/api/org/springframework/ai/tool/execution/ToolExecutionException.html" target="_blank" rel="noopener noreferrer">ToolExecutionException 2.0.0 API</a></p>
       <pre><code class="language-java">interface SecurityAudit {
     void toolDenied(AgentRole trustedRole, String toolName);
 }
 
 final class PolicyEnforcingToolCallback implements ToolCallback {
+    private static final String SAFE_DENIAL_MESSAGE =
+            "Tool execution denied by server policy";
+
     private final AgentRole trustedRole; // 由服务器 role Bean 固定，不读模型输入
     private final RoleToolSet toolSet;
     private final SecurityAudit audit;
@@ -602,13 +605,17 @@ final class PolicyEnforcingToolCallback implements ToolCallback {
     }
 
     private void authorize() {
-        String toolName = delegate.getToolDefinition().name();
+        ToolDefinition toolDefinition = delegate.getToolDefinition();
+        String toolName = toolDefinition.name();
         try {
             toolSet.requireAllowed(trustedRole, toolName);
         }
         catch (SecurityException denied) {
             audit.toolDenied(trustedRole, toolName);
-            throw denied;
+            // 不把原异常串入 cause：其 message 可能含角色、工具或策略细节。
+            throw new ToolExecutionException(
+                    toolDefinition,
+                    new SecurityException(SAFE_DENIAL_MESSAGE));
         }
     }
 }</code></pre>
@@ -711,7 +718,7 @@ final class ServiceDeskCoordinator {
           <tr><td>错 run / 上下文</td><td>handoff 原件的 run、tenant、principal、correlation、plan / step 或 from / to 任一不匹配</td><td>逐字段绑定校验拒绝；即使 expectedVersion 数字相同也不 CAS、不调用 action</td><td>只比 version 数字，或相信结果自报角色</td></tr>
           <tr><td>schema / provenance 篡改</td><td>旧 schema，或结果未继承 handoff 的输入 provenance</td><td>合并前拒绝，记录 handoff ID 与私有原因；公开错误不泄露来源内容</td><td>丢失输入来源后继续生成提案</td></tr>
           <tr><td>冲突输出</td><td>两个角色修改同一受保护字段且值不同</td><td>无领域规则时进入 <code>CONFLICT</code>；保留两份 provenance</td><td>按完成先后 / 模型偏好选择</td></tr>
-          <tr><td>角色工具越权</td><td>用计数 fake delegate 包裹 callback；受信 KNOWLEDGE 角色请求 <code>ticket.create</code>，并伪报 <code>reportedToolsUsed</code></td><td>执行前 wrapper 拒绝，delegate 调用次数为 0、安全审计为 1、工具循环异常退出</td><td>等结果合并才拒绝，或通过改写 Prompt / 自报工具 / 切换角色继续</td></tr>
+          <tr><td>角色工具越权</td><td>用计数 fake delegate 包裹 callback；受信 KNOWLEDGE 角色请求 <code>ticket.create</code>，并伪报 <code>reportedToolsUsed</code></td><td>执行前 wrapper 拒绝；断言 delegate 调用次数为 0、安全审计为 1、异常类型为 <code>ToolExecutionException</code>、<code>getToolDefinition()</code> 与真实 callback 定义相同、cause 只有固定安全消息；<code>DefaultToolExecutionExceptionProcessor(true)</code> 可按框架类型识别并重抛，模型收到的普通可继续工具错误为 0</td><td>直接抛 <code>SecurityException</code> 绕过 processor，等结果合并才拒绝，或把工具输入 / tenant / 凭证 / 原始异常消息发给模型</td></tr>
           <tr><td>超时与取消</td><td>knowledge 卡住，status 快速成功，总 deadline 到期</td><td>传播绝对 deadline、取消后续 action、保存可用 status 证据和超时原因</td><td>后台幽灵任务继续消耗预算</td></tr>
           <tr><td>部分成功</td><td>optional status 失败，knowledge 成功</td><td>仅当计划允许时输出 PARTIAL，明确缺口；不得生成依赖 status 的字段</td><td>把缺失状态写成“正常”</td></tr>
           <tr><td>Coordinator 重启</td><td>角色完成后、合并前杀进程并恢复</td><td>从持久 ledger 读取完成结果，不重复调用；CAS 只成功一次</td><td>仅凭内存 Future 决定重跑</td></tr>
@@ -743,7 +750,7 @@ final class ServiceDeskCoordinator {
         <li>能解释为什么“多个 <code>ChatClient</code>”不等于多 Agent runtime，并指出业务 Coordinator、状态库、dispatch ledger、审批与恢复的 owner。</li>
         <li>有完整单 Agent 基线，涵盖质量、延迟、token、工具调用、失败率和运维复杂度；拆分决策有可重复的净收益证据。</li>
         <li>能根据依赖、并行性、角色权限和评审信号在四种拓扑中选择，且能说明何时固定工作流更合适。</li>
-        <li><code>PolicyEnforcingToolCallback</code> 使用服务器固定角色与实际 callback name，在 delegate 前执行 <code>RoleToolSet</code>；越权时 delegate 计数为 0、产生安全审计并退出工具循环。任意角色都看不到共享密钥，action 没有 <code>ticket.create</code>。</li>
+        <li><code>PolicyEnforcingToolCallback</code> 使用服务器固定角色与实际 callback name，在 delegate 前执行 <code>RoleToolSet</code>；越权时 delegate 计数为 0、产生安全审计，并以真实 <code>ToolDefinition</code> 和固定安全 cause 抛出 <code>ToolExecutionException</code>。always-throw processor 向调用方重抛，不能生成给模型继续推理的工具错误。任意角色都看不到共享密钥，action 没有 <code>ticket.create</code>。</li>
         <li><code>AgentHandoff</code> 包含 tenant / principal、correlation / plan / step / handoff ID、from / to、schema、provenance、expected version、deadline 和 idempotency key，并在派发前不可变写入 <code>HandoffLedger</code>；伪造、过期、错 run / 上下文或来源断链的结果被拒绝。</li>
         <li>并行结果按稳定顺序合并并使用 CAS；字段冲突、版本冲突和重复派发有确定性测试，不能依赖线程完成顺序。</li>
         <li>超时能向子任务和后续节点传播取消；required / optional 部分失败规则显式，重启后从持久记录恢复而不盲重放。</li>
@@ -760,6 +767,7 @@ final class ServiceDeskCoordinator {
         <li><a href="https://docs.spring.io/spring-ai/reference/api/chatclient.html" target="_blank" rel="noopener noreferrer">Spring AI ChatClient API</a>。核验自动配置 builder 的 prototype scope、多个 ChatClient 的构建方式、<code>defaultSystem</code> 与 <code>mutate()</code> 能力。</li>
         <li><a href="https://docs.spring.io/spring-ai/reference/api/advisors.html" target="_blank" rel="noopener noreferrer">Spring AI Advisors API</a>。核验 <code>defaultAdvisors</code>、Advisor 链上下文与可观测性；Advisor 不是 durable Coordinator。</li>
         <li><a href="https://docs.spring.io/spring-ai/reference/api/tools.html" target="_blank" rel="noopener noreferrer">Spring AI Tool Calling</a>。核验 request / default tools、ToolCallingAdvisor 与 user-controlled execution；官方警告共享 default tools 可能扩大不应暴露的工具范围。</li>
+        <li><a href="https://docs.spring.io/spring-ai/docs/current/api/org/springframework/ai/tool/execution/ToolExecutionException.html" target="_blank" rel="noopener noreferrer">Spring AI 2.0.0 ToolExecutionException API</a> 与 <a href="https://github.com/spring-projects/spring-ai/blob/v2.0.0/spring-ai-model/src/main/java/org/springframework/ai/model/tool/DefaultToolCallingManager.java" target="_blank" rel="noopener noreferrer">v2.0.0 DefaultToolCallingManager 源码</a>。核验构造签名为 <code>ToolExecutionException(ToolDefinition, Throwable)</code>，manager 只捕获该框架异常并交给 processor；<code>alwaysThrow=true</code> 时 processor 重抛而不生成模型工具响应。</li>
       </ol>
     </article>
   </main>
