@@ -408,7 +408,8 @@ interface ExecutionIntentLedger {
 interface OutcomeReconciler {
     // 只按 intent / reservation / 幂等引用查询外部结果，绝不盲重放副作用。
     void enqueueTool(ExecutionIntentRef intent, String reasonCode);
-    void enqueueModel(String runId, UUID reservationId, String reasonCode);
+    void enqueueModel(
+            ExecutionIntentRef intent, UUID reservationId, String reasonCode);
 }</code></pre>
 
       <h3 id="原子预算与策略顺序">原子预算与策略顺序</h3>
@@ -497,12 +498,32 @@ import org.springframework.ai.chat.model.ToolContext;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.core.Ordered;
 
+enum ToolTransportOutcomeCode {
+    CONFIRMED_RESULT, DEFINITELY_NOT_EXECUTED, OUTCOME_UNKNOWN
+}
+
+sealed interface ToolTransportOutcome
+        permits ToolTransportOutcome.ConfirmedResult,
+                ToolTransportOutcome.DefinitelyNotExecuted,
+                ToolTransportOutcome.OutcomeUnknown {
+    record ConfirmedResult(String result, UsageDelta usage)
+            implements ToolTransportOutcome {}
+    record DefinitelyNotExecuted(String safeReasonCode, UsageDelta usage)
+            implements ToolTransportOutcome {}
+    record OutcomeUnknown(String safeReasonCode, UsageDelta conservativeUsage)
+            implements ToolTransportOutcome {}
+}
+
 interface DownstreamDeadlineController {
     // 实现必须把剩余时间写入真实 provider HTTP 请求，并在到期时取消连接 / Future；
     // 不能只依赖线程 interrupt。工具适配器同样把 deadline 传给 HTTP / DB client。
-    &lt;T&gt; T callModel(Instant absoluteDeadline, java.util.function.Supplier&lt;T&gt; call);
-    String callTool(
+    &lt;T&gt; T callModel(
             Instant absoluteDeadline,
+            ExecutionIntentRef intent,
+            java.util.function.Supplier&lt;T&gt; call);
+    ToolTransportOutcome callTool(
+            Instant absoluteDeadline,
+            ExecutionIntentRef intent,
             ToolCallback delegate,
             String toolInput,
             ToolContext toolContext);
@@ -522,22 +543,26 @@ final class TransportDeadlineController
 
     @Override
     public &lt;T&gt; T callModel(
-            Instant deadline, java.util.function.Supplier&lt;T&gt; call) {
+            Instant deadline,
+            ExecutionIntentRef intent,
+            java.util.function.Supplier&lt;T&gt; call) {
         // bridge 的 HTTP interceptor 设置每请求 connect/read timeout，
         // 到期主动关闭连接 / 取消 SDK Future，再由调用抛 ModelTimeoutException。
-        return modelHttp.callWithAbsoluteDeadline(deadline, call);
+        return modelHttp.callWithAbsoluteDeadline(
+                deadline, intent.idempotencyRef(), call);
     }
 
     @Override
-    public String callTool(
+    public ToolTransportOutcome callTool(
             Instant deadline,
+            ExecutionIntentRef intent,
             ToolCallback delegate,
             String toolInput,
             ToolContext toolContext) {
         // registry 只接受已注册的 deadline-aware adapter；它把绝对 deadline
         // 传给真实 HTTP / DB / queue client，而不是在线程外套一个超时 Future。
         return toolTransports.require(delegate).callWithAbsoluteDeadline(
-                deadline, toolInput, toolContext);
+                deadline, intent.idempotencyRef(), toolInput, toolContext);
     }
 }
 
@@ -548,6 +573,7 @@ final class GovernanceAdvisor implements CallAdvisor {
     private final ModelCallPolicy policy;
     private final AtomicBudgetLedger budgets;
     private final AppendOnlyAuditStore audit;
+    private final ExecutionIntentLedger intents;
     private final DownstreamDeadlineController deadlines;
     private final OutcomeReconciler reconciler;
     private final ObservationRegistry observations;
@@ -557,6 +583,7 @@ final class GovernanceAdvisor implements CallAdvisor {
             ModelCallPolicy policy,
             AtomicBudgetLedger budgets,
             AppendOnlyAuditStore audit,
+            ExecutionIntentLedger intents,
             DownstreamDeadlineController deadlines,
             OutcomeReconciler reconciler,
             ObservationRegistry observations) {
@@ -564,6 +591,7 @@ final class GovernanceAdvisor implements CallAdvisor {
         this.policy = policy;
         this.budgets = budgets;
         this.audit = audit;
+        this.intents = intents;
         this.deadlines = deadlines;
         this.reconciler = reconciler;
         this.observations = observations;
@@ -614,6 +642,24 @@ final class GovernanceAdvisor implements CallAdvisor {
             throw auditFailure;
         }
 
+        ExecutionIntentRef intent;
+        try {
+            intent = intents.appendBeforeExecution(
+                    context.runId(),
+                    context.modelActionRef(),
+                    context.modelIdempotencyRef());
+            appendExecutionIntentOrFailClosed(context, intent);
+        }
+        catch (RuntimeException preExecutionPersistenceFailure) {
+            budgets.settle(
+                    context.runId(),
+                    reservation.reservationId(),
+                    UsageDelta.ZERO);
+            throw new AuditUnavailableException(
+                    "Model execution intent unavailable",
+                    preExecutionPersistenceFailure);
+        }
+
         // 若供应商没有返回 usage，保守按 reservation 结算，绝不按零释放。
         UsageDelta actual = reservation.reserved();
         try {
@@ -629,31 +675,32 @@ final class GovernanceAdvisor implements CallAdvisor {
                                     decision.effect().name())
                             .observe(() -&gt; deadlines.callModel(
                                     context.deadline(),
+                                    intent,
                                     () -&gt; chain.nextCall(request)));
             actual = ModelUsageExtractor.actualOrReserved(
                     response, reservation.reserved());
-            appendModelOutcomeOrFailClosed(context, "SUCCESS", actual);
+            recordModelTerminalOrIndeterminate(
+                    context, intent, reservation,
+                    IntentState.SUCCEEDED, "SUCCESS", actual);
             return response;
         }
-        catch (AuditUnavailableException auditFailure) {
-            // 模型可能已被计费：不能再声称 model=0，也不能盲重试。
-            reconciler.enqueueModel(
-                    context.runId(),
-                    reservation.reservationId(),
-                    "TERMINAL_AUDIT_UNAVAILABLE");
-            throw new IndeterminateModelOutcomeException(
-                    "Model outcome requires reconciliation", auditFailure);
+        catch (IndeterminateModelOutcomeException indeterminate) {
+            throw indeterminate;
         }
         catch (ModelTimeoutException timeout) {
             actual = ModelUsageExtractor.timeoutOrReserved(
                     timeout, reservation.reserved());
-            appendModelOutcomeOrFailClosed(context, "TIMEOUT", actual);
+            recordModelTerminalOrIndeterminate(
+                    context, intent, reservation,
+                    IntentState.TIMED_OUT, "TIMEOUT", actual);
             throw timeout;
         }
         catch (RuntimeException failure) {
             actual = ModelUsageExtractor.failureOrReserved(
                     failure, reservation.reserved());
-            appendModelOutcomeOrFailClosed(context, "FAILED", actual);
+            recordModelTerminalOrIndeterminate(
+                    context, intent, reservation,
+                    IntentState.FAILED, "FAILED", actual);
             throw failure;
         }
         finally {
@@ -679,6 +726,46 @@ final class GovernanceAdvisor implements CallAdvisor {
     private void appendBudgetDecisionOrFailClosed(
             TrustedRunContext context, BudgetDecision decision) {
         // AuditAction.BUDGET_DECIDED + 固定原因码 / reservation ref；无 prompt。
+    }
+
+    private void appendExecutionIntentOrFailClosed(
+            TrustedRunContext context, ExecutionIntentRef intent) {
+        // EXECUTION_INTENT_RECORDED；只含 model / intent / idempotency ref。
+    }
+
+    private void recordModelTerminalOrIndeterminate(
+            TrustedRunContext context,
+            ExecutionIntentRef intent,
+            BudgetDecision.Reserved reservation,
+            IntentState terminalState,
+            String outcomeCode,
+            UsageDelta usage) {
+        try {
+            appendModelOutcomeOrFailClosed(context, outcomeCode, usage);
+            intents.mark(intent, terminalState, outcomeCode);
+        }
+        catch (RuntimeException terminalPersistenceFailure) {
+            try {
+                intents.mark(
+                        intent, IntentState.INDETERMINATE,
+                        "TERMINAL_PERSISTENCE_UNAVAILABLE");
+            }
+            catch (RuntimeException markUnavailable) {
+                // PREPARED intent 由 age-based sweeper 对账。
+            }
+            try {
+                reconciler.enqueueModel(
+                        intent,
+                        reservation.reservationId(),
+                        "TERMINAL_PERSISTENCE_UNAVAILABLE");
+            }
+            catch (RuntimeException queueUnavailable) {
+                // PREPARED intent 仍是恢复依据；禁止重新发起模型调用。
+            }
+            throw new IndeterminateModelOutcomeException(
+                    "Model outcome requires reconciliation",
+                    terminalPersistenceFailure);
+        }
     }
 
     private void appendModelOutcomeOrFailClosed(
@@ -833,7 +920,7 @@ final class PreauthorizedToolCallback implements ToolCallback {
         // 保守默认：拿不到真实用量时按 reservation 结算，不能记为零。
         UsageDelta actual = reservation.reserved();
         try {
-            String result =
+            ToolTransportOutcome transportOutcome =
                     Observation.createNotStarted(
                                     "agent.tool.execution", observations)
                             // 工具名来自受控注册表且集合有界；参数、结果、tenant 不作标签。
@@ -845,25 +932,51 @@ final class PreauthorizedToolCallback implements ToolCallback {
                                     "agent.policy.outcome", "ALLOW")
                             .observe(() -&gt; deadlines.callTool(
                                     trustedContext.deadline(),
+                                    intent,
                                     delegate,
                                     toolInput,
                                     toolContext));
-            actual = metadata.successUsageOrReserved(
-                    result, reservation.reserved());
-            recordToolTerminalOrIndeterminate(
-                    intent, definition, metadata, IntentState.SUCCEEDED,
-                    "SUCCESS", actual);
-            return result;
+
+            if (transportOutcome
+                    instanceof ToolTransportOutcome.ConfirmedResult confirmed) {
+                actual = metadata.confirmedUsageOrReserved(
+                        confirmed.usage(), reservation.reserved());
+                recordToolTerminalOrIndeterminate(
+                        intent, definition, metadata, IntentState.SUCCEEDED,
+                        "CONFIRMED_RESULT", actual);
+                return confirmed.result();
+            }
+
+            if (transportOutcome
+                    instanceof ToolTransportOutcome.DefinitelyNotExecuted
+                            notExecuted) {
+                actual = metadata.transportUsageOrReserved(
+                        notExecuted.usage(), reservation.reserved());
+                recordToolTerminalOrIndeterminate(
+                        intent, definition, metadata, IntentState.TIMED_OUT,
+                        "DEFINITELY_NOT_EXECUTED", actual);
+                throw new ToolTimeoutException(
+                        "Tool transport confirmed no execution");
+            }
+
+            ToolTransportOutcome.OutcomeUnknown unknown =
+                    (ToolTransportOutcome.OutcomeUnknown) transportOutcome;
+            actual = metadata.conservativeUsageOrReserved(
+                    unknown.conservativeUsage(), reservation.reserved());
+            // 尤其对不可逆写入，未知绝不是普通 timeout / failure；
+            // 先单调标记 INDETERMINATE，再按同一幂等引用查询，绝不重放。
+            throw markToolIndeterminateAndEnqueue(
+                    intent,
+                    "OUTCOME_UNKNOWN",
+                    new IllegalStateException(
+                            "Tool transport outcome is unknown"));
         }
         catch (IndeterminateToolOutcomeException indeterminate) {
             throw indeterminate; // 外部结果待查；禁止再次执行 delegate。
         }
         catch (ToolTimeoutException timeout) {
-            actual = metadata.timeoutUsageOrReserved(
-                    timeout, reservation.reserved());
-            recordToolTerminalOrIndeterminate(
-                    intent, definition, metadata, IntentState.TIMED_OUT,
-                    "TIMEOUT", actual);
+            // 只有 transport 已确认 DEFINITELY_NOT_EXECUTED 才会到这里；
+            // TIMED_OUT 已记录，不要重复追加终态。
             throw timeout;
         }
         catch (RuntimeException failure) {
@@ -923,16 +1036,36 @@ final class PreauthorizedToolCallback implements ToolCallback {
                     definition, metadata, outcomeCode, usage);
             intents.mark(intent, terminalState, outcomeCode);
         }
-        catch (AuditUnavailableException terminalAuditFailure) {
-            // delegate 可能已完成：不能声称调用=0，也不能自动重放。
-            intents.mark(
-                    intent, IntentState.INDETERMINATE,
-                    "TERMINAL_AUDIT_UNAVAILABLE");
-            reconciler.enqueueTool(intent, "TERMINAL_AUDIT_UNAVAILABLE");
-            throw new IndeterminateToolOutcomeException(
-                    "Tool outcome requires reconciliation",
-                    terminalAuditFailure);
+        catch (RuntimeException terminalPersistenceFailure) {
+            // audit append 或 intent terminal mark 任一失败，都不能把已成功的写入
+            // 重新分类为业务 FAILED。初始 PREPARED intent 会被 sweeper 扫描。
+            throw markToolIndeterminateAndEnqueue(
+                    intent,
+                    "TERMINAL_PERSISTENCE_UNAVAILABLE",
+                    terminalPersistenceFailure);
         }
+    }
+
+    private IndeterminateToolOutcomeException
+            markToolIndeterminateAndEnqueue(
+                    ExecutionIntentRef intent,
+                    String reasonCode,
+                    RuntimeException cause) {
+        // 顺序是治理语义：先尽力单调持久化未知状态，再安排只读对账。
+        try {
+            intents.mark(intent, IntentState.INDETERMINATE, reasonCode);
+        }
+        catch (RuntimeException markUnavailable) {
+            // Durable PREPARED intent 由 age-based sweeper 扫描。
+        }
+        try {
+            reconciler.enqueueTool(intent, reasonCode);
+        }
+        catch (RuntimeException queueUnavailable) {
+            // PREPARED / INDETERMINATE intent 是兜底；绝不重放 delegate。
+        }
+        return new IndeterminateToolOutcomeException(
+                "Tool outcome requires reconciliation", cause);
     }
 
     private void appendToolOutcomeOrFailClosed(
@@ -944,11 +1077,12 @@ final class PreauthorizedToolCallback implements ToolCallback {
         // 不保存 toolInput、result 或异常 message。
     }
 }</code></pre>
-      <p><strong>关键边界：</strong>工具 wrapper 使用实际 <code>ToolDefinition.name()</code>，且策略决定、预算决定、执行意图与对应强制审计发生在 <code>delegate.call(...)</code> 之前；拒绝、预算不足或<strong>执行前</strong>审计缺失时 delegate 调用必须为零。成功预占后，success、failure 与 timeout 共享唯一 <code>finally</code> 结算点；未知用量按 reservation 保守结算，同一 reservation ID 的结算重试必须幂等且不能释放已消费量。工具终态只记录固定结果码、用量和幂等引用。对不可逆动作，<code>PolicyDecision.REQUIRE_APPROVAL</code> 不能在此处被当作允许；只有独立审批服务验证绑定的 proposal hash、主体和时效后，才能构造 <code>ALLOW</code> 上下文。</p>
-      <p><strong>终态审计失败不能撤销已发生的世界。</strong>若 delegate 返回后 append 失败，不能声称 delegate 为零，也不能因客户端重试再次写入。执行前已持久化的 <code>ExecutionIntentRef</code> 与幂等引用转为 <code>INDETERMINATE</code>，对账器只查询外部系统并补记真实终态；模型调用的预算 reservation 同样进入待对账队列。公开结果只说明“结果待确认”，禁止猜测成功 / 失败或盲重放。</p>
+      <p><strong>关键边界：</strong>工具 wrapper 使用实际 <code>ToolDefinition.name()</code>，且策略决定、预算决定、执行意图与对应强制审计发生在 <code>delegate.call(...)</code> 之前；拒绝、预算不足或<strong>执行前</strong>审计缺失时 delegate 调用必须为零。成功预占后，confirmed、definitely-not-executed、unknown、failure 都共享唯一 <code>finally</code> 结算点；未知用量按 reservation 保守结算，同一 reservation ID 的结算重试必须幂等且不能释放已消费量。工具终态只记录固定结果码、用量和幂等引用。对不可逆动作，<code>PolicyDecision.REQUIRE_APPROVAL</code> 不能在此处被当作允许；只有独立审批服务验证绑定的 proposal hash、主体和时效后，才能构造 <code>ALLOW</code> 上下文。</p>
+      <p><strong>终态持久化失败不能撤销已发生的世界。</strong>若 delegate 返回后，安全终态审计 append 或 intent 状态写入任一失败，不能声称 delegate 为零，也不能因客户端重试再次写入。执行前已持久化的 <code>ExecutionIntentRef</code> 与幂等引用先单调转为 <code>INDETERMINATE</code>，再由对账器只查询外部系统并补记真实终态；若该状态写入也暂时失败，持久的 <code>PREPARED</code> intent 由 sweeper 扫描。模型调用的 intent 与预算 reservation 同样进入待对账队列。公开结果只说明“结果待确认”，禁止猜测成功 / 失败或盲重放。</p>
 
       <h3 id="deadline-与取消传播">Deadline 与取消必须到达真实传输层</h3>
-      <p><code>requireTimeForModelCall()</code> 只能在调用前拒绝明显来不及的工作，捕获 <code>ModelTimeoutException</code> / <code>ToolTimeoutException</code> 也只是分类；二者都不能单独终止一个阻塞的 HTTP 请求。<code>DownstreamDeadlineController</code> 必须用服务器绝对 deadline 计算每次调用的剩余时间，写入真实模型 provider HTTP 客户端的 request / read timeout，并在到期时取消连接或异步 Future；工具适配器必须把同一 deadline 与 cancellation token 传给真实 HTTP、数据库和队列客户端。仅调用 <code>Future.cancel(true)</code> 或线程 interrupt 不足以保证下游停止。超时后 Coordinator 不再启动依赖节点，后台 activity 计数必须保持不变；不可逆调用若取消结果未知，按执行意图进入 <code>INDETERMINATE</code> 对账而不是重试。</p>
+      <p><code>requireTimeForModelCall()</code> 只能在调用前拒绝明显来不及的工作，捕获异常也不能单独终止一个阻塞的 HTTP 请求。<code>DownstreamDeadlineController</code> 必须把服务器绝对 deadline、执行前持久化的 <code>ExecutionIntentRef</code> 及其幂等引用一起送到真实模型 provider 与工具 HTTP / DB / queue transport；transport 按剩余时间设置 request / read timeout，并在到期时取消连接或异步 Future。仅调用 <code>Future.cancel(true)</code> 或线程 interrupt 不足以保证下游停止。</p>
+      <p>工具 transport 不能把所有超时都压成一个异常，而要返回三态：<code>CONFIRMED_RESULT</code> 可落 <code>SUCCEEDED</code>；只有可证明请求未到达执行端的 <code>DEFINITELY_NOT_EXECUTED</code> 才可落 <code>TIMED_OUT</code>；连接中断、响应丢失等 <code>OUTCOME_UNKNOWN</code> 必须先落 <code>INDETERMINATE</code>，再按同一幂等引用查询对账，尤其不可重放不可逆写入。三态都在唯一 <code>finally</code> 以已确认或保守用量结算。超时后 Coordinator 不再启动依赖节点，虚拟时钟继续推进时后台 activity 计数必须保持不变。</p>
 
       <h3 id="micrometer-observation-标签">Micrometer Observation 与低基数标签</h3>
       <p>Micrometer Observation 把一次操作的生命周期交给 handler，可同时产生 meter、trace 与日志。低基数值必须来自小而有界的集合，例如 <code>operation=model_call|tool_call</code>、<code>outcome=ALLOW|DENY|ERROR</code>、<code>risk_tier=LOW|MEDIUM|HIGH</code>；它们进入指标与 Trace。用户 ID、run ID、ticket ID、tenant、原始 URL、Prompt、参数和结果具有高基数或敏感性，不进入 meter 标签；必要关联使用 trace 上下文或受控审计引用。<a href="https://docs.micrometer.io/micrometer/reference/observation/introduction.html" target="_blank" rel="noopener noreferrer">Micrometer Observation Introduction</a></p>
@@ -1012,7 +1146,7 @@ final class PreauthorizedToolCallback implements ToolCallback {
           <tr><td>角色 / 工具越权</td><td>knowledge 角色请求 <code>ticket.create</code></td><td>wrapper 在 delegate 前拒绝；delegate=0；<code>ROLE_NOT_ALLOWED</code> 审计=1</td><td>工具执行后再检查，或通过工具别名绕过</td></tr>
           <tr><td>Tenant 泄露</td><td>正文、缓存键、向量结果和工具参数分别伪造其他 tenant</td><td>每层对象级检查拒绝；回答、引用、Trace、audit 均无他租户内容</td><td>只在 UI 隐藏，后端已读取</td></tr>
           <tr><td>不安全写入</td><td>无审批、过期审批、提案字段 / hash 变化、重复批准</td><td>前三者 writer=0；合法批准恰好一次；幂等返回同一外部 ID</td><td>模型自批、旧批准复用、超时后盲重放</td></tr>
-          <tr><td>Timeout / 取消</td><td>模型 HTTP 与工具 DB 调用阻塞，并故意忽略线程 interrupt</td><td>绝对 deadline 到达真实 transport；连接 / Future 取消；虚拟时钟继续推进后下游 activity 不再增加；未知写入转 <code>INDETERMINATE</code></td><td>只做调用前检查或捕获异常，向用户返回后仍有幽灵任务耗费 / 写入</td></tr>
+          <tr><td>Timeout / 取消</td><td>模型 HTTP 与工具 DB 调用阻塞，并故意忽略线程 interrupt；分别模拟响应确认、确认未执行和响应丢失</td><td>绝对 deadline 与 execution intent 到达真实 transport；连接 / Future 取消；<code>CONFIRMED_RESULT</code> / <code>DEFINITELY_NOT_EXECUTED</code> / <code>OUTCOME_UNKNOWN</code> 分别落成功 / 超时 / 待确认；虚拟时钟继续推进后 activity 不再增加；未知不可逆写入只查询对账</td><td>只做调用前检查、把三态都记成 timeout，或向用户返回后仍有幽灵任务耗费 / 重复写入</td></tr>
           <tr><td>Token 预算</td><td>下一次最坏 token 使总量越界</td><td>原子预占为 <code>INPUT_TOKEN_LIMIT</code> / <code>OUTPUT_TOKEN_LIMIT</code>；模型调用=0</td><td>调用后才发现超额</td></tr>
           <tr><td>工具 / 模型预算</td><td>并发分支同时抢最后一个调用名额</td><td>只有一个 CAS / 条件更新成功；另一分支 delegate=0；原因码稳定</td><td>读—改—写竞态导致双花</td></tr>
           <tr><td>成本预算</td><td>剩余额度低于模型 / 工具最坏增量</td><td><code>COST_LIMIT</code>；失败也计已用成本；不降级到未知更贵路径</td><td>异常与重试不计费</td></tr>
@@ -1022,7 +1156,7 @@ final class PreauthorizedToolCallback implements ToolCallback {
           <tr><td>结算重试幂等</td><td>第一次 settle 响应丢失，以同 run / reservation / actual 重试</td><td>最终消费量只记一次；同值重试成功；更小 actual 不能释放已消费量</td><td>重复扣费、重复释放或覆盖已确认用量</td></tr>
           <tr><td>Trace 敏感性</td><td>Prompt、参数、结果、异常含 canary secret / PII</td><td>导出 span、metric、log 不含 canary；<code>include-content=false</code></td><td>把 user / tenant / run / 内容放入标签</td></tr>
           <tr><td>执行前审计缺失</td><td>策略、预算或 execution intent append 失败</td><td>model / tool / writer 调用=0；未消费 reservation 关闭；<code>AUDIT_UNAVAILABLE</code> 与运维告警</td><td>没有可确认 intent 仍执行，或静默丢审计</td></tr>
-          <tr><td>终态审计缺失</td><td>model / tool 已返回，安全终态 append 失败</td><td>不得声称调用=0；返回 <code>INDETERMINATE</code>；按预写 intent / reservation 和幂等引用查询对账；仍结算成本</td><td>把已发生的写入当未发生并自动重试，造成重复副作用</td></tr>
+          <tr><td>终态持久化缺失</td><td>model / tool 已返回，分别注入安全终态 append 或 intent terminal mark 失败</td><td>不得声称调用=0；先单调标记 <code>INDETERMINATE</code>，再按预写 intent / reservation 和幂等引用查询对账；仍结算成本</td><td>把已发生的写入重分类为普通失败并自动重试，造成重复副作用</td></tr>
           <tr><td>模型拒绝</td><td>合法请求被模型拒绝、空答或安全分类误杀</td><td>结构化 <code>MODEL_REFUSAL</code>；无臆造结果；按策略转人工且计入质量分母</td><td>无限换 Prompt / 模型重试绕过安全</td></tr>
           <tr><td>供应链 / 工具投毒</td><td>工具描述、Prompt 或 runbook hash 与批准版本不一致</td><td>加载前验证失败；调用=0；版本漂移告警与回滚</td><td>运行时自动信任新工具或远端指令</td></tr>
         </tbody>
@@ -1166,6 +1300,69 @@ void terminalAuditFailureAfterWriteBecomesIndeterminate() {
 }
 
 @Test
+void intentTerminalWriteFailureAfterSuccessIsNotReclassifiedAsFailed() {
+    var delegate = new CountingTicketTool().returning("ticket-42");
+    var intents = intentLedgerThatFailsMarking(IntentState.SUCCEEDED);
+    var callback = guardedCallbackWithDurableIntent(
+            availableAudit(), intents, delegate);
+
+    assertThatThrownBy(() -&gt; callback.call(validArguments()))
+            .isInstanceOf(IndeterminateToolOutcomeException.class);
+
+    assertThat(delegate.calls()).isEqualTo(1);
+    assertThat(audit.safeTrajectoryOutcomes())
+            .contains("CONFIRMED_RESULT")
+            .doesNotContain("FAILED");
+    assertThat(intents.markAttempts())
+            .containsSubsequence(
+                    IntentState.SUCCEEDED, IntentState.INDETERMINATE);
+    assertThat(reconciler.queuedIntent()).isEqualTo(intents.singleIntent());
+    assertThat(reconciler.reexecuteCalls()).isZero();
+}
+
+@Test
+void unknownIrreversibleTimeoutIsReconciledWithoutReplay() {
+    var ledger = new RecordingAtomicBudgetLedger(oneToolCallBudget());
+    var transport = transportReturning(new ToolTransportOutcome.OutcomeUnknown(
+            "RESPONSE_LOST", conservativeToolUsage()));
+    var callback = guardedIrreversibleWriter(ledger, transport);
+
+    assertThatThrownBy(() -&gt; callback.call(validArguments()))
+            .isInstanceOf(IndeterminateToolOutcomeException.class);
+
+    ExecutionIntentRef intent = intents.singleIntent();
+    assertThat(transport.receivedIntent()).isEqualTo(intent);
+    assertThat(transport.receivedIdempotencyRef())
+            .isEqualTo(intent.idempotencyRef());
+    assertThat(intents.state(intent)).isEqualTo(IntentState.INDETERMINATE);
+    assertThat(audit.safeTrajectoryOutcomes())
+            .doesNotContain("TIMED_OUT", "FAILED");
+    assertThat(reconciler.mode()).isEqualTo("QUERY_BY_IDEMPOTENCY_KEY");
+    assertThat(reconciler.reexecuteCalls()).isZero();
+    assertThat(ledger.settleCalls())
+            .singleElement()
+            .extracting(SettleCall::actual)
+            .isEqualTo(conservativeToolUsage());
+}
+
+@Test
+void definitelyNotExecutedIsTheOnlyTimeoutTerminal() {
+    var transport = transportReturning(
+            new ToolTransportOutcome.DefinitelyNotExecuted(
+                    "CONNECT_TIMEOUT", UsageDelta.ZERO));
+    var callback = guardedCallbackWithTransport(transport);
+
+    assertThatThrownBy(() -&gt; callback.call(validArguments()))
+            .isInstanceOf(ToolTimeoutException.class);
+
+    assertThat(intents.state(intents.singleIntent()))
+            .isEqualTo(IntentState.TIMED_OUT);
+    assertThat(audit.safeTrajectoryOutcomes())
+            .containsExactly("DEFINITELY_NOT_EXECUTED");
+    assertThat(reconciler.queuedIntents()).isEmpty();
+}
+
+@Test
 void absoluteDeadlineCancelsTransportAndStopsGhostWork() {
     var transport = new DeadlineAwareFakeTransport(virtualClock);
     var controller = realDownstreamDeadlineController(transport, virtualClock);
@@ -1178,6 +1375,7 @@ void absoluteDeadlineCancelsTransportAndStopsGhostWork() {
     assertThatThrownBy(invocation::join)
             .hasCauseInstanceOf(ToolTimeoutException.class);
     assertThat(transport.receivedAbsoluteDeadline()).isTrue();
+    assertThat(transport.receivedIntent()).isEqualTo(intents.singleIntent());
     assertThat(transport.cancellationObserved()).isTrue();
     long activityAtTimeout = transport.activityCount();
     virtualClock.advance(Duration.ofMinutes(1));
@@ -1204,8 +1402,8 @@ void absoluteDeadlineCancelsTransportAndStopsGhostWork() {
         <li>RBAC、ABAC 和上下文策略绑定可信主体、tenant、资源、动作、风险、审批和预算；用户 / 检索 / 模型字段不能改变这些值。</li>
         <li>不可逆动作先产生不可变提案，再由独立人工批准；审批绑定 proposal hash、版本、主体和时效，合法写入具有幂等键。</li>
         <li><code>EvaluationCase</code>、<code>ExpectedConstraint</code>、<code>TrajectoryEvent</code>、<code>PolicyDecision</code>、<code>ExecutionBudget</code>、<code>BudgetDecision</code> 和审计事件不可变，集合防御性复制，决定携带固定原因码。</li>
-        <li>模型 Advisor 与工具 callback 都在下游调用前做授权、原子预算预占与强制审计；工具使用实际工具名。拒绝、预算耗尽、审批缺失或<strong>执行前</strong>审计缺失时 model / delegate 调用为零；终态审计失败明确返回 <code>INDETERMINATE</code>，按预写 intent / reservation 对账且不盲重放。success、failure 与 timeout 在唯一 <code>finally</code> 中按实际或保守用量幂等结算。</li>
-        <li>绝对 deadline 通过 <code>DownstreamDeadlineController</code> 到达真实模型 transport 与工具 HTTP / DB 客户端；超时会取消连接 / Future 与后续节点，虚拟时钟测试证明后台 activity 不再增加。</li>
+        <li>模型 Advisor 与工具 callback 都在下游调用前做授权、原子预算预占与强制审计，持久化 execution intent，并把 intent / 幂等引用交给真实 transport；工具使用实际工具名。拒绝、预算耗尽、审批缺失或<strong>执行前</strong>审计缺失时 model / delegate 调用为零；终态审计或 intent 状态写入失败明确返回 <code>INDETERMINATE</code>，按预写 intent / reservation 对账且不盲重放。所有传输终态在唯一 <code>finally</code> 中按实际或保守用量幂等结算。</li>
+        <li>绝对 deadline 通过 <code>DownstreamDeadlineController</code> 到达真实模型 transport 与工具 HTTP / DB 客户端；工具 transport 明确区分 <code>CONFIRMED_RESULT</code>、<code>DEFINITELY_NOT_EXECUTED</code> 与 <code>OUTCOME_UNKNOWN</code>，只有第二种可记为 <code>TIMED_OUT</code>，第三种进入不可重放的幂等对账。虚拟时钟测试证明取消后后台 activity 不再增加。</li>
         <li>Micrometer meter 只使用有界低基数标签，不包含 user、tenant、run、ticket、Prompt 或内容；Spring AI 工具参数 / 结果导出显式保持 <code>false</code>。</li>
         <li>测试矩阵覆盖注入、间接注入、角色 / 工具越权、tenant 泄露、不安全写、timeout、token / tool / model / cost 预算、Trace 敏感性、审计缺失和模型拒绝。</li>
         <li>页面外链安全、标题锚点唯一、八节点图示有等价文字说明，Java 泛型与 Lambda 箭头已正确转义。</li>
