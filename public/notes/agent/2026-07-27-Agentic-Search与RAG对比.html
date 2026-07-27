@@ -27,11 +27,16 @@
     </div>
     <div class="sidebar-category-summary">
       <span class="eyebrow">当前分类</span>
-      <a class="sidebar-category-link" href="../../index.html"><strong>Agent 开发</strong><small>分类文档</small></a>
+      <a class="sidebar-category-link" href="../../index.html#category-agent-开发-fm6pdx">
+        <strong>Agent 开发</strong>
+        <small>10 篇文档</small>
+      </a>
       <a class="sidebar-featured-link" href="2026-07-27-Agent开发学习主目录.html">分类主目录<span>Agent 开发学习主目录</span></a>
     </div>
     <label class="sidebar-search"><span class="sr-only">筛选文档</span><input type="search" placeholder="筛选当前分类…" data-sidebar-search></label>
-    <nav class="doc-nav" aria-label="当前分类文档"></nav>
+    <nav class="doc-nav" aria-label="当前分类文档">
+      <a class="doc-nav-item" href="2026-07-27-01-Agent基础概念与边界.html"><span>Agent 基础概念与边界</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-02-模型API结构化输出与Tool-Calling.html"><span>模型 API、结构化输出与 Tool Calling</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-03-Agent状态上下文与记忆.html"><span>Agent 状态、上下文与记忆</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-04-Agent知识检索与RAG.html"><span>Agent 知识检索与 RAG</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-05-Agent规划反思与任务分解.html"><span>Agent 规划、反思与任务分解</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-06-多Agent协作与编排.html"><span>多 Agent 协作与编排</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-07-Agent评测安全权限与成本控制.html"><span>Agent 评测、安全、权限与成本控制</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-08-Java-Agent生产部署可观测性与故障恢复.html"><span>Java Agent 生产部署、可观测性与故障恢复</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-Agent开发学习主目录.html"><span>Agent 开发学习主目录</span><small>2026-07-27</small></a><a class="doc-nav-item is-active" href="2026-07-27-Agentic-Search与RAG对比.html" aria-current="page"><span>Agentic Search 与 RAG：边界、对比与 Java 实现</span><small>2026-07-27</small></a>
+    </nav>
   </aside>
   <main class="article-column">
     <div class="article-meta">
@@ -207,6 +212,7 @@
       <p>不要把无限 <code>while</code> 循环藏在 Prompt 里。领域层显式表达决策、预算、证据和停止原因；模型只能返回候选 <code>SearchDecision</code>，Java 代码负责校验与执行。</p>
 
       <h3 id="java-领域契约">领域契约</h3>
+      <p>下面三个 Java 代码块分别保存为同一 package 下的 <code>SearchTypes.java</code>、<code>EvidenceLedger.java</code> 和 <code>AgenticSearchService.java</code>；类型故意使用 package-private，使一个学习示例不需要拆成十多个文件。</p>
       <pre><code>import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
@@ -214,31 +220,40 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-public enum DecisionType { SEARCH, ANSWER, ESCALATE }
+enum DecisionType { SEARCH, ANSWER, ESCALATE }
 
-public record SearchBudget(
+record SearchBudget(
         int maxRounds,
         int maxQueries,
         int maxEvidence,
         Duration maxElapsed,
         long maxModelTokens,
         long maxCostMicros) {
-    public SearchBudget {
-        if (maxRounds &lt; 1 || maxQueries &lt; 1 || maxEvidence &lt; 1) {
+    SearchBudget {
+        if (maxRounds &lt; 1 || maxQueries &lt; 1 || maxEvidence &lt; 1
+                || maxElapsed.isNegative() || maxElapsed.isZero()
+                || maxModelTokens &lt; 1 || maxCostMicros &lt; 1) {
             throw new IllegalArgumentException("budgets must be positive");
         }
     }
 }
 
-public record SearchQuery(String source, String text, String evidenceGap) {}
+record SearchQuery(String source, String text, String evidenceGap) {}
 
-public record SearchDecision(
+record SearchDecision(
         DecisionType type,
         List&lt;SearchQuery&gt; queries,
         String rationale,
         Set&lt;String&gt; supportedClaimIds) {}
 
-public record Evidence(
+record PrincipalScope(String tenantId, String subjectId, Set&lt;String&gt; roles) {}
+
+record SearchRequest(
+        String goal,
+        PrincipalScope principal,
+        Set&lt;String&gt; requiredClaimIds) {}
+
+record Evidence(
         String id,
         String source,
         String title,
@@ -248,15 +263,117 @@ public record Evidence(
         Set&lt;String&gt; supports,
         Map&lt;String, Object&gt; metadata) {}
 
-public record SearchOutcome(
+record SearchOutcome(
         String answer,
         List&lt;Evidence&gt; evidence,
         String stopReason,
         int rounds,
-        int queriesUsed) {}</code></pre>
+        int queriesUsed) {}
+
+record Usage(long modelTokens, long costMicros) {}
+
+record RemainingBudget(
+        int querySlots,
+        Duration elapsed,
+        Duration perQueryTimeout,
+        long modelTokensLeft,
+        long costMicrosLeft) {
+    static RemainingBudget from(
+            SearchBudget limit,
+            int queriesUsed,
+            Instant startedAt,
+            Instant now,
+            Usage usage) {
+        Duration elapsed = Duration.between(startedAt, now);
+        Duration timeLeft = limit.maxElapsed().minus(elapsed);
+        Duration perCallCap = Duration.ofSeconds(8);
+        Duration timeout = timeLeft.isNegative()
+                ? Duration.ZERO
+                : (timeLeft.compareTo(perCallCap) &lt; 0 ? timeLeft : perCallCap);
+        return new RemainingBudget(
+                limit.maxQueries() - queriesUsed,
+                elapsed,
+                timeout,
+                limit.maxModelTokens() - usage.modelTokens(),
+                limit.maxCostMicros() - usage.costMicros());
+    }
+
+    boolean exhausted(SearchBudget limit) {
+        return querySlots &lt;= 0
+                || elapsed.compareTo(limit.maxElapsed()) &gt;= 0
+                || modelTokensLeft &lt;= 0
+                || costMicrosLeft &lt;= 0;
+    }
+}
+
+interface UsageMeter {
+    Usage snapshot();
+}
+
+interface SearchPlanner {
+    SearchDecision next(
+            String goal,
+            List&lt;Evidence&gt; evidence,
+            RemainingBudget budget,
+            Set&lt;String&gt; allowedSources);
+}
+
+interface SearchGateway {
+    List&lt;Evidence&gt; search(
+            SearchQuery query,
+            PrincipalScope principal,
+            Duration timeout);
+}
+
+interface AnswerPublisher {
+    SearchOutcome abstain(
+            List&lt;Evidence&gt; evidence,
+            String stopReason,
+            int rounds,
+            int queriesUsed);
+
+    SearchOutcome publishIfSupported(
+            Set&lt;String&gt; requiredClaimIds,
+            EvidenceLedger ledger,
+            int rounds,
+            int queriesUsed);
+}
+
+final class DecisionValidator {
+    private DecisionValidator() {}
+
+    static void validate(
+            SearchDecision decision,
+            Set&lt;String&gt; allowedSources,
+            RemainingBudget remaining) {
+        if (decision == null || decision.type() == null) {
+            throw new IllegalArgumentException("decision and type are required");
+        }
+        List&lt;SearchQuery&gt; queries =
+                decision.queries() == null ? List.of() : decision.queries();
+        if (decision.type() != DecisionType.SEARCH &amp;&amp; !queries.isEmpty()) {
+            throw new IllegalArgumentException("only SEARCH may contain queries");
+        }
+        if (decision.type() == DecisionType.SEARCH
+                &amp;&amp; (queries.isEmpty() || queries.size() &gt; remaining.querySlots())) {
+            throw new IllegalArgumentException("query count exceeds remaining budget");
+        }
+        for (SearchQuery query : queries) {
+            if (!allowedSources.contains(query.source())
+                    || query.text() == null || query.text().isBlank()
+                    || query.evidenceGap() == null || query.evidenceGap().isBlank()) {
+                throw new IllegalArgumentException("invalid search query");
+            }
+        }
+    }
+}</code></pre>
 
       <h3 id="证据账本">证据账本不是聊天记录</h3>
-      <pre><code>public final class EvidenceLedger {
+      <pre><code>import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+public final class EvidenceLedger {
     private final Map&lt;String, Evidence&gt; accepted = new java.util.LinkedHashMap&lt;&gt;();
     private final List&lt;String&gt; conflicts = new java.util.ArrayList&lt;&gt;();
 
@@ -284,11 +401,29 @@ public record SearchOutcome(
       <p>证据账本保存原始来源与声明支持关系；给模型的上下文可以是经过裁剪的投影，但不能反过来把模型摘要当成原始证据。冲突也不能靠“最后一条覆盖前一条”消失。</p>
 
       <h3 id="有界搜索循环">有界搜索循环</h3>
-      <pre><code>public final class AgenticSearchService {
+      <pre><code>import java.time.Instant;
+import java.util.List;
+import java.util.Set;
+
+public final class AgenticSearchService {
     private final SearchPlanner planner;
     private final SearchGateway gateway;
     private final AnswerPublisher publisher;
+    private final UsageMeter usageMeter;
     private final java.time.Clock clock;
+
+    public AgenticSearchService(
+            SearchPlanner planner,
+            SearchGateway gateway,
+            AnswerPublisher publisher,
+            UsageMeter usageMeter,
+            java.time.Clock clock) {
+        this.planner = planner;
+        this.gateway = gateway;
+        this.publisher = publisher;
+        this.usageMeter = usageMeter;
+        this.clock = clock;
+    }
 
     public SearchOutcome search(
             SearchRequest request,
@@ -300,8 +435,8 @@ public record SearchOutcome(
 
         for (int round = 1; round &lt;= budget.maxRounds(); round++) {
             RemainingBudget remaining = RemainingBudget.from(
-                    budget, round, queriesUsed, startedAt, clock.instant());
-            if (remaining.exhausted()) {
+                    budget, queriesUsed, startedAt, clock.instant(), usageMeter.snapshot());
+            if (remaining.exhausted(budget)) {
                 return publisher.abstain(ledger.snapshot(), "BUDGET_EXHAUSTED", round, queriesUsed);
             }
 
@@ -517,12 +652,17 @@ ChatClient classicRagClient(
     </article>
     <footer class="article-footer">
       <div class="source-path">HTML 页面：<code>notes/agent/2026-07-27-Agentic-Search与RAG对比.html</code></div>
-      <nav class="pager" aria-label="上一篇和下一篇"></nav>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="2026-07-27-Agent开发学习主目录.html"><small>上一篇</small><span>Agent 开发学习主目录</span></a>
+        <a class="pager-link next" href="../codex/2026-07-24-AI开发工作流选型与小团队沉淀指南.html"><small>下一篇</small><span>AI 开发工作流选型与小团队沉淀指南</span></a>
+      </nav>
     </footer>
   </main>
   <aside class="toc-sidebar">
     <div class="toc-title">本页目录</div>
-    <nav aria-label="本页目录"></nav>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#概念边界">概念边界：搜索能力与生成方式是两个维度</a></li><li class="toc-level-3"><a href="#与普通搜索的区别">与普通搜索的区别</a></li><li class="toc-level-2"><a href="#agentic-search-闭环">Agentic Search 闭环</a></li><li class="toc-level-3"><a href="#每一轮的输入输出">每一轮到底改变什么</a></li><li class="toc-level-2"><a href="#能力阶梯">能力阶梯：不要一步跳到全自主</a></li><li class="toc-level-2"><a href="#三者对比">经典 RAG、Agentic RAG 与 Agentic Search 对比</a></li><li class="toc-level-2"><a href="#优缺点">优缺点：能力不是免费的</a></li><li class="toc-level-3"><a href="#经典-rag-优缺点">经典 RAG</a></li><li class="toc-level-3"><a href="#agentic-search-优缺点">Agentic Search</a></li><li class="toc-level-3"><a href="#常见误区">常见误区</a></li><li class="toc-level-2"><a href="#选型决策">选型决策：默认采用渐进增强</a></li><li class="toc-level-2"><a href="#企业服务台案例">企业服务台案例：为什么一次 RAG 不够</a></li><li class="toc-level-2"><a href="#java-21-实现">Java 21：把搜索 Agent 写成有界状态机</a></li><li class="toc-level-3"><a href="#java-领域契约">领域契约</a></li><li class="toc-level-3"><a href="#证据账本">证据账本不是聊天记录</a></li><li class="toc-level-3"><a href="#有界搜索循环">有界搜索循环</a></li><li class="toc-level-2"><a href="#spring-ai-实现">Spring AI 2.0.0：组合能力，而不是寻找魔法注解</a></li><li class="toc-level-3"><a href="#spring-ai-依赖">Maven 依赖</a></li><li class="toc-level-3"><a href="#spring-ai-planner">用 ChatClient 产生候选计划</a></li><li class="toc-level-3"><a href="#经典-rag-与-agentic-组合">经典 RAG 与 Agentic Search 如何组合</a></li><li class="toc-level-2"><a href="#安全边界">安全边界</a></li><li class="toc-level-2"><a href="#评测与测试">评测与测试：检索、轨迹、答案分层测</a></li><li class="toc-level-3"><a href="#最小测试矩阵">最小测试矩阵</a></li><li class="toc-level-2"><a href="#练习与验收">练习与验收</a></li><li class="toc-level-3"><a href="#练习">练习：扩展服务台 RAG</a></li><li class="toc-level-3"><a href="#验收标准">验收标准</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
+    </nav>
     <a class="back-to-top" href="#">返回顶部 ↑</a>
   </aside>
 </div>
