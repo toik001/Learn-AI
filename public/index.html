@@ -22,9 +22,9 @@
       <p>这里汇集 Codex、Agent 工作流、AI-DLC 与工程实践资料。所有内容直接维护为 HTML，可离线阅读。</p>
     </div>
     <div class="hero-stats" aria-label="知识库统计">
-      <div><strong>9</strong><span>篇文档</span></div>
-      <div><strong>500</strong><span>个章节</span></div>
-      <div><strong>114k</strong><span>约字符</span></div>
+      <div><strong>17</strong><span>篇文档</span></div>
+      <div><strong>702</strong><span>个章节</span></div>
+      <div><strong>325k</strong><span>约字符</span></div>
     </div>
   </section>
   <section class="library-tools" aria-label="文档搜索">
@@ -33,7 +33,7 @@
       <input type="search" placeholder="搜索标题、主题或章节…" data-library-search autofocus>
       <kbd>/</kbd>
     </label>
-    <p class="search-status" aria-live="polite">显示全部 9 篇文档</p>
+    <p class="search-status" aria-live="polite">显示全部 17 篇文档</p>
   </section>
   <div class="no-results" hidden>
     <h2>没有找到匹配文档</h2>
@@ -45,10 +45,114 @@
       <span class="eyebrow">COLLECTION</span>
       <h2>Agent 开发</h2>
     </div>
-    <span class="section-count">1 篇</span>
+    <span class="section-count">9 篇</span>
   </div>
   <div class="document-grid">
-    <article class="document-card" data-search-text="agent 开发学习主目录 面向 java 开发者的 agent 开发学习主目录：概念、调用循环、最小运行时、学习路线与实践项目。 notes/agent/2026-07-27-agent开发学习主目录.html 核心结论 agent 通用释义 agent 不是什么 核心组成 一次完整调用过程 java 开发者映射 最小 java 实现 主学习路线 第一个实践项目 参考资料">
+    <article class="document-card" data-search-text="agent 基础概念与边界 面向 java 开发者辨析 software agent、ai agent、llm agent 与 agentic system，并完成企业服务台 agent 的目标、状态、工具和护栏设计。 notes/agent/2026-07-27-01-agent基础概念与边界.html 课程导航 核心结论 学习目标与本阶段产物 直观理解 agent 五要素 八节点调用闭环 边界辨析 何时不该使用 agent java 21 领域模型 spring ai 职责边界 maven bom（稳定版 2.0.0） 从 chatmodel 构造 chatclient，并加入固定策略 advisor 原生能力与应用责任矩阵 企业服务台案例 1. 目标（goal） 2. 状态 / 环境（state） 3. 工具 / 动作（tools） 4. 护栏 / 验收（guardrails） 常见错误 练习与验收 练习一：分类三个需求 练习二：写自己的四栏设计 本课验收标准 参考资料">
+          <a class="card-link" href="notes/agent/2026-07-27-01-Agent基础概念与边界.html" aria-label="阅读 Agent 基础概念与边界"></a>
+          <div class="card-topline">
+            <span class="category-pill">Agent 开发</span>
+            <time>2026-07-27</time>
+          </div>
+          <h3>Agent 基础概念与边界</h3>
+          <p>面向 Java 开发者辨析 Software Agent、AI Agent、LLM Agent 与 Agentic System，并完成企业服务台 Agent 的目标、状态、工具和护栏设计。</p>
+          <div class="card-footer">
+            <span>24 个章节</span>
+            <span>约 23 分钟</span>
+            <span class="read-more">阅读 →</span>
+          </div>
+        </article><article class="document-card" data-search-text="模型 api、结构化输出与 tool calling 面向 java 开发者系统学习模型结构化决策与 spring ai 2.0.0 tool calling，并为企业服务台建立工具契约、授权边界和测试策略。 notes/agent/2026-07-27-02-模型api结构化输出与tool-calling.html 课程导航 核心结论 学习目标与本阶段产物 结构化决策模型 tool calling 调用过程 三种执行控制模式 java 21 类型设计 spring ai 2.0.0 tool calling maven bom 只读工具与显式 advisor-controlled 示例 user-controlled 生命周期：插入审批与预算 returndirect 的边界 授权校验与错误边界 企业服务台案例 测试策略 练习与验收 练习 本课验收标准 参考资料">
+          <a class="card-link" href="notes/agent/2026-07-27-02-模型API结构化输出与Tool-Calling.html" aria-label="阅读 模型 API、结构化输出与 Tool Calling"></a>
+          <div class="card-topline">
+            <span class="category-pill">Agent 开发</span>
+            <time>2026-07-27</time>
+          </div>
+          <h3>模型 API、结构化输出与 Tool Calling</h3>
+          <p>面向 Java 开发者系统学习模型结构化决策与 Spring AI 2.0.0 Tool Calling，并为企业服务台建立工具契约、授权边界和测试策略。</p>
+          <div class="card-footer">
+            <span>19 个章节</span>
+            <span>约 53 分钟</span>
+            <span class="read-more">阅读 →</span>
+          </div>
+        </article><article class="document-card" data-search-text="agent 状态、上下文与记忆 面向 java 开发者区分 agent 状态、提示上下文、chat memory 与完整业务历史，并用 java 21 和 spring ai 2.0.0 实现可恢复、隔离且可审计的状态管理。 notes/agent/2026-07-27-03-agent状态上下文与记忆.html 课程导航 核心结论 学习目标与本阶段产物 四类信息不要混在一起 状态生命周期 上下文窗口与压缩 java 21：可序列化状态、检查点与恢复 spring ai 2.0.0：显式 chat memory 框架能力与业务责任 版本与依赖管理 provider-neutral 配置与调用 持久化、恢复与并发 检查点与事件日志 乐观锁冲突如何处理 安全与隐私 企业服务台案例 测试策略 练习与验收 练习一：给字段分层 练习二：实现 staterepository 练习三：接入 spring ai 2.0.0 本课验收标准 参考资料">
+          <a class="card-link" href="notes/agent/2026-07-27-03-Agent状态上下文与记忆.html" aria-label="阅读 Agent 状态、上下文与记忆"></a>
+          <div class="card-topline">
+            <span class="category-pill">Agent 开发</span>
+            <time>2026-07-27</time>
+          </div>
+          <h3>Agent 状态、上下文与记忆</h3>
+          <p>面向 Java 开发者区分 Agent 状态、提示上下文、Chat Memory 与完整业务历史，并用 Java 21 和 Spring AI 2.0.0 实现可恢复、隔离且可审计的状态管理。</p>
+          <div class="card-footer">
+            <span>23 个章节</span>
+            <span>约 46 分钟</span>
+            <span class="read-more">阅读 →</span>
+          </div>
+        </article><article class="document-card" data-search-text="agent 知识检索与 rag 面向 java 开发者系统学习 agent 知识检索与 rag：从采集、切分、版本化和权限过滤，到带来源引用、诚实降级与提示注入隔离。 notes/agent/2026-07-27-04-agent知识检索与rag.html 课程导航 核心结论 学习目标与本阶段产物 rag 完整链路：从来源到引用答案 离线索引与在线检索 采集、切分与元数据 chunk 粒度不是越小越好 建议的 metadata schema 版本、删除与重建 召回、过滤与重排 引用与诚实降级 从召回证据到 citation 拒答与降级决策 java 21：只读、带来源的检索契约 spring ai 2.0.0：etl、只读召回与模块化 rag java 21、spring boot 4 与 bom 离线 etl：写权限只属于索引任务 在线只读召回：过滤发生在查询内 模块化 rag advisor 的安全封装 生产存储与 simplevectorstore 安全边界 检索文本是 data，不是 instructions 其他必须的控制 企业服务台增量案例 评测与测试 练习与验收 练习：为服务台实现 source-aware rag 验收标准 参考资料">
+          <a class="card-link" href="notes/agent/2026-07-27-04-Agent知识检索与RAG.html" aria-label="阅读 Agent 知识检索与 RAG"></a>
+          <div class="card-topline">
+            <span class="category-pill">Agent 开发</span>
+            <time>2026-07-27</time>
+          </div>
+          <h3>Agent 知识检索与 RAG</h3>
+          <p>面向 Java 开发者系统学习 Agent 知识检索与 RAG：从采集、切分、版本化和权限过滤，到带来源引用、诚实降级与提示注入隔离。</p>
+          <div class="card-footer">
+            <span>29 个章节</span>
+            <span>约 45 分钟</span>
+            <span class="read-more">阅读 →</span>
+          </div>
+        </article><article class="document-card" data-search-text="agent 规划、反思与任务分解 面向 java 开发者系统学习 agent 规划、任务分解与有限反思：用 dag、状态、预算、审批、幂等、补偿和人工升级把模型候选计划变成可治理执行。 notes/agent/2026-07-27-05-agent规划反思与任务分解.html 课程导航 核心结论 学习目标与本阶段产物 四种执行策略：反思是可选增强层 何时需要规划 五个判断问题 计划状态机：dag、版本与证据 dag 与 ready set 幂等、重试、补偿与重规划 反思的收益与成本 java 21：不可变计划模型 业务 planvalidator：从候选到可执行计划 spring ai 2.0.0：只生成候选计划 原生能力与应用职责边界 校验、执行与转人工 持久化 stepexecutor 有限重试、补偿、重规划和升级的决策表 企业服务台增量案例 示例预算与人工门 测试策略 练习与验收 练习：实现受治理的服务台计划执行 验收标准 参考资料">
+          <a class="card-link" href="notes/agent/2026-07-27-05-Agent规划反思与任务分解.html" aria-label="阅读 Agent 规划、反思与任务分解"></a>
+          <div class="card-topline">
+            <span class="category-pill">Agent 开发</span>
+            <time>2026-07-27</time>
+          </div>
+          <h3>Agent 规划、反思与任务分解</h3>
+          <p>面向 Java 开发者系统学习 Agent 规划、任务分解与有限反思：用 DAG、状态、预算、审批、幂等、补偿和人工升级把模型候选计划变成可治理执行。</p>
+          <div class="card-footer">
+            <span>24 个章节</span>
+            <span>约 52 分钟</span>
+            <span class="read-more">阅读 →</span>
+          </div>
+        </article><article class="document-card" data-search-text="多 agent 协作与编排 面向 java 开发者系统学习多 agent 协作与编排：从单 agent 基线出发，建立显式 coordinator、最小权限角色、版本化共享状态、统一审批与故障传播。 notes/agent/2026-07-27-06-多agent协作与编排.html 课程导航 核心结论 学习目标与本阶段产物 先建立单 agent 基线 拆分决策门 四种协作拓扑 角色与工具隔离 显式 handoff，而不是转发聊天记录 共享状态与冲突 确定性合并顺序 java 21：协调器与版本化契约 合并器与并行边界 spring ai 2.0.0：多角色 chatclient 与业务编排 工具执行前策略门 显式 servicedeskcoordinator 失败传播与审批 统一审批服务不能被角色绕过 企业服务台案例 评测与测试 生产评测指标 练习与验收 动手练习 验收标准 参考资料">
+          <a class="card-link" href="notes/agent/2026-07-27-06-多Agent协作与编排.html" aria-label="阅读 多 Agent 协作与编排"></a>
+          <div class="card-topline">
+            <span class="category-pill">Agent 开发</span>
+            <time>2026-07-27</time>
+          </div>
+          <h3>多 Agent 协作与编排</h3>
+          <p>面向 Java 开发者系统学习多 Agent 协作与编排：从单 Agent 基线出发，建立显式 Coordinator、最小权限角色、版本化共享状态、统一审批与故障传播。</p>
+          <div class="card-footer">
+            <span>24 个章节</span>
+            <span>约 54 分钟</span>
+            <span class="read-more">阅读 →</span>
+          </div>
+        </article><article class="document-card" data-search-text="agent 评测、安全、权限与成本控制 面向 java 开发者系统学习 agent 评测、安全、权限与成本控制：建立轨迹级指标、策略门、工具执行前授权、不可变审计、预算和红队发布门。 notes/agent/2026-07-27-07-agent评测安全权限与成本控制.html 课程导航 核心结论 学习目标与本阶段产物 评测对象与指标 八节点治理闭环 离线、在线、人工与红队评测 威胁模型 权限、审批与不可变审计 rbac + abac + 上下文策略 不可变审计与最小披露 成本与执行预算 java 21：不可变评测、策略、预算与审计模型 原子预算与策略顺序 spring ai 2.0.0：策略 advisor、工具前授权与 observation advisor：模型调用前策略门 toolcallback：执行 delegate 前授权 deadline 与取消必须到达真实传输层 micrometer observation 与低基数标签 工具参数 / 结果默认不导出，并保持关闭 企业服务台案例：从评测集到发布门 发布门示例 测试与红队矩阵 java 测试夹具示例 练习与验收 动手练习 验收标准 参考资料">
+          <a class="card-link" href="notes/agent/2026-07-27-07-Agent评测安全权限与成本控制.html" aria-label="阅读 Agent 评测、安全、权限与成本控制"></a>
+          <div class="card-topline">
+            <span class="category-pill">Agent 开发</span>
+            <time>2026-07-27</time>
+          </div>
+          <h3>Agent 评测、安全、权限与成本控制</h3>
+          <p>面向 Java 开发者系统学习 Agent 评测、安全、权限与成本控制：建立轨迹级指标、策略门、工具执行前授权、不可变审计、预算和红队发布门。</p>
+          <div class="card-footer">
+            <span>27 个章节</span>
+            <span>约 92 分钟</span>
+            <span class="read-more">阅读 →</span>
+          </div>
+        </article><article class="document-card" data-search-text="java agent 生产部署、可观测性与故障恢复 面向 java 开发者的生产级 agent 运维课程：设计同步与异步运行、持久状态、幂等、韧性、可观测性、恢复队列和安全重放。 notes/agent/2026-07-27-08-java-agent生产部署可观测性与故障恢复.html 课程导航 核心结论 学习目标与本阶段产物 生产拓扑：八节点与三条控制平面 框架能力与业务责任 同步、异步与持久状态机 状态与检查点纪律 超时、重试、熔断与背压 韧性组件的组合边界 可观测性：安全关联、指标和 trace 关联字段与基数 业务指标与告警 spring ai 2.0.0 的精确观测边界 vectorstore trace：默认泄露面与自定义清洗 必须在实际 provider builder 上接线 canary：默认 convention red，自定义后零泄露 trace 父子关系 幂等与一致性 故障恢复与安全重放 java 21：运行、幂等、转移与恢复契约 spring boot 与 spring ai：api、service、actuator 和 observation 安全配置基线 controller / service 与 observationregistry worker 观测与内容最小化 企业服务台案例：最终生产状态 生产检查与故障演练 生产就绪清单 故障演练矩阵 练习与验收 练习 验收标准 参考资料">
+          <a class="card-link" href="notes/agent/2026-07-27-08-Java-Agent生产部署可观测性与故障恢复.html" aria-label="阅读 Java Agent 生产部署、可观测性与故障恢复"></a>
+          <div class="card-topline">
+            <span class="category-pill">Agent 开发</span>
+            <time>2026-07-27</time>
+          </div>
+          <h3>Java Agent 生产部署、可观测性与故障恢复</h3>
+          <p>面向 Java 开发者的生产级 Agent 运维课程：设计同步与异步运行、持久状态、幂等、韧性、可观测性、恢复队列和安全重放。</p>
+          <div class="card-footer">
+            <span>32 个章节</span>
+            <span>约 62 分钟</span>
+            <span class="read-more">阅读 →</span>
+          </div>
+        </article><article class="document-card" data-search-text="agent 开发学习主目录 面向 java 开发者的 agent 开发学习主目录：概念、调用循环、最小运行时、学习路线与实践项目。 notes/agent/2026-07-27-agent开发学习主目录.html 核心结论 agent 通用释义 agent 不是什么 核心组成 一次完整调用过程 java 开发者映射 最小 java 实现 主学习路线 第一个实践项目 参考资料">
           <a class="card-link" href="notes/agent/2026-07-27-Agent开发学习主目录.html" aria-label="阅读 Agent 开发学习主目录"></a>
           <div class="card-topline">
             <span class="category-pill">Agent 开发</span>
