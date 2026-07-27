@@ -122,18 +122,18 @@
       </table></div>
 
       <h3 id="八节点调用闭环">八节点调用闭环</h3>
-      <div class="agent-call-flow" role="img" aria-label="八节点 Agent 闭环：业务目标，环境或对象，感知或输入，状态或上下文，策略或模型，候选行动，策略执行点暴露 handler 并由框架调用，Observation 与验收。授权、校验、审批、预算和审计贯穿全程。">
+      <div class="agent-call-flow" role="img" aria-label="八节点 Agent 闭环：业务目标，环境或对象，感知或输入，状态或上下文，策略或模型，候选行动，应用策略执行工具 handler 并由 ToolCallingAdvisor 发起调用，Observation 与验收。授权、校验、审批、预算和审计贯穿全程。">
         <div class="agent-step">业务目标</div>
         <div class="agent-step">环境 / 对象</div>
         <div class="agent-step">感知 / 输入</div>
         <div class="agent-step">状态 / 上下文</div>
         <div class="agent-step">策略 / 模型</div>
         <div class="agent-step">候选行动</div>
-        <div class="agent-step">策略执行点 / handler</div>
+        <div class="agent-step">应用策略执行工具 handler</div>
         <div class="agent-step">Observation / 验收</div>
         <div class="guardrail-band">横切护栏：身份与租户 · 工具白名单 · schema 校验 · 人工审批 · 步数/时间/成本预算 · 安全错误 · 审计</div>
       </div>
-      <p class="diagram-text"><strong>等价文字说明：</strong>外部指定的业务目标落在具体环境或业务对象上；应用接收并校验感知输入，装配可信度标记明确的状态与上下文；策略或模型只能提出候选行动。应用策略执行点先依据身份、租户、allowlist、schema、独立审批和剩余预算决定本次可注册/暴露的 handler；Spring AI 的 <code>ToolCallingAdvisor</code> 可以调用模型请求的已注册 handler 并回传结果。handler 自身仍须重新执行对象级授权、审批与预算检查。Observation 作为不可信输入被校验、记录并用于验收，未达标时由应用决定是否进入下一轮。任何节点都不能绕过横切护栏。</p>
+      <p class="diagram-text"><strong>等价文字说明：</strong>外部指定的业务目标落在具体环境或业务对象上；应用接收并校验感知输入，装配可信度标记明确的状态与上下文；策略或模型只能提出候选行动。应用策略执行点先依据身份、租户、allowlist、schema、独立审批和剩余预算决定本次可注册/暴露的 handler；Spring AI 的 <code>ToolCallingAdvisor</code> 负责发起对模型所请求且已注册 handler 的框架调用并回传结果，应用拥有的 handler 则在业务凭证与策略约束下执行真实工具操作。handler 执行前仍须重新检查对象级授权、审批与预算。Observation 作为不可信输入被校验、记录并用于验收，未达标时由应用决定是否进入下一轮。任何节点都不能绕过横切护栏。</p>
 
       <h2 id="边界辨析"><a class="heading-anchor" href="#边界辨析" aria-label="链接到本节">#</a>边界辨析</h2>
       <div class="table-wrap"><table>
