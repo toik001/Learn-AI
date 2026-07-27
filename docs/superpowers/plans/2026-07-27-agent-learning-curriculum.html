@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Agent 开发八阶段课程及 Spring AI 示例的分步实施计划">
+  <title>Agent 开发八阶段课程实施计划</title>
+</head>
+<body>
+  <header>
+    <h1>Agent 开发八阶段课程实施计划</h1>
+    <p>
+      <strong>Agent 执行要求：</strong>
+      必须使用 superpowers:subagent-driven-development 逐任务实施，
+      每个专题完成后执行规格与质量审查。
+    </p>
+    <p><strong>目标：</strong>建设八篇 Agent 专题学习页，将主目录升级为完整的 Java 21 + Spring AI 渐进课程。</p>
+    <p>
+      <strong>架构：</strong>
+      每个专题是独立 HTML 内容单元，使用统一页面外壳、共享样式和企业服务台案例。
+      前八个任务分别创建页面；第九个任务建立课程互链并更新主目录；
+      第十个任务运行索引生成和全站回归验证。
+    </p>
+    <p>
+      <strong>技术栈：</strong>
+      HTML5、共享 CSS、现有原生 JavaScript、Java 21、Spring Boot 4.0/4.1、
+      Spring AI 2.0.0、Maven BOM、Micrometer/OpenTelemetry。
+    </p>
+  </header>
+
+  <main>
+    <section aria-labelledby="constraints">
+      <h2 id="constraints">全局约束</h2>
+      <ul>
+        <li>八个页面固定使用设计规格中列出的路径，分类统一为“Agent 开发”，整理日期为 2026-07-27。</li>
+        <li>每篇使用 <code>../../assets/style.css</code> 和 <code>../../assets/app.js</code>，遵循现有 document-page 外壳。</li>
+        <li>Java 核心示例使用 Java 21；Spring AI 示例锁定稳定版 2.0.0，兼容 Spring Boot 4.0.x 或 4.1.x。</li>
+        <li>依赖管理使用 <code>org.springframework.ai:spring-ai-bom:2.0.0</code>，不使用 SNAPSHOT 或里程碑版本。</li>
+        <li>示例不绑定具体模型厂商；需要模型 Bean 时使用 <code>ChatModel</code>、<code>EmbeddingModel</code> 等抽象。</li>
+        <li>Spring AI 原生能力与业务自建能力必须明确标注，不把 Planner、Coordinator、审批或恢复队列描述为框架原生组件。</li>
+        <li>每篇包含核心结论、页内目录、至少一个语义化 HTML/CSS 图示、Java 21 示例、Spring AI 示例、练习、验收标准和参考资料。</li>
+        <li>模型输出、检索文本和工具 Observation 均按不可信输入处理；公开错误与私有诊断分离。</li>
+        <li>联网资料只使用论文原文、标准组织、Spring 官方文档、官方项目文档或源代码仓库，并标记检索日期 2026-07-27。</li>
+        <li>外链必须使用 <code>target="_blank"</code> 和 <code>rel="noopener noreferrer"</code>；Java 泛型与 Lambda 箭头必须 HTML 转义。</li>
+        <li>专题创建阶段不链接尚未创建的页面；课程互链统一由任务 9 添加。</li>
+      </ul>
+    </section>
+
+    <section aria-labelledby="sources">
+      <h2 id="sources">已核验的 Spring AI 基线</h2>
+      <p>以下官方资料检索于 2026-07-27，所有专题应按需就近引用：</p>
+      <ul>
+        <li><a href="https://docs.spring.io/spring-ai/reference/getting-started.html">Getting Started</a>：Spring AI 2.0.0 BOM，支持 Spring Boot 4.0.x/4.1.x。</li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/api/chatclient.html">ChatClient</a>：同步/流式调用与 Advisor 接入。</li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/api/advisors.html">Advisors API</a>：请求/响应拦截、上下文和内置 Advisor。</li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/api/tools.html">Tool Calling</a>：2.0 的 ToolCallingAdvisor、框架控制、Advisor 控制和用户控制三种生命周期。</li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/api/structured-output-converter.html">Structured Output</a>：POJO 转换与原生结构化输出。</li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/api/advisors-recursive.html">Recursive Advisors</a>：StructuredOutputValidationAdvisor 与 ToolCallingAdvisor。</li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/api/chat-memory.html">Chat Memory</a>：ChatMemory、ChatMemoryRepository、MessageChatMemoryAdvisor 和会话 ID 约束。</li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/api/vectordbs.html">VectorStore</a>：VectorStoreRetriever、VectorStore 和 SearchRequest。</li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/api/retrieval-augmented-generation.html">RAG</a>：VectorStoreDocumentRetriever 与模块化 RAG。</li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/api/etl-pipeline.html">ETL Pipeline</a>：DocumentReader、DocumentTransformer 和 DocumentWriter。</li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/observability/index.html">Observability</a>：ChatClient、Advisor、ChatModel、工具和 VectorStore 指标/Trace；工具参数与结果默认不导出。</li>
+      </ul>
+    </section>
+
+    <article>
+      <h2 id="task-1">任务 1：Agent 基础概念与边界</h2>
+      <p><strong>创建：</strong><code>public/notes/agent/2026-07-27-01-Agent基础概念与边界.html</code></p>
+      <p><strong>产物：</strong>企业服务台 Agent 的目标、环境、状态、工具和护栏四栏设计，供后续任务复用。</p>
+      <ol>
+        <li>RED：运行页面存在性检查，确认退出码非 0。</li>
+        <li>联网核验 NIST Agent 定义、Spring AI ChatClient 与 Advisor 官方文档。</li>
+        <li>
+          写入稳定章节：核心结论、学习目标、Agent 五要素、聊天/工作流/Agent 对比、
+          “何时不用 Agent”决策树、Java 21 <code>AgentDefinition</code> record、
+          Spring AI 的 ChatClient/Advisor/业务 Runtime 职责图、企业服务台四栏设计、
+          常见误区、练习与验收、参考资料。
+        </li>
+        <li>
+          Spring 示例必须说明 ChatClient 是模型交互入口，Advisor 是拦截增强机制，
+          目标管理、授权、循环预算和人工审批仍由业务 Runtime 负责。
+        </li>
+        <li>GREEN：检查文件非空、必需锚点唯一、Spring AI 2.0.0 与 Java 21 示例存在、外链安全、图示含等价文字说明。</li>
+        <li>提交：<code>docs: add Agent foundations course</code>。</li>
+      </ol>
+
+      <h2 id="task-2">任务 2：模型 API、结构化输出与 Tool Calling</h2>
+      <p><strong>创建：</strong><code>public/notes/agent/2026-07-27-02-模型API结构化输出与Tool-Calling.html</code></p>
+      <p><strong>消费：</strong>任务 1 的服务台工具边界。<strong>产出：</strong><code>ModelDecision</code>、<code>ToolCall</code>、<code>ToolPolicy</code> 契约。</p>
+      <ol>
+        <li>RED：确认页面不存在；记录失败结果。</li>
+        <li>核验 Spring AI 2.0 Tool Calling、Structured Output 和 Recursive Advisors 官方文档，以及 JSON Schema 官方规范。</li>
+        <li>
+          解释文本答复与工具请求、Schema 不等于授权、框架控制/Advisor 控制/用户控制三种执行模式、
+          return-direct 风险、工具白名单、参数 Bean Validation、超时和安全失败响应。
+        </li>
+        <li>
+          Java 示例定义 sealed <code>ModelDecision</code>、<code>FinalAnswer</code>、
+          <code>ToolRequest</code>、<code>ServiceStatusQuery</code> 和 <code>ToolPolicy.authorize</code>。
+        </li>
+        <li>
+          Spring 示例使用 <code>@Tool</code> 或 ToolCallback 暴露只读的服务状态与工单查询，
+          使用 ChatClient + ToolCallingAdvisor；另给用户控制循环伪代码说明审批和预算插入点。
+        </li>
+        <li>GREEN：检查未知工具、非法参数、超时和工具异常四条测试思路齐全，代码不执行任意 URL/Shell，外链和锚点有效。</li>
+        <li>提交：<code>docs: add Tool Calling course</code>。</li>
+      </ol>
+
+      <h2 id="task-3">任务 3：状态、上下文与记忆</h2>
+      <p><strong>创建：</strong><code>public/notes/agent/2026-07-27-03-Agent状态上下文与记忆.html</code></p>
+      <p><strong>消费：</strong>任务 2 的决策/工具轨迹。<strong>产出：</strong>可序列化 <code>AgentState</code> 与记忆分层策略。</p>
+      <ol>
+        <li>RED：确认页面不存在。</li>
+        <li>核验 Spring AI Chat Memory 文档，特别记录 Conversation ID 必需、Chat Memory 与完整 Chat History 的差异、工具中间消息限制。</li>
+        <li>
+          写入状态/上下文/短期记忆/长期业务记忆四层图；说明 token 窗口、摘要损失、敏感数据、
+          TTL、租户隔离、乐观锁、事件日志和检查点。
+        </li>
+        <li>
+          Java 示例定义 <code>AgentState</code>、<code>AgentCheckpoint</code>、
+          <code>ObservationEnvelope</code> 和 <code>StateRepository</code>，展示版本号、脱敏视图和恢复。
+        </li>
+        <li>
+          Spring 示例配置 <code>MessageWindowChatMemory</code>、
+          <code>MessageChatMemoryAdvisor</code> 和显式 <code>ChatMemory.CONVERSATION_ID</code>；
+          明确业务状态与审计历史必须另存 Spring Data/数据库。
+        </li>
+        <li>GREEN：覆盖跨用户串话、过期记忆、恢复冲突、敏感 Observation 和缺失 Conversation ID 的验收。</li>
+        <li>提交：<code>docs: add Agent state and memory course</code>。</li>
+      </ol>
+
+      <h2 id="task-4">任务 4：知识检索与 RAG</h2>
+      <p><strong>创建：</strong><code>public/notes/agent/2026-07-27-04-Agent知识检索与RAG.html</code></p>
+      <p><strong>消费：</strong>任务 3 的会话/租户上下文。<strong>产出：</strong>带来源的 <code>KnowledgeHit</code> 与只读检索接口。</p>
+      <ol>
+        <li>RED：确认页面不存在。</li>
+        <li>核验原始 RAG 论文、Spring AI ETL、VectorStoreRetriever 和模块化 RAG 文档。</li>
+        <li>
+          写入采集→切分→元数据→嵌入→索引→召回→过滤/重排→生成→引用流程图，
+          解释 chunk 粒度、top-k、阈值、权限过滤、来源引用、检索失败和提示注入。
+        </li>
+        <li>
+          Java 示例定义 <code>KnowledgeHit</code>、<code>KnowledgeRetriever</code>、
+          <code>CitedAnswer</code>；引用必须由文档 ID、标题、版本和 URI 组成。
+        </li>
+        <li>
+          Spring 示例使用只读 <code>VectorStoreRetriever</code>、<code>SearchRequest</code>、
+          <code>VectorStoreDocumentRetriever</code> 和 Advisor/ChatClient 组装上下文；
+          SimpleVectorStore 只标为测试/演示。
+        </li>
+        <li>GREEN：覆盖无召回、低相似度、越权文档、过期版本、注入内容和答案无引用六类验收。</li>
+        <li>提交：<code>docs: add Agent RAG course</code>。</li>
+      </ol>
+
+      <h2 id="task-5">任务 5：规划、反思与任务分解</h2>
+      <p><strong>创建：</strong><code>public/notes/agent/2026-07-27-05-Agent规划反思与任务分解.html</code></p>
+      <p><strong>消费：</strong>工具、状态和知识检索能力。<strong>产出：</strong><code>ExecutionPlan</code>、<code>PlanStep</code> 与有限反思策略。</p>
+      <ol>
+        <li>RED：确认页面不存在。</li>
+        <li>核验 ReAct、Plan-and-Solve、Reflexion 原始论文；Spring 能力只引用 ChatClient/Structured Output，不宣称原生 Planner。</li>
+        <li>
+          比较固定工作流、动态计划、ReAct 和反思；给出复杂度/不确定性/风险选择表；
+          解释依赖图、步骤状态、预算、重试分类、补偿、转人工和反思上限。
+        </li>
+        <li>
+          Java 示例定义 <code>StepStatus</code>、<code>PlanStep</code>、<code>ExecutionPlan</code>、
+          <code>Planner</code> 和 <code>StepExecutor</code>，禁止无界自我反思。
+        </li>
+        <li>
+          Spring 示例使用 ChatClient 的结构化输出生成候选计划，由业务 <code>PlanValidator</code>
+          校验 DAG、工具权限和预算，再由 Spring Bean Executor 执行。
+        </li>
+        <li>GREEN：覆盖循环依赖、不可重试写操作、反思超限、步骤超时、预算耗尽和转人工。</li>
+        <li>提交：<code>docs: add Agent planning course</code>。</li>
+      </ol>
+
+      <h2 id="task-6">任务 6：多 Agent 协作与编排</h2>
+      <p><strong>创建：</strong><code>public/notes/agent/2026-07-27-06-多Agent协作与编排.html</code></p>
+      <p><strong>消费：</strong>任务 5 的计划步骤。<strong>产出：</strong>显式 Coordinator、角色工具集和版本化共享状态。</p>
+      <ol>
+        <li>RED：确认页面不存在。</li>
+        <li>核验 AutoGen 等原始多 Agent 论文/官方资料与 Spring AI ChatClient 官方抽象。</li>
+        <li>
+          比较单 Agent、主管—执行者、顺序流水线、并行分支和评审者拓扑；
+          强调只有角色边界、工具权限或上下文隔离带来净收益时才拆分。
+        </li>
+        <li>
+          Java 示例定义 <code>AgentRole</code>、<code>RoleToolSet</code>、
+          <code>SharedStateVersion</code>、<code>Coordinator</code> 和冲突检测。
+        </li>
+        <li>
+          Spring 示例构建 triage、knowledge、action 三个专用 ChatClient/服务 Bean，
+          由业务 Coordinator 路由；创建工单仍经过统一审批服务，Agent 之间不直接共享密钥。
+        </li>
+        <li>GREEN：必须给出单 Agent 基线比较，覆盖重复执行、状态冲突、角色越权、部分失败和超时传播。</li>
+        <li>提交：<code>docs: add multi-Agent orchestration course</code>。</li>
+      </ol>
+
+      <h2 id="task-7">任务 7：评测、安全、权限与成本控制</h2>
+      <p><strong>创建：</strong><code>public/notes/agent/2026-07-27-07-Agent评测安全权限与成本控制.html</code></p>
+      <p><strong>消费：</strong>前六篇的完整运行轨迹。<strong>产出：</strong>评测数据集、策略门、审计事件和预算模型。</p>
+      <ol>
+        <li>RED：确认页面不存在。</li>
+        <li>核验 NIST AI RMF、OWASP LLM/Agentic 安全资料、Spring AI Observability 和 Micrometer 官方文档。</li>
+        <li>
+          建立结果正确性、引用质量、工具选择、轨迹效率、安全、延迟和成本指标；
+          区分离线回归、在线监控、人工评审和红队测试。
+        </li>
+        <li>
+          Java 示例定义 <code>EvaluationCase</code>、<code>TrajectoryEvent</code>、
+          <code>PolicyDecision</code>、<code>ExecutionBudget</code> 和不可变审计记录。
+        </li>
+        <li>
+          Spring 示例展示 Advisor 策略门、工具调用前授权、Micrometer Observation 标签和测试夹具；
+          工具参数/结果默认不进入 Trace，敏感内容导出保持关闭。
+        </li>
+        <li>GREEN：覆盖提示注入、间接注入、越权写操作、租户穿透、超时、超 token、超工具次数和审计缺失。</li>
+        <li>提交：<code>docs: add Agent evaluation and security course</code>。</li>
+      </ol>
+
+      <h2 id="task-8">任务 8：Java 生产部署、可观测性与故障恢复</h2>
+      <p><strong>创建：</strong><code>public/notes/agent/2026-07-27-08-Java-Agent生产部署可观测性与故障恢复.html</code></p>
+      <p><strong>消费：</strong>完整 Agent 设计。<strong>产出：</strong>Spring Boot 生产拓扑、运行记录和安全恢复流程。</p>
+      <ol>
+        <li>RED：确认页面不存在。</li>
+        <li>核验 Spring AI Observability、Spring Boot Actuator、Micrometer Tracing、OpenTelemetry GenAI 语义约定和 Resilience4j 官方文档。</li>
+        <li>
+          写入 API→任务队列→Agent Runtime→模型/工具/RAG→状态库→审计/指标/Trace 拓扑；
+          解释同步/异步边界、幂等键、超时、重试分类、熔断、背压、恢复队列和安全重放。
+        </li>
+        <li>
+          Java 示例定义 <code>AgentRun</code>、<code>RunStatus</code>、<code>RecoveryCommand</code>、
+          <code>IdempotencyKey</code> 和重放前策略检查。
+        </li>
+        <li>
+          Spring 示例展示 Controller/Service 边界、Actuator、ObservationRegistry、
+          Spring AI 指标/Trace 配置和工具内容默认不导出；恢复队列标为业务基础设施。
+        </li>
+        <li>GREEN：覆盖实例重启、重复请求、模型限流、工具 5xx、向量库故障、部分写入、毒消息和安全重放。</li>
+        <li>提交：<code>docs: add production Agent operations course</code>。</li>
+      </ol>
+
+      <h2 id="task-9">任务 9：建立课程导航并更新主目录</h2>
+      <p>
+        <strong>修改：</strong>Agent 主目录和八个专题页面。
+        <strong>产出：</strong>无失效链接的 01～08 课程路径。
+      </p>
+      <ol>
+        <li>RED：检查主目录仍包含 8 个“待建设”，预期命中 8 次。</li>
+        <li>将每个 roadmap-stage 标题改为对应专题相对链接，并把状态改为“已建设”。</li>
+        <li>在八篇页面中加入统一“课程导航”，当前专题标记 <code>aria-current="page"</code>，其他七项使用相对链接。</li>
+        <li>在正文末尾加入课程内上一篇/下一篇；第一篇上一篇指向主目录，第八篇下一步指向生产实践清单/主目录，不制造新页面。</li>
+        <li>GREEN：主目录不再包含“待建设”，八个 href 目标存在；每篇课程导航有 8 项且只有一个当前项。</li>
+        <li>提交：<code>docs: link Agent learning curriculum</code>。</li>
+      </ol>
+
+      <h2 id="task-10">任务 10：重建索引并完成全站验证</h2>
+      <p><strong>修改：</strong>索引脚本生成的首页、manifest、侧栏、source-path 和全站上一篇/下一篇。</p>
+      <ol>
+        <li>RED：检查 manifest 的 documentCount 仍为 9，确认新专题尚未进入生成索引。</li>
+        <li>运行 <code>node scripts/build-html-index.mjs</code>，预期输出“已索引 17 篇 HTML 文档”。</li>
+        <li>运行 <code>test -s public/index.html</code>、两个 <code>node --check</code> 和 <code>git diff --check</code>。</li>
+        <li>
+          递归验证 18 个 HTML 文件（17 篇文档加首页）：无重复 ID、相对链接目标存在、
+          页内锚点存在、外链安全、无内联 SVG、Java 泛型已转义。
+        </li>
+        <li>
+          对八篇专题逐页验证：Spring AI 2.0.0、Java 21、至少一个图示及文字替代、
+          Spring 示例、练习、验收标准、参考资料和 2026-07-27 检索日期均存在。
+        </li>
+        <li>确认主目录八个课程入口和 manifest 八条新记录完整，知识库首页显示“Agent 开发”共 9 篇。</li>
+        <li>提交：<code>docs: index complete Agent curriculum</code>。</li>
+      </ol>
+    </article>
+  </main>
+</body>
+</html>
