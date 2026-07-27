@@ -54,7 +54,7 @@
         <a href="#java-21-类型设计">Java 21 类型设计</a> ·
         <a href="#spring-ai-tool-calling">Spring AI Tool Calling</a> ·
         <a href="#maven-bom">Maven BOM</a> ·
-        <a href="#只读工具与框架控制">只读工具与框架控制</a> ·
+        <a href="#只读工具与框架控制">只读工具与受控 Advisor</a> ·
         <a href="#用户控制生命周期">用户控制生命周期</a> ·
         <a href="#return-direct-边界">returnDirect 边界</a> ·
         <a href="#授权校验与错误边界">授权与错误</a> ·
@@ -164,7 +164,6 @@ import jakarta.validation.constraints.Size;
 
 import java.time.Duration;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -183,17 +182,19 @@ record ToolRequest(ToolCall call) implements ModelDecision {
     }
 }
 
-record ToolCall(String name, Map&lt;String, Object&gt; arguments) {
+sealed interface ToolArguments permits ServiceStatusQuery, TicketQuery {}
+
+record ToolCall(String name, ToolArguments arguments) {
     public ToolCall {
         name = Required.text(name, "name");
-        arguments = Map.copyOf(Objects.requireNonNull(arguments, "arguments"));
+        Objects.requireNonNull(arguments, "arguments");
     }
 }
 
 record ServiceStatusQuery(
         @NotBlank
         @Pattern(regexp = "[A-Z][A-Z0-9_-]{1,31}")
-        String serviceCode) {
+        String serviceCode) implements ToolArguments {
     public ServiceStatusQuery {
         serviceCode = Required.text(serviceCode, "serviceCode");
     }
@@ -202,7 +203,7 @@ record ServiceStatusQuery(
 record TicketQuery(
         @NotBlank
         @Pattern(regexp = "TKT-[0-9]{6,12}")
-        String ticketId) {
+        String ticketId) implements ToolArguments {
     public TicketQuery {
         ticketId = Required.text(ticketId, "ticketId");
     }
@@ -255,18 +256,33 @@ final class AllowlistToolPolicy implements ToolPolicy {
 }
 
 enum PublicToolError {
-    INVALID_REQUEST, FORBIDDEN, NOT_FOUND, TEMPORARILY_UNAVAILABLE,
-    TIMEOUT, LIMIT_EXCEEDED
+    INVALID_REQUEST("Tool request is invalid", false),
+    FORBIDDEN("Tool request is not permitted", false),
+    NOT_FOUND("Requested resource was not found", false),
+    TEMPORARILY_UNAVAILABLE("Tool is temporarily unavailable", true),
+    TIMEOUT("Tool execution timed out", true),
+    LIMIT_EXCEEDED("Execution limit reached; human handoff required", false);
+
+    private final String publicMessage;
+    private final boolean retryable;
+
+    PublicToolError(String publicMessage, boolean retryable) {
+        this.publicMessage = publicMessage;
+        this.retryable = retryable;
+    }
+
+    String publicMessage() {
+        return publicMessage;
+    }
+
+    boolean retryable() {
+        return retryable;
+    }
 }
 
-record SafeToolFailure(
-        PublicToolError code,
-        String message,
-        String correlationId,
-        boolean retryable) {
+record SafeToolFailure(PublicToolError code, String correlationId) {
     public SafeToolFailure {
         Objects.requireNonNull(code, "code");
-        message = Required.text(message, "message");
         correlationId = Required.text(correlationId, "correlationId");
     }
 }
@@ -332,6 +348,7 @@ final class PolicyRejectedException extends RuntimeException {
 }
 
 final class InvalidToolArgumentsException extends RuntimeException {}</code></pre>
+      <p><code>ToolCall.arguments</code> 使用封闭的类型化 record，而不是嵌套可变的 <code>Map&lt;String, Object&gt;</code>：仅对 Map 调用 <code>Map.copyOf</code> 只能冻结外层，内部 List、Map 或对象仍可能被修改。协议 adapter 应先按 allowlist 选择目标类型，再把 JSON 解码为对应 record 并执行 Bean Validation。</p>
       <p>上例中的 <code>timeout</code> 是执行约束，不是装饰信息：实际 adapter 必须把它交给 HTTP / 数据库客户端并在到期后取消。安全错误只暴露稳定枚举、通用消息和关联 ID；异常类型、下游地址、堆栈、SQL、token 与原始响应仅进入访问受控且已脱敏的私有诊断。</p>
 
       <h2 id="spring-ai-tool-calling"><a class="heading-anchor" href="#spring-ai-tool-calling" aria-label="链接到本节">#</a>Spring AI 2.0.0 Tool Calling</h2>
@@ -351,16 +368,81 @@ final class InvalidToolArgumentsException extends RuntimeException {}</code></pr
 &lt;/dependencyManagement&gt;</code></pre>
       <p>截至检索日，Spring AI 2.0.x 官方支持 Spring Boot 4.0.x 与 4.1.x，稳定版依赖可直接从 Maven Central 获取。BOM 只负责统一 Spring AI 组件版本；具体模型 starter 由部署环境选择。<a href="https://docs.spring.io/spring-ai/reference/getting-started.html" target="_blank" rel="noopener noreferrer">Spring AI Getting Started</a></p>
 
-      <h3 id="只读工具与框架控制">只读工具与 framework-controlled 示例</h3>
-      <p>工具参数使用类型化 record；租户来自应用注入且不会发送给模型的 <code>ToolContext</code>，绝不从模型生成参数信任 tenant。handler 内再次执行 Bean Validation、对象级授权和超时。这里仅注册两个只读工具。</p>
+      <h3 id="只读工具与框架控制">只读工具与显式 Advisor-controlled 示例</h3>
+      <p>下面的主示例显式配置 <code>ToolCallingAdvisor</code>，把安全异常处理器和受护栏保护的 <code>ToolCallingManager</code> 真正接入调用链。framework-controlled 的自动 Advisor 仍是简单只读场景的默认选择；一旦承诺 run 级预算、最大步数或重复调用边界，就必须由实际 handler / manager 强制执行，不能只写在说明文字里。</p>
+      <p><code>ToolContext</code> 数据不会发送给模型，但<strong>“不发送给模型”不等于“可信”</strong>。可信身份必须先从 Spring Security <code>Authentication</code> 与服务端 session 派生，再由应用写入 context；handler 读取时还要验证类型、tenant 和当前活动 run 一致。客户端请求体、模型参数或任意调用方自己构造的 Map 都不能成为身份来源。</p>
       <pre><code class="language-java">import jakarta.validation.Validator;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.model.tool.DefaultToolCallingManager;
+import org.springframework.ai.model.tool.ToolCallingManager;
+import org.springframework.ai.model.tool.ToolExecutionResult;
 import org.springframework.ai.tool.ToolContext;
 import org.springframework.ai.tool.annotation.Tool;
+import org.springframework.ai.tool.definition.ToolDefinition;
+import org.springframework.ai.tool.execution.ToolExecutionException;
+import org.springframework.ai.tool.execution.ToolExecutionExceptionProcessor;
+import org.springframework.ai.chat.client.advisor.ToolCallingAdvisor;
+import org.springframework.ai.model.tool.ToolCallingChatOptions;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Supplier;
+
+// 该对象由服务端 session adapter 创建，不从请求 JSON 反序列化。
+record ServerAgentSession(String sessionId, String tenantId) {}
+
+record ServiceDeskPrincipal(
+        String userId, Set&lt;String&gt; tenantIds, Set&lt;String&gt; permissions) {}
+
+final class UserContextFactory {
+    UserContext from(
+            Authentication authentication, ServerAgentSession serverSession) {
+        if (authentication == null || !authentication.isAuthenticated()
+                || !(authentication.getPrincipal()
+                        instanceof ServiceDeskPrincipal principal)) {
+            throw new PolicyRejectedException(AuthorizationCode.PERMISSION_DENIED);
+        }
+        if (!principal.tenantIds().contains(serverSession.tenantId())) {
+            throw new PolicyRejectedException(AuthorizationCode.TENANT_MISMATCH);
+        }
+        return new UserContext(
+                principal.userId(),
+                serverSession.tenantId(),
+                principal.permissions());
+    }
+}
+
+record TrustedToolContext(String userId, String tenantId, Duration timeout) {
+    static TrustedToolContext from(
+            ToolContext context, RunContextAccessor runs) {
+        Object rawUser = context.getContext().get("trustedUserContext");
+        Object rawTimeout = context.getContext().get("trustedTimeout");
+        if (!(rawUser instanceof UserContext candidate)
+                || !(rawTimeout instanceof Duration timeout)
+                || timeout.isZero()
+                || timeout.isNegative()
+                || timeout.compareTo(Duration.ofSeconds(2)) &gt; 0) {
+            throw new PolicyRejectedException(AuthorizationCode.PERMISSION_DENIED);
+        }
+
+        UserContext active = runs.requireCurrent().user();
+        if (!active.userId().equals(candidate.userId())
+                || !active.tenantId().equals(candidate.tenantId())) {
+            throw new PolicyRejectedException(AuthorizationCode.TENANT_MISMATCH);
+        }
+        return new TrustedToolContext(
+                active.userId(), active.tenantId(), timeout);
+    }
+}
 
 @Component
 final class ServiceDeskReadTools {
@@ -368,16 +450,19 @@ final class ServiceDeskReadTools {
     private final TicketRepository ticketRepository;
     private final Validator validator;
     private final ServiceDeskAuthorization authorization;
+    private final RunContextAccessor runs;
 
     ServiceDeskReadTools(
             ServiceStatusRepository statusRepository,
             TicketRepository ticketRepository,
             Validator validator,
-            ServiceDeskAuthorization authorization) {
+            ServiceDeskAuthorization authorization,
+            RunContextAccessor runs) {
         this.statusRepository = statusRepository;
         this.ticketRepository = ticketRepository;
         this.validator = validator;
         this.authorization = authorization;
+        this.runs = runs;
     }
 
     @Tool(
@@ -385,7 +470,7 @@ final class ServiceDeskReadTools {
         description = "Read the current status of one allowlisted service code")
     ServiceStatusView readServiceStatus(
             ServiceStatusQuery query, ToolContext context) {
-        TrustedToolContext trusted = TrustedToolContext.from(context);
+        TrustedToolContext trusted = TrustedToolContext.from(context, runs);
         ToolGuards.validate(validator, query);
         authorization.requireServiceRead(trusted, query.serviceCode());
         return statusRepository.findAllowlisted(
@@ -396,7 +481,7 @@ final class ServiceDeskReadTools {
         name = "readTenantTicket",
         description = "Read one ticket visible to the authenticated tenant")
     TicketView readTenantTicket(TicketQuery query, ToolContext context) {
-        TrustedToolContext trusted = TrustedToolContext.from(context);
+        TrustedToolContext trusted = TrustedToolContext.from(context, runs);
         ToolGuards.validate(validator, query);
         authorization.requireTicketRead(
                 trusted.userId(), trusted.tenantId(), query.ticketId());
@@ -405,34 +490,245 @@ final class ServiceDeskReadTools {
     }
 }
 
+final class ExecutionBudget {
+    private final int maxSteps;
+    private final Instant deadline;
+    private int reservedSteps;
+
+    private ExecutionBudget(int maxSteps, Duration maxDuration) {
+        this.maxSteps = maxSteps;
+        this.deadline = Instant.now().plus(maxDuration);
+    }
+
+    static ExecutionBudget start(int maxSteps, Duration maxDuration) {
+        if (maxSteps &lt; 1 || maxDuration.isZero() || maxDuration.isNegative()) {
+            throw new IllegalArgumentException("Budget must be positive");
+        }
+        return new ExecutionBudget(maxSteps, maxDuration);
+    }
+
+    synchronized void reserve(int requestedCalls) {
+        if (requestedCalls &lt; 1
+                || reservedSteps + requestedCalls &gt; maxSteps
+                || Instant.now().isAfter(deadline)) {
+            throw new RunLimitException(PublicToolError.LIMIT_EXCEEDED);
+        }
+        reservedSteps += requestedCalls; // 原子预占，发生在 delegate 执行之前
+    }
+}
+
+final class DuplicateToolCallGuard {
+    private final Set&lt;ToolCall&gt; seen = new HashSet&lt;&gt;();
+
+    synchronized void requireFirstOccurrence(List&lt;ToolCall&gt; calls) {
+        if (calls.stream().anyMatch(seen::contains)) {
+            throw new RunLimitException(PublicToolError.LIMIT_EXCEEDED);
+        }
+        seen.addAll(calls);
+    }
+}
+
+record RunContext(
+        UserContext user,
+        ExecutionBudget budget,
+        DuplicateToolCallGuard duplicateCalls) {}
+
+interface RunContextAccessor {
+    RunContext requireCurrent();
+    &lt;T&gt; T withRun(RunContext run, Supplier&lt;T&gt; action);
+}
+
+final class RunLimitException extends RuntimeException {
+    private final PublicToolError code;
+
+    RunLimitException(PublicToolError code) {
+        super(code.name());
+        this.code = code;
+    }
+
+    PublicToolError code() {
+        return code;
+    }
+}
+
+// 应用 adapter：先按 allowlist 选择类型，再解码成 ToolArguments record 并校验。
+interface ModelToolCallAdapter {
+    List&lt;ToolCall&gt; decodeAndValidate(ChatResponse response);
+}
+
+final class GuardedToolCallingManager implements ToolCallingManager {
+    private final ToolCallingManager delegate;
+    private final RunContextAccessor runs;
+    private final ModelToolCallAdapter adapter;
+    private final ToolPolicy policy;
+    private final AuditSink audit;
+
+    GuardedToolCallingManager(
+            ToolCallingManager delegate,
+            RunContextAccessor runs,
+            ModelToolCallAdapter adapter,
+            ToolPolicy policy,
+            AuditSink audit) {
+        this.delegate = delegate;
+        this.runs = runs;
+        this.adapter = adapter;
+        this.policy = policy;
+        this.audit = audit;
+    }
+
+    @Override
+    public List&lt;ToolDefinition&gt; resolveToolDefinitions(
+            ToolCallingChatOptions options) {
+        return delegate.resolveToolDefinitions(options);
+    }
+
+    @Override
+    public ToolExecutionResult executeToolCalls(
+            org.springframework.ai.chat.prompt.Prompt prompt,
+            ChatResponse response) {
+        RunContext run = runs.requireCurrent();
+        List&lt;ToolCall&gt; calls = adapter.decodeAndValidate(response);
+
+        for (ToolCall call : calls) {
+            AuthorizationDecision decision = policy.authorize(run.user(), call);
+            if (!decision.allowed()) {
+                throw new PolicyRejectedException(decision.code());
+            }
+        }
+        run.duplicateCalls().requireFirstOccurrence(calls);
+        run.budget().reserve(calls.size());
+        audit.recordAuthorized(run.user(), calls);
+        return delegate.executeToolCalls(prompt, response);
+    }
+}
+
+final class SafeToolExecutionExceptionProcessor
+        implements ToolExecutionExceptionProcessor {
+    private final RunContextAccessor runs;
+    private final PublicErrorClassifier classifier;
+    private final PrivateDiagnosticSink diagnostics;
+    private final SafeJson safeJson;
+
+    SafeToolExecutionExceptionProcessor(
+            RunContextAccessor runs,
+            PublicErrorClassifier classifier,
+            PrivateDiagnosticSink diagnostics,
+            SafeJson safeJson) {
+        this.runs = runs;
+        this.classifier = classifier;
+        this.diagnostics = diagnostics;
+        this.safeJson = safeJson;
+    }
+
+    @Override
+    public String process(ToolExecutionException exception) {
+        RunContext run = runs.requireCurrent();
+        String correlationId = UUID.randomUUID().toString();
+        PublicToolError code = classifier.classify(exception.getCause());
+
+        PrivateDiagnostic diagnostic = new PrivateDiagnostic(
+                correlationId,
+                exception.getToolDefinition().name(),
+                run.user().tenantId(),
+                exception.getCause().getClass().getSimpleName(),
+                "Full cause retained only in restricted diagnostics");
+        diagnostics.record(diagnostic, exception);
+
+        // 固定 schema 只含枚举 code 与 correlationId；绝不使用 exception.getMessage()。
+        return safeJson.write(new SafeToolFailure(code, correlationId));
+    }
+}
+
 @Component
 final class ServiceDeskAssistant {
     private final ChatClient chatClient;
+    private final UserContextFactory users;
+    private final RunContextAccessor runs;
+    private final SafeFailureFactory safeFailures;
 
-    ServiceDeskAssistant(ChatModel chatModel, ServiceDeskReadTools tools) {
+    ServiceDeskAssistant(
+            ChatModel chatModel,
+            ServiceDeskReadTools tools,
+            UserContextFactory users,
+            RunContextAccessor runs,
+            ModelToolCallAdapter adapter,
+            ToolPolicy policy,
+            AuditSink audit,
+            SafeToolExecutionExceptionProcessor safeProcessor,
+            SafeFailureFactory safeFailures) {
+        ToolCallingManager springManager = DefaultToolCallingManager.builder()
+                .toolExecutionExceptionProcessor(safeProcessor)
+                .build();
+        ToolCallingManager guardedManager = new GuardedToolCallingManager(
+                springManager, runs, adapter, policy, audit);
+        ToolCallingAdvisor toolAdvisor = ToolCallingAdvisor.builder()
+                .toolCallingManager(guardedManager)
+                .build();
         this.chatClient = ChatClient.builder(chatModel)
                 .defaultTools(tools)
+                .defaultAdvisors(toolAdvisor)
                 .build();
+        this.users = users;
+        this.runs = runs;
+        this.safeFailures = safeFailures;
     }
 
-    String answer(UserContext user, String question) {
-        return chatClient.prompt()
-                .user(question)
-                .toolContext(Map.of(
-                        "trustedUserId", user.userId(),
-                        "trustedTenantId", user.tenantId(),
-                        "timeoutMillis", 2_000L))
-                .call()
-                .content();
+    String answer(
+            Authentication authentication,
+            ServerAgentSession serverSession,
+            String question) {
+        UserContext user = users.from(authentication, serverSession);
+        RunContext run = new RunContext(
+                user,
+                ExecutionBudget.start(4, Duration.ofSeconds(8)),
+                new DuplicateToolCallGuard());
+
+        return runs.withRun(run, () -&gt; {
+            try {
+                return chatClient.prompt()
+                        .user(question)
+                        .toolContext(Map.of(
+                                "trustedUserContext", user,
+                                "trustedTimeout", Duration.ofSeconds(2)))
+                        .call()
+                        .content();
+            }
+            catch (RunLimitException limit) {
+                // 固定 LIMIT_EXCEEDED + correlationId，并把 run 放入人工接管队列。
+                return safeFailures.limitExceededAndHandoff(run, limit);
+            }
+            catch (PolicyRejectedException | InvalidToolArgumentsException rejected) {
+                // manager 自身的执行前拒绝不会进入 Spring 的 exception processor；
+                // 因此由同一安全工厂映射，禁止返回 rejected.getMessage()。
+                return safeFailures.rejected(run, rejected);
+            }
+        });
     }
 }</code></pre>
-      <p><code>ChatClient.builder(chatModel).defaultTools(tools)</code> 是 Spring AI 2.0.0 官方记录的方式。<code>ChatClient</code> 会自动注册 <code>ToolCallingAdvisor</code> 并完成循环。默认工具会对由同一 builder 构建的全部 client 请求可见，因此生产代码应优先按用例拆分 client，或使用每次请求的 <code>.tools(...)</code> 进一步收窄暴露面。</p>
-      <p><strong>不要把“Spring 调到了方法”误认为“方法已安全”。</strong><code>ServiceDeskAuthorization</code>、<code>TrustedToolContext</code>、验证器、repository 租户过滤、超时与公共错误映射均由应用拥有。框架只负责把符合协议的调用分派到已注册 handler。</p>
+      <p><code>ChatClient.builder(chatModel).defaultTools(tools)</code> 与显式 <code>ToolCallingAdvisor</code> 都是 Spring AI 2.0.0 记录的 API。此处 <code>GuardedToolCallingManager</code> 在委托 Spring 执行前完成类型化解码、授权、重复调用检查和原子预算预占；每个 handler 仍再次执行可信 context、Bean Validation、对象级授权和下游超时。默认工具会对同一 builder 构建的 client 请求可见，因此生产代码还应按用例拆分 client，或使用每次请求的 <code>.tools(...)</code> 收窄暴露面。</p>
+      <p><strong>不能依赖默认异常文本是安全的。</strong>Spring AI 2.0.0 官方说明，默认 <code>DefaultToolExecutionExceptionProcessor</code> 在默认配置下会把 <code>RuntimeException</code> 的 message 发回模型。示例明确把 <code>SafeToolExecutionExceptionProcessor</code> 注入 <code>DefaultToolCallingManager</code>：分类器只产生固定 <code>PublicToolError</code>，模型只收到 code 与 correlation ID；原始异常、工具名、tenant 和受限诊断留在应用侧。guarded manager 在 Spring delegate 之前产生的策略、参数或预算拒绝不会经过该 processor，所以 <code>ServiceDeskAssistant</code> 还用同一个安全工厂做外层映射。另一种可接受策略是配置 <code>spring.ai.tools.throw-exception-on-error=true</code>，并在最外层统一做同样的安全映射。</p>
+      <p><strong>可信边界来自服务器。</strong><code>ServerAgentSession</code> 必须由服务端 session adapter 创建，<code>Authentication</code> 必须由 Spring Security 提供。<code>TrustedToolContext.from</code> 不仅做类型转换，还把 context 中的 <code>UserContext</code> 与当前 run 交叉校验；因此即便内部调用方伪造 Map，也无法跨 user 或 tenant 执行。</p>
+      <p>若场景确实只需 framework-controlled 的自动循环，也要先替换自动配置使用的异常处理器；下面的 Bean 使 Spring 的默认 manager 使用同一个安全映射，而不是回传 RuntimeException message：</p>
+      <pre><code class="language-java">@Bean
+ToolExecutionExceptionProcessor toolExecutionExceptionProcessor(
+        SafeToolExecutionExceptionProcessor safeProcessor) {
+    return safeProcessor;
+}
+
+@Bean
+ChatClient frameworkControlledClient(
+        ChatModel chatModel, ServiceDeskReadTools tools) {
+    return ChatClient.builder(chatModel)
+            .defaultTools(tools)
+            .build(); // 自动 ToolCallingAdvisor；handler 仍强制全部业务策略
+}</code></pre>
 
       <h3 id="用户控制生命周期">User-controlled 生命周期：插入审批与预算</h3>
       <p>需要人工批准或严格预算时，关闭本次调用的自动 Advisor。下面是刻意简化的生命周期伪代码；其中 <code>extractDomainCalls</code> 与 <code>appendSafeRejections</code> 是应用 adapter，不是 Spring AI API。只有当本轮全部请求通过 allowlist、类型化参数、对象授权、审批与预算预占后，才交给 <code>ToolCallingManager</code> 执行。</p>
       <pre><code class="language-java">ToolCallback[] callbacks = ToolCallbacks.from(readOnlyTools);
-ToolCallingManager toolCallingManager = ToolCallingManager.builder().build();
+ToolCallingManager toolCallingManager = DefaultToolCallingManager.builder()
+        .toolExecutionExceptionProcessor(safeProcessor)
+        .build();
 ChatOptions options = ToolCallingChatOptions.builder()
         .toolCallbacks(callbacks)
         .build();
@@ -515,12 +811,12 @@ var advisorControlledClient = ChatClient.builder(chatModel)
           <tr><td>未知工具</td><td>模型请求 <code>runShell</code></td><td>执行前拒绝</td><td>adapter 零调用；公开 <code>INVALID_REQUEST</code>；记录工具名</td></tr>
           <tr><td>畸形 JSON</td><td>参数缺少闭合符或类型不匹配</td><td>解析失败，不进入 handler</td><td>不可重试或有限结构重试；不泄漏 parser 堆栈</td></tr>
           <tr><td>Bean Validation 失败</td><td><code>serviceCode</code> 含空格或超长</td><td>执行前拒绝</td><td>repository 零调用；只返回安全字段级错误</td></tr>
-          <tr><td>租户不匹配</td><td>认证 tenant A 请求 tenant B 的工单 ID</td><td>对象级策略拒绝</td><td>查询强制 tenant A；公开 <code>FORBIDDEN</code> 且不暴露对象存在性</td></tr>
+          <tr><td>租户不匹配 / 伪造 context</td><td>认证 tenant A 请求 tenant B 工单，或内部调用方伪造 <code>ToolContext</code></td><td><code>UserContextFactory</code> / <code>TrustedToolContext.from</code> 在执行前拒绝</td><td>身份来自 Spring Security 与服务端 session；查询强制 tenant A；公开 <code>FORBIDDEN</code> 且不暴露对象存在性</td></tr>
           <tr><td>超时</td><td>只读下游超过 2 秒</td><td>取消调用并返回安全失败</td><td><code>TIMEOUT</code>；预算结算；无后台失控执行</td></tr>
           <tr><td>工具 5xx</td><td>下游返回 503 和含内部信息的正文</td><td>正文被丢弃或脱敏</td><td>公开 <code>TEMPORARILY_UNAVAILABLE</code>；私有诊断保存状态码与 correlation ID</td></tr>
-          <tr><td>模型重复调用</td><td>连续请求同一工具和参数</td><td>命中 run 内指纹或幂等策略</td><td>不会无界执行；只读可复用安全缓存或计入重试预算</td></tr>
-          <tr><td>最大步数 / 预算耗尽</td><td>模型持续返回工具调用</td><td>循环在硬上限停止并转人工</td><td>不再调用模型或工具；公开 <code>LIMIT_EXCEEDED</code>；完整审计</td></tr>
-          <tr><td>安全公开错误</td><td>adapter 抛出带主机、SQL、token 的异常</td><td>公开与私有诊断分离</td><td>用户/模型只见枚举、通用消息、correlation ID；敏感值不出现</td></tr>
+          <tr><td>模型重复调用</td><td>连续请求同一工具和相同类型化参数</td><td><code>DuplicateToolCallGuard</code> 在 delegate 前拒绝</td><td>下游零新增调用；返回 <code>LIMIT_EXCEEDED</code> 并转人工；完整审计</td></tr>
+          <tr><td>最大步数 / 预算耗尽</td><td>第 5 次调用超过本 run 的 <code>maxSteps=4</code></td><td><code>ExecutionBudget.reserve</code> 在 delegate 前失败</td><td>第 5 次下游调用为零；公开 <code>LIMIT_EXCEEDED</code> + correlation ID；进入人工接管队列</td></tr>
+          <tr><td>安全公开错误</td><td>handler 抛出 message 含主机、SQL、token 的 <code>RuntimeException</code></td><td>自定义 <code>ToolExecutionExceptionProcessor</code> 输出固定 schema</td><td>模型只见 <code>PublicToolError</code> 与 correlation ID；原始 exception 仅在私有诊断，敏感值不出现</td></tr>
         </tbody>
       </table></div>
       <p>此外应做契约测试：确保 JSON Schema 与 Java record 同步、每个工具名唯一、批准前的工具定义列表不包含 <code>createTicket</code>、<code>returnDirect</code> 输出经过同一脱敏器，以及 framework-controlled 与 user-controlled 两条路径共享同一授权策略。</p>
@@ -539,9 +835,10 @@ var advisorControlledClient = ChatClient.builder(chatModel)
       <ul>
         <li>能用一句话说明：模型提出 <code>ToolCall</code>，应用 <code>ToolPolicy</code> 才决定能否执行。</li>
         <li>能分别解释普通文本、<code>FinalAnswer</code> 与 <code>ToolRequest</code>，并说明 JSON Schema 不覆盖权限与真实性。</li>
-        <li>Java 21 契约包含 sealed <code>ModelDecision</code>、不可变 record、allowlist、Bean Validation、可信租户上下文和公开/私有错误分离。</li>
+        <li>Java 21 契约包含 sealed <code>ModelDecision</code>、类型化不可变 <code>ToolArguments</code> record、allowlist、Bean Validation、可信租户上下文和公开/私有错误分离。</li>
         <li>能准确描述 framework-controlled、Advisor-controlled、user-controlled 三种模式，以及 Spring AI 2.0.0 中 <code>ToolCallingAdvisor</code> 与 <code>ToolCallingManager</code> 的分工。</li>
-        <li>能证明审批和预算在应用执行前生效，<code>returnDirect</code> 不绕过授权和输出控制。</li>
+        <li>能证明实际调用链在 delegate 执行前完成审批、重复检查和预算预占；第 5 次调用产生 <code>LIMIT_EXCEEDED</code> 并转人工，<code>returnDirect</code> 也不绕过授权和输出控制。</li>
+        <li>能证明 framework-controlled 与 Advisor-controlled 都不依赖默认 RuntimeException message：模型只收到固定 <code>PublicToolError</code> 和 correlation ID。</li>
         <li>服务台只注册读取服务状态与租户工单两个工具；创建工单在批准前不可被模型调用。</li>
         <li>未知工具、畸形 JSON、Bean Validation、租户不匹配、超时、工具 5xx、重复调用、预算耗尽与安全公开错误均有自动化测试设计。</li>
       </ul>
