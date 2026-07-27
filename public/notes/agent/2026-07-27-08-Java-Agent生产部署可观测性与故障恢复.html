@@ -69,7 +69,7 @@
         <li><strong>重试是分类决策，不是通用注解。</strong>只重试瞬态且幂等的调用；认证、授权、参数、配额硬上限、策略拒绝和确定性数据冲突直接失败。超时不会自动取消下游，必须传播绝对 deadline，并为迟到结果设计隔离与对账。</li>
         <li><strong>恢复不是“重新发原 Prompt”。</strong>从结构化检查点生成新恢复命令，用当前身份、当前策略、当前数据版本和当前审批重新决策；写操作不得继承旧授权，批准内容或目标变化时必须重新审批。</li>
         <li><strong>三类基础设施职责不同。</strong>Spring AI / Spring Boot / Micrometer 提供模型、工具、向量库与应用的观测集成；队列、幂等账本、持久状态、outbox、恢复队列、重放策略和人工操作台都是业务拥有的基础设施，不能归因于框架。</li>
-        <li><strong>内容默认不进入遥测。</strong>Prompt、completion、检索正文、工具参数、工具结果、审批凭证和密钥不得进入默认日志、指标或 Trace。Spring AI 2.0.0 的 <code>spring.ai.tools.observations.include-content</code> 默认为 <code>false</code>，生产配置继续显式保持关闭。</li>
+        <li><strong>内容最小化必须覆盖 VectorStore Trace。</strong>Spring AI 2.0.0 的 Prompt / completion 日志与工具参数 / 结果 observation 默认关闭；但默认 <code>DefaultVectorStoreObservationConvention</code> 会把查询正文和 metadata filter 加入高基数 Trace 属性。生产环境除保持内容日志开关为 <code>false</code> 外，还必须在实际 VectorStore builder 上接入只允许安全属性的自定义 convention。</li>
         <li><strong>可观测性服务于决策，而不是“多打日志”。</strong>必须能回答哪个阶段慢、哪类依赖失败、队列是否积压、运行是否卡住、预算如何消耗、恢复是否成功；metric 标签必须有界，<code>requestId</code>、<code>runId</code>、原始 <code>tenantId</code> 和用户 ID 不能成为无界标签。</li>
       </ul>
 
@@ -99,7 +99,7 @@
         <div class="agent-step">8. Recovery / Operator<br>quarantine · inspect · approve</div>
         <div class="guardrail-band">横切护栏：trusted identity + tenant · current policy · approval · absolute deadline · execution budget · idempotency · encryption · content minimization</div>
       </div>
-      <p class="diagram-text"><strong>等价文字说明：</strong>API 只接受经过认证的主体并在服务端确定 tenant；短只读请求可同步进入 Runtime，长任务则在同一事务中保存 run 与待发布 outbox，relay 将命令投递到持久队列。Runtime 领取有 lease 的任务，从版本化检查点执行模型、只读工具或 RAG；任何写工具都经过当前策略与审批。状态、效果账本和 outbox 以事务边界保持一致，安全审计记录决策与结果引用。日志、指标、Trace 从各节点采集不含业务正文的信号。超过自动恢复阈值的消息进入业务恢复队列，由受权操作员检查、修正或发起受控重放。身份、策略、审批、deadline、预算、幂等和内容最小化贯穿八个节点。</p>
+      <p class="diagram-text"><strong>等价文字说明：</strong>API 只接受经过认证的主体并在服务端确定 tenant；短只读请求可同步进入 Runtime，长任务则在同一事务中保存 run 与待发布 outbox，relay 将命令投递到持久队列。Runtime 领取有 lease 的任务，从版本化检查点执行模型、只读工具或 RAG；任何写工具都经过当前策略与审批。状态、效果账本和 outbox 以事务边界保持一致，安全审计记录决策与结果引用。日志、指标、Trace 经过字段 allowlist 和 VectorStore 自定义 observation convention 后采集不含业务正文的信号。超过自动恢复阈值的消息进入业务恢复队列，由受权操作员检查、修正或发起受控重放。身份、策略、审批、deadline、预算、幂等和内容最小化贯穿八个节点。</p>
 
       <h3 id="框架能力与业务责任">框架能力与业务责任</h3>
       <div class="table-wrap"><table>
@@ -196,9 +196,129 @@
           <tr><td>ChatModel</td><td><code>gen_ai.client.operation</code></td><td>模型调用 timer / span；Prometheus 为 <code>gen_ai_client_operation_seconds_*</code></td></tr>
           <tr><td>Token</td><td><code>gen_ai.client.token.usage</code></td><td>Prometheus 为 <code>gen_ai_client_token_usage_total</code>，按 input / output / total token type 区分</td></tr>
           <tr><td>Tool Calling</td><td><code>spring.ai.tool</code></td><td><code>gen_ai.operation.name=execute_tool</code>；arguments / result 只有显式开启才导出，生产保持关闭</td></tr>
-          <tr><td>VectorStore</td><td><code>db.vector.client.operation</code></td><td>query / add / remove 的 timer / Trace；查询正文与响应默认不记录</td></tr>
+          <tr><td>VectorStore</td><td><code>db.vector.client.operation</code></td><td>query / add / remove 的 timer / Trace；2.0.0 默认 convention 会把 <code>db.vector.query.content</code> 与 <code>db.vector.query.filter</code> 放入高基数 Trace 属性，必须自定义清洗</td></tr>
         </tbody>
       </table></div>
+
+      <h3 id="vectorstore-trace-内容清洗">VectorStore Trace：默认泄露面与自定义清洗</h3>
+      <p>Spring AI v2.0.0 源码显示，<code>DefaultVectorStoreObservationConvention.getHighCardinalityKeyValues</code> 会依次加入 collection、dimension、field、metadata filter、namespace、query content、similarity metric / threshold 与 top-k；其中 <code>metadataFilter(...)</code> 直接序列化 filter expression，<code>queryContent(...)</code> 直接复制查询正文。Micrometer 的高基数键不进入 metric，却会进入 Trace，因此“metric 标签安全”不能推出“span 无敏感内容”。<a href="https://github.com/spring-projects/spring-ai/blob/v2.0.0/spring-ai-vector-store/src/main/java/org/springframework/ai/vectorstore/observation/DefaultVectorStoreObservationConvention.java" target="_blank" rel="noopener noreferrer">v2.0.0 默认 convention 源码</a></p>
+      <p><code>spring.ai.vectorstore.observations.log-query-response=false</code> 的作用仅是阻止自动配置注册 <code>VectorStoreQueryResponseObservationHandler</code>，从而不把返回文档正文写入日志；它<strong>不会</strong>删除默认 convention 已生成的 <code>db.vector.query.content</code> 或 <code>db.vector.query.filter</code> span attributes。v2.0.0 默认 convention 不导出 response document / ID 高基数键，但 <code>VectorStoreObservationContext</code> 仍持有 query response，任何自定义 handler 都必须经过安全审查。<a href="https://github.com/spring-projects/spring-ai/blob/v2.0.0/auto-configurations/vector-stores/spring-ai-autoconfigure-vector-store-observation/src/main/java/org/springframework/ai/vectorstore/observation/autoconfigure/VectorStoreObservationAutoConfiguration.java" target="_blank" rel="noopener noreferrer">v2.0.0 响应日志自动配置源码</a></p>
+
+      <p>下面采用<strong>空的高基数 allowlist</strong>：继承默认低基数的 <code>spring.ai.kind</code>、<code>db.system</code>、<code>db.operation.name</code> 指标 / Trace 属性，但不导出 query、filter、collection、namespace、field、response 内容或文档 ID。若以后确需 top-k 等数值属性，也必须逐项加入、做隐私与基数评审，不能调用 <code>super.getHighCardinalityKeyValues(context)</code> 后再期望靠日志开关清洗。</p>
+      <pre><code class="language-java">import io.micrometer.common.KeyValues;
+import org.springframework.ai.vectorstore.observation
+        .DefaultVectorStoreObservationConvention;
+import org.springframework.ai.vectorstore.observation
+        .VectorStoreObservationContext;
+
+final class SafeVectorStoreObservationConvention
+        extends DefaultVectorStoreObservationConvention {
+
+    @Override
+    public KeyValues getHighCardinalityKeyValues(
+            VectorStoreObservationContext context) {
+        // Fail closed：不调用 super。明确排除：
+        // db.vector.query.content / db.vector.query.filter
+        // db.collection.name / db.namespace / db.vector.field_name
+        // query response content / document IDs / metadata。
+        return KeyValues.empty();
+    }
+}</code></pre>
+
+      <h4 id="vectorstore-convention-接线">必须在实际 provider builder 上接线</h4>
+      <p>v2.0.0 的通用 <code>VectorStore.Builder</code> / <code>AbstractVectorStoreBuilder</code> 提供 <code>observationRegistry(...)</code> 与 <code>customObservationConvention(...)</code>，构造出的 <code>AbstractObservationVectorStore</code> 才会使用该 convention。<strong>只声明一个 <code>VectorStoreObservationConvention</code> Spring Bean 不足以证明它已接入</strong>；官方 observation auto-configuration 只管理响应日志 handler，没有把任意 convention Bean 全局塞入所有 provider。每个选定 provider 必须在自己的 <code>@Bean VectorStore</code> 工厂中使用其官方 builder，或使用该 provider 经源码核验的等效 customizer。<a href="https://github.com/spring-projects/spring-ai/blob/v2.0.0/spring-ai-vector-store/src/main/java/org/springframework/ai/vectorstore/VectorStore.java" target="_blank" rel="noopener noreferrer">VectorStore.Builder v2.0.0 源码</a> · <a href="https://github.com/spring-projects/spring-ai/blob/v2.0.0/spring-ai-vector-store/src/main/java/org/springframework/ai/vectorstore/AbstractVectorStoreBuilder.java" target="_blank" rel="noopener noreferrer">AbstractVectorStoreBuilder v2.0.0 源码</a></p>
+      <pre><code class="language-java">import io.micrometer.observation.ObservationRegistry;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.ai.vectorstore.observation
+        .VectorStoreObservationConvention;
+
+final class SafeVectorStoreWiring {
+    private SafeVectorStoreWiring() {}
+
+    // 在所选 provider 的 @Bean VectorStore 工厂内调用；
+    // B 是该 provider 官方 builder 的真实类型，不虚构统一 provider API。
+    static &lt;B extends VectorStore.Builder&lt;B&gt;&gt; VectorStore build(
+            B providerBuilder,
+            ObservationRegistry registry,
+            VectorStoreObservationConvention safeConvention) {
+        return providerBuilder
+                .observationRegistry(registry)
+                .customObservationConvention(safeConvention)
+                .build();
+    }
+}
+
+// provider-specific @Bean 内：
+// return SafeVectorStoreWiring.build(
+//         providerOfficialBuilder, observationRegistry,
+//         new SafeVectorStoreObservationConvention());</code></pre>
+      <p><strong>接线验收：</strong>应用上下文测试必须取得生产实际注入的 <code>VectorStore</code>，执行一次带 canary 的 <code>similaritySearch</code>，并证明自定义 convention 被调用；若 provider starter 自动创建了另一实例，应排除 / 覆盖该自动配置或使用 provider 官方 customizer，禁止让未清洗实例通过 <code>@Primary</code>、集合注入或 Advisor 旁路进入运行时。Spring AI 2.0.0 没有已核验的统一 property 能替代这一步。</p>
+
+      <h4 id="vectorstore-canary-回归">Canary：默认 convention RED，自定义后零泄露</h4>
+      <p>测试将四个互不相同的 canary 放入 query、filter、返回文档正文和返回文档 ID，并抓取同一次调用的结构化 logs、所有 meter 名 / tags / exemplar，以及 finished spans 的 name / attributes / events。第一项 characterization 故意使用默认 convention，安全断言应失败并在 span 中定位 query / filter；第二项使用生产实际 wiring 与 <code>log-query-response=false</code>，四个 canary 在三类信号中出现次数都必须为零。</p>
+      <pre><code class="language-java">private static final String QUERY_CANARY =
+        "QUERY_CANARY_7b6fbd";
+private static final String FILTER_CANARY =
+        "FILTER_CANARY_a193e2";
+private static final String RESULT_TEXT_CANARY =
+        "RESULT_TEXT_CANARY_51cde8";
+private static final String RESULT_ID_CANARY =
+        "RESULT_ID_CANARY_408af1";
+
+@Test
+void defaultConventionLeaksQueryAndFilterIntoTrace_RED() {
+    TelemetrySnapshot snapshot = fixture
+            .withDefaultVectorStoreObservationConvention()
+            .withProperty(
+                    "spring.ai.vectorstore.observations"
+                            + ".log-query-response",
+                    "false")
+            .searchReturning(
+                    QUERY_CANARY,
+                    "tenant == '" + FILTER_CANARY + "'",
+                    RESULT_ID_CANARY,
+                    RESULT_TEXT_CANARY);
+
+    // 这是修复前安全期望，必须 RED：
+    assertThat(snapshot.allLogsMetricsAndSpans())
+            .doesNotContain(
+                    QUERY_CANARY,
+                    FILTER_CANARY,
+                    RESULT_TEXT_CANARY,
+                    RESULT_ID_CANARY);
+    // 实际失败定位：
+    // DEFAULT_CONVENTION_LEAK:
+    // db.vector.query.content=QUERY_CANARY_7b6fbd
+    // db.vector.query.filter=...FILTER_CANARY_a193e2...
+}
+
+@Test
+void wiredSafeConventionHasZeroTelemetryLeak_GREEN() {
+    TelemetrySnapshot snapshot = fixture
+            // fixture 必须返回应用实际注入的 VectorStore，
+            // 并断言 SafeVectorStoreObservationConvention 调用次数 &gt; 0。
+            .withProductionVectorStoreBean()
+            .withProperty(
+                    "spring.ai.vectorstore.observations"
+                            + ".log-query-response",
+                    "false")
+            .searchReturning(
+                    QUERY_CANARY,
+                    "tenant == '" + FILTER_CANARY + "'",
+                    RESULT_ID_CANARY,
+                    RESULT_TEXT_CANARY);
+
+    assertThat(snapshot.allLogsMetricsAndSpans())
+            .doesNotContain(
+                    QUERY_CANARY,
+                    FILTER_CANARY,
+                    RESULT_TEXT_CANARY,
+                    RESULT_ID_CANARY);
+    assertThat(snapshot.safeConventionInvocationCount()).isPositive();
+    // SANITIZED_CONVENTION_ZERO_LEAK
+}</code></pre>
+      <p><code>TelemetrySnapshot</code> / <code>fixture</code> 是项目测试工具，不是 Spring AI API；它们必须连接真实 <code>ObservationRegistry</code>、测试 tracer / exporter、meter registry 和日志 capture。除 canary 扫描外，测试还应直接断言 finished span 不含键 <code>db.vector.query.content</code>、<code>db.vector.query.filter</code> 及任何 response / document ID 属性，以防值被截断、hash 或重命名后绕过纯字符串扫描。</p>
+
       <p><strong>OpenTelemetry 说明：</strong>Spring AI 的 <code>gen_ai.*</code> 命名遵循其文档声明的 GenAI 语义方向，但应用只应依赖当前 Spring AI 2.0.0 明确导出的契约。OpenTelemetry 原 <code>/semconv/gen-ai/</code> 页面已于检索日标为“已迁移且不再维护”，最新 GenAI spans、metrics、events 与 MCP 约定在独立官方仓库继续演进；上线前固定 collector 映射与仪表板版本。<a href="https://opentelemetry.io/docs/specs/semconv/gen-ai/" target="_blank" rel="noopener noreferrer">迁移公告</a> · <a href="https://github.com/open-telemetry/semantic-conventions-genai" target="_blank" rel="noopener noreferrer">OpenTelemetry GenAI 语义约定仓库</a></p>
 
       <h3 id="trace-父子关系">Trace 父子关系</h3>
@@ -569,6 +689,7 @@ spring:
     vectorstore:
       observations:
         log-query-response: false</code></pre>
+      <p><strong>VectorStore 配置边界：</strong><code>log-query-response: false</code> 只关闭返回文档正文的日志 handler，不清洗 query / filter Trace attributes；必须同时按上一节在实际 provider builder 调用 <code>customObservationConvention(new SafeVectorStoreObservationConvention())</code>。这里没有虚构一个全局清洗 property。</p>
       <p>生产环境只通过独立管理端口 / 网络策略暴露必要 Actuator endpoint，并对 Prometheus / OTLP 出口鉴权和加密。readiness 表示实例能否接新流量，liveness 只表示进程是否需重启；模型或向量库短暂故障通常不应让 liveness 失败造成重启风暴。采样比例不替代错误 span 保留、尾部采样与内容脱敏。</p>
 
       <h3 id="controller-service-与-observationregistry">Controller / Service 与 ObservationRegistry</h3>
@@ -711,7 +832,7 @@ final class AgentRunService {
           <tr><td>容量与背压</td><td>按依赖做容量模型；入口配额、队列高水位、bulkhead、连接池、限流和恢复队列阈值有 owner 与 runbook</td></tr>
           <tr><td>韧性</td><td>全局 deadline；错误分类；单层有限重试；circuit breaker 排除业务拒绝；降级不绕过授权 / 引用 / 审批</td></tr>
           <tr><td>可观测性</td><td>run 可跨日志 / Trace 关联；active / completed、队列年龄、依赖延迟错误、预算、恢复指标与 SLO 告警可用；标签基数经过测试</td></tr>
-          <tr><td>隐私与审计</td><td>Prompt / completion / tool / RAG 内容导出关闭；日志字段 allowlist、受限证据库、访问审计、TTL 和删除流程验证</td></tr>
+          <tr><td>隐私与审计</td><td>Prompt / completion 与 tool 内容开关关闭；VectorStore builder 已接安全 convention，query / filter / response / ID canary 在 logs、metrics、spans 为零；日志字段 allowlist、受限证据库、访问审计、TTL 和删除流程验证</td></tr>
           <tr><td>恢复</td><td>操作员最小权限与双人审批；重放重新认证、重新策略、重新数据 / 审批 / 幂等检查；原 run 不改写</td></tr>
           <tr><td>部署</td><td>readiness / liveness 语义正确；滚动发布先停止领取、完成或释放 lease；schema 与事件兼容；可回滚且旧 worker 不消费新命令</td></tr>
         </tbody>
@@ -740,7 +861,7 @@ final class AgentRunService {
         <li><strong>入口幂等：</strong>用 Spring Boot + 数据库实现 <code>POST /agent-runs</code>。并发发送 20 个相同 key / 指纹请求，再发送一个相同 key / 不同指纹请求。</li>
         <li><strong>可恢复 worker：</strong>实现 lease、状态 CAS 和三个 checkpoint，在“远端写成功、本地提交前”注入进程退出，并通过 effectId 对账。</li>
         <li><strong>韧性实验：</strong>为模型、只读工具和向量库建立独立 bulkhead / circuit breaker；模拟 429、慢调用和 5xx，证明总尝试受 deadline / 预算限制且没有乘法重试。</li>
-        <li><strong>安全遥测：</strong>接入 Actuator、ObservationRegistry 和 Spring AI observations；用 canary secret 放入 Prompt、工具参数、结果与异常，扫描日志、metrics、spans，要求零泄露。</li>
+        <li><strong>安全遥测：</strong>接入 Actuator、ObservationRegistry 和 Spring AI observations；用不同 canary 放入 Prompt、工具参数 / 结果、VectorStore query / filter、返回文档正文 / ID 与异常。先证明默认 VectorStore convention 的 span 扫描 RED，再在生产实际 builder 接入安全 convention，扫描 logs、metrics、spans 要求零泄露。</li>
         <li><strong>安全恢复：</strong>实现 <code>RecoveryCommand</code> 与 <code>ReplayPolicy</code>，测试过期审批、撤销权限、资源版本冲突、UNKNOWN effect 和当前合法只读恢复。</li>
       </ol>
 
@@ -753,7 +874,7 @@ final class AgentRunService {
         <li>故障矩阵十类场景均有自动化或演练证据；部分写入没有重复副作用，毒消息不会热循环。</li>
         <li>Dashboard 同时展示 active / completed、queue oldest age、step / model / tool / RAG latency-error、budget 与 recovery age；metric 中不存在 run / user / 原始 tenant 等无界标签。</li>
         <li>Spring AI 2.0.0 的 ChatClient、Advisor、ChatModel、tool、VectorStore observations 可见，trace 父子 / link 关系正确，异步边界上下文传播经过测试。</li>
-        <li>Prompt、completion、RAG query / result、工具 arguments / result、secret 和审批凭证在默认日志、metrics、Trace 中均未出现；<code>spring.ai.tools.observations.include-content=false</code> 保持关闭。</li>
+        <li>Prompt / completion 日志与工具 arguments / result observation 开关保持关闭；<code>spring.ai.tools.observations.include-content=false</code>。VectorStore 的 <code>log-query-response=false</code> 仅承担响应日志控制，生产 bean 另接安全 convention；query / filter / response text / document ID canary 在 logs、metrics、spans 中均为零。</li>
         <li>恢复时重新认证、读取当前状态、执行当前策略并重新校验审批 / 幂等；过期审批、撤权、冲突或 UNKNOWN effect 的写 delegate 调用数为 0。</li>
         <li>团队能明确指出：Spring AI / Boot / Micrometer 提供观测集成；队列、run 状态、幂等、outbox、recovery queue 和 replay policy 是业务基础设施。</li>
       </ul>
@@ -762,6 +883,7 @@ final class AgentRunService {
       <p>以下资料均为官方一手来源，检索于 <time datetime="2026-07-27">2026-07-27</time>。版本、配置名与语义约定可能继续变化，升级时需重新核验并做遥测契约回归。</p>
       <ul>
         <li><a href="https://docs.spring.io/spring-ai/reference/observability/index.html" target="_blank" rel="noopener noreferrer">Spring AI 2.0.0 — Observability</a>：ChatClient、Advisor、ChatModel、Tool Calling、VectorStore 的 observation、metric 名与内容默认值。</li>
+        <li><a href="https://github.com/spring-projects/spring-ai/blob/v2.0.0/spring-ai-vector-store/src/main/java/org/springframework/ai/vectorstore/observation/DefaultVectorStoreObservationConvention.java" target="_blank" rel="noopener noreferrer">Spring AI v2.0.0 — DefaultVectorStoreObservationConvention</a> 与 <a href="https://github.com/spring-projects/spring-ai/blob/v2.0.0/auto-configurations/vector-stores/spring-ai-autoconfigure-vector-store-observation/src/main/java/org/springframework/ai/vectorstore/observation/autoconfigure/VectorStoreObservationAutoConfiguration.java" target="_blank" rel="noopener noreferrer">VectorStore observation auto-configuration</a>：核验 query / filter 高基数属性、响应日志 handler 与配置边界。</li>
         <li><a href="https://docs.spring.io/spring-ai/reference/getting-started.html" target="_blank" rel="noopener noreferrer">Spring AI 2.0.0 — Getting Started</a>：BOM 与 Spring Boot 4.0.x / 4.1.x 基线。</li>
         <li><a href="https://docs.spring.io/spring-boot/reference/actuator/observability.html" target="_blank" rel="noopener noreferrer">Spring Boot 4.1 — Observability</a>：ObservationRegistry、低 / 高基数、异步上下文传播、Micrometer 与 OpenTelemetry 支持。</li>
         <li><a href="https://docs.spring.io/spring-boot/reference/actuator/endpoints.html" target="_blank" rel="noopener noreferrer">Spring Boot — Actuator Endpoints</a>：endpoint 暴露、健康信息与安全配置。</li>
