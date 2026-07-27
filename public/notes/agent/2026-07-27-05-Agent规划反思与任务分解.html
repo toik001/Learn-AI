@@ -166,14 +166,34 @@
           <tr><td>测试失败给出确定断言；编译器 / schema / 规则引擎给出可定位错误；工具 Observation 与计划假设矛盾；人工给出具体反馈</td><td>没有新证据；只是“再想一遍”；需要扩大权限；写操作结果未知；同一失败重复；任一预算耗尽；达到 <code>MAX_REFLECTION_ROUNDS</code></td><td>引用具体 evidence ID、指出失效假设、提出最小计划 diff、估算新增预算、说明是否需要新审批</td></tr>
         </tbody>
       </table></div>
-      <pre><code class="language-java">final class BoundedReflectionPolicy {
+      <pre><code class="language-java">record ReflectionBudgetRequest(
+        long wallClockMillis,
+        long modelTokens,
+        int toolCalls,
+        long costMicros) {}
+
+interface ReflectionBudgetGate {
+    boolean tryReserveReflection(
+            java.util.UUID runId,
+            long expectedBudgetVersion,
+            ReflectionBudgetRequest request);
+}
+
+final class BoundedReflectionPolicy {
     static final int MAX_REFLECTION_ROUNDS = 2;
+    static final long MIN_REFLECTION_COST_MICROS = 5_000;
+    private static final ReflectionBudgetRequest MINIMUM_RESERVATION =
+            new ReflectionBudgetRequest(2_000, 800, 1,
+                    MIN_REFLECTION_COST_MICROS);
 
     ReflectionDecision decide(
+            java.util.UUID runId,
+            long expectedBudgetVersion,
             int completedRounds,
             boolean hasNewVerifiableEvidence,
             boolean sideEffectOutcomeKnown,
-            RemainingBudget remaining) {
+            RemainingBudget remaining,
+            ReflectionBudgetGate budgetGate) {
 
         if (completedRounds &gt;= MAX_REFLECTION_ROUNDS) {
             return ReflectionDecision.ESCALATE_LIMIT_REACHED;
@@ -183,13 +203,20 @@
         }
         if (remaining.wallClockMillis() &lt; 2_000
                 || remaining.tokens() &lt; 800
-                || remaining.toolCalls() &lt; 1) {
+                || remaining.toolCalls() &lt; 1
+                || remaining.costMicros()
+                        &lt; MIN_REFLECTION_COST_MICROS) {
+            return ReflectionDecision.ESCALATE_BUDGET_EXHAUSTED;
+        }
+        // 预算版本校验与四个维度的扣减必须是一个原子 compare-and-set。
+        if (!budgetGate.tryReserveReflection(
+                runId, expectedBudgetVersion, MINIMUM_RESERVATION)) {
             return ReflectionDecision.ESCALATE_BUDGET_EXHAUSTED;
         }
         return ReflectionDecision.ALLOW_ONE_ROUND;
     }
 }</code></pre>
-      <p>反思文本本身是不可信候选，不直接写入长期记忆或执行。它只能提出新计划 diff；应用重新执行完整的 DAG、权限、预算和审批校验。持久记录反思轮次、触发 evidence、输入 / 输出摘要、token 与延迟，但默认不把完整内部推理轨迹写入普通日志或展示给用户。</p>
+      <p>反思文本本身是不可信候选，不直接写入长期记忆或执行。它只能提出新计划 diff；应用重新执行完整的 DAG、权限、预算和审批校验。在调用反思模型之前，<code>tryReserveReflection</code> 必须以 expectedBudgetVersion 原子检查并预占本轮最小 wall-clock、token、tool-call 与 cost；任一不足或并发抢占失败都不调用模型，直接转人工。完成后用实际 usage 结算 reservation，未使用额度按预算策略释放；失败的模型调用仍计入已消耗成本。持久记录反思轮次、触发 evidence、输入 / 输出摘要、token、cost 与延迟，但默认不把完整内部推理轨迹写入普通日志或展示给用户。</p>
 
       <h2 id="java-21-计划模型"><a class="heading-anchor" href="#java-21-计划模型" aria-label="链接到本节">#</a>Java 21：不可变计划模型</h2>
       <p>下面是供应商中立的 Java 21 领域模型。record 提供不可变载体；所有集合在紧凑构造器中复制，避免计划通过外部引用被悄悄修改。模型生成的是 <code>CandidatePlan</code>，只有业务校验器能产生 <code>ExecutionPlan</code>。</p>
@@ -197,6 +224,7 @@
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -261,6 +289,8 @@ record PlanStep(
         int maxAttempts,
         ToolRisk risk,
         boolean approvalRequired,
+        String intentId,
+        String canonicalRequestFingerprint,
         String idempotencyKey,
         String compensationTool,
         StepStatus status) {
@@ -298,6 +328,17 @@ record StepEvidence(
     }
 }
 
+record BudgetReservation(
+        long wallClockMillis,
+        long modelTokens,
+        int toolCalls,
+        long costMicros) {}
+
+record AuthorizedAttempt(
+        int attempt,
+        String reservationId,
+        String idempotencyKey) {}
+
 interface Planner {
     CandidatePlan propose(PlanningInput input);
 }
@@ -326,14 +367,17 @@ final class PlanValidator {
 
     private final ToolCatalog tools;
     private final ToolAuthorization authorization;
+    private final WriteIntentService writeIntents;
     private final Clock clock;
 
     PlanValidator(
             ToolCatalog tools,
             ToolAuthorization authorization,
+            WriteIntentService writeIntents,
             Clock clock) {
         this.tools = tools;
         this.authorization = authorization;
+        this.writeIntents = writeIntents;
         this.clock = clock;
     }
 
@@ -367,6 +411,8 @@ final class PlanValidator {
         }
         rejectCycles(byId);
 
+        UUID planId = UUID.randomUUID();
+        long planVersion = 1L;
         long estimatedWallClockMillis = 0;
         long estimatedTokens = 0;
         int estimatedToolCalls = 0;
@@ -375,6 +421,9 @@ final class PlanValidator {
         for (CandidateStep step : candidate.steps()) {
             ToolDescriptor tool = tools.find(step.toolName())
                     .orElseThrow(() -&gt; new InvalidPlan("unknown tool"));
+            if (!input.allowedToolNames().contains(tool.name())) {
+                throw new InvalidPlan("tool outside run-scoped allowlist");
+            }
             authorization.requireAllowed(
                     input.tenantId(), input.principalId(), tool.name());
 
@@ -413,14 +462,26 @@ final class PlanValidator {
             estimatedCostMicros = Math.addExact(
                     estimatedCostMicros, serverCostMicros);
 
+            Map&lt;String, Object&gt; normalizedArguments =
+                    tool.validateAndNormalize(step.arguments());
+            String canonicalRequestFingerprint =
+                    tool.canonicalRequestFingerprint(normalizedArguments);
+            String intentId = tool.risk() == ToolRisk.READ_ONLY
+                    ? ""
+                    : writeIntents.issueOrCarryForward(
+                            input.tenantId(), planId, planVersion,
+                            step.stepId(), canonicalRequestFingerprint);
             String idempotencyKey = tool.risk() == ToolRisk.READ_ONLY
                     ? ""
-                    : input.tenantId() + ":" + step.stepId();
+                    : IdempotencyKeys.compose(
+                            input.tenantId(), planId, intentId,
+                            step.stepId(), canonicalRequestFingerprint);
             normalized.add(new PlanStep(
                     step.stepId(), step.description(), tool.name(),
-                    tool.validateAndNormalize(step.arguments()),
+                    normalizedArguments,
                     Set.copyOf(step.dependsOn()), timeout, step.maxAttempts(),
-                    tool.risk(), tool.requiresApproval(), idempotencyKey,
+                    tool.risk(), tool.requiresApproval(), intentId,
+                    canonicalRequestFingerprint, idempotencyKey,
                     tool.compensationTool().orElse(""), StepStatus.PLANNED));
         }
         if (estimatedWallClockMillis &gt; trustedBudget.maxWallClockMillis()
@@ -431,7 +492,7 @@ final class PlanValidator {
         }
 
         return new ExecutionPlan(
-                UUID.randomUUID(), 1L, input.objective(),
+                planId, planVersion, input.objective(),
                 List.copyOf(normalized), trustedBudget, 0, clock.instant());
     }
 
@@ -511,8 +572,10 @@ class PlanningConfiguration {
     PlanValidator planValidator(
             ToolCatalog tools,
             ToolAuthorization authorization,
+            WriteIntentService writeIntents,
             java.time.Clock clock) {
-        return new PlanValidator(tools, authorization, clock);
+        return new PlanValidator(
+                tools, authorization, writeIntents, clock);
     }
 
     @Bean
@@ -527,10 +590,9 @@ class PlanningConfiguration {
             PlanRepository plans,
             ToolGateway tools,
             ApprovalService approvals,
-            ExecutionBudgetLedger budgets,
             FailureClassifier failures) {
         return new PersistingStepExecutor(
-                plans, tools, approvals, budgets, failures);
+                plans, tools, approvals, failures);
     }
 }
 
@@ -577,7 +639,6 @@ final class SpringChatPlanner implements Planner {
     private final PlanRepository plans;
     private final ToolGateway tools;
     private final ApprovalService approvals;
-    private final ExecutionBudgetLedger budgets;
     private final FailureClassifier failures;
 
     // constructor 省略
@@ -600,48 +661,58 @@ final class SpringChatPlanner implements Planner {
                     "approval-required");
             return StepExecutionResult.waitingForApproval();
         }
-        if (!budgets.tryReserve(planId, stepId, step.timeout(), 1)) {
-            plans.escalate(planId, expectedPlanVersion, stepId,
-                    "execution-budget-exhausted");
-            return StepExecutionResult.escalated();
+        BudgetReservation requested = snapshot.requiredReservation(step);
+        java.util.Optional&lt;AuthorizedAttempt&gt; authorized =
+                plans.claimAndReserve(
+                        planId,
+                        expectedPlanVersion,
+                        stepId,
+                        StepStatus.READY,
+                        requested,
+                        step.idempotencyKey());
+        if (authorized.isEmpty()) {
+            // 版本 / 状态已变化，或预算不足：没有状态 claim，也没有预算扣减。
+            return StepExecutionResult.notClaimed(
+                    "stale, already claimed, or budget exhausted");
         }
-
-        int attempt = plans.claimRunning(
-                planId, expectedPlanVersion, stepId,
-                step.idempotencyKey()); // 原子 READY -&gt; RUNNING + attempt
+        AuthorizedAttempt claim = authorized.orElseThrow();
         try {
             ToolObservation observation = tools.execute(
                     step.toolName(), step.arguments(),
-                    step.idempotencyKey(), step.timeout());
+                    claim.idempotencyKey(), step.timeout());
             StepEvidence evidence = verifyAndSummarize(
-                    snapshot, step, attempt, observation);
+                    snapshot, step, claim.attempt(), observation);
             plans.completeWithEvidence(
-                    planId, expectedPlanVersion, stepId, evidence);
-            budgets.commit(planId, stepId, observation.usage());
+                    planId, expectedPlanVersion, stepId,
+                    claim.reservationId(), evidence, observation.usage());
             return StepExecutionResult.succeeded(evidence);
         }
         catch (RuntimeException failure) {
             FailureClass kind = failures.classify(failure);
             boolean retrySafe = step.risk() == ToolRisk.READ_ONLY
                     || !step.idempotencyKey().isBlank();
-            boolean attemptsRemain = attempt &lt; step.maxAttempts();
-            boolean budgetRemains = budgets.mayRetry(planId, stepId);
+            boolean attemptsRemain = claim.attempt() &lt; step.maxAttempts();
+            boolean budgetRemains = plans.mayRetry(
+                    planId, claim.reservationId());
 
             if (kind == FailureClass.TRANSIENT
                     &amp;&amp; retrySafe &amp;&amp; attemptsRemain &amp;&amp; budgetRemains) {
                 plans.failRetryableThenScheduleReady(
                         planId, expectedPlanVersion, stepId,
+                        claim.reservationId(),
                         privateDiagnosticCode(failure));
                 return StepExecutionResult.retryScheduled();
             }
             plans.failFinalAndEscalate(
                     planId, expectedPlanVersion, stepId,
+                    claim.reservationId(),
                     privateDiagnosticCode(failure));
             return StepExecutionResult.escalated();
         }
     }
 }</code></pre>
-      <p><code>claimRunning</code> 和状态转换必须是数据库 compare-and-set：带 <code>planId + planVersion + stepId + fromStatus</code> 条件更新；影响行数不是 1 就表示其他 worker 已领取或计划已重规划。工具调用无法与数据库跨系统原子提交，因此写工具还必须使用外部系统可识别的幂等键，并在恢复时先查询外部结果，再决定是否重放。</p>
+      <p><code>claimAndReserve</code> 必须在同一个数据库事务中同时完成两件事：用 <code>planId + expectedPlanVersion + stepId + expectedStatus</code> compare-and-set 将 READY 改为 RUNNING 并递增 attempt；在同一行锁 / 事务内检查并预占 wall-clock、token、tool-call 与 cost 预算。两者要么一起成功并返回唯一 <code>AuthorizedAttempt</code>，要么一起失败且不产生任何预算扣减。Executor 必须检查返回值，只有持有该授权 attempt 的 worker 才能调用工具；不能先预占预算再 claim，也不能忽略 claim 失败。工具调用仍无法与数据库跨系统原子提交，因此写工具还必须使用外部系统可识别的幂等键，并在恢复时先查询外部结果，再决定是否重放。</p>
+      <p><strong>写操作幂等键绑定逻辑意图，而不是只绑定步骤名。</strong>服务端先对工具名、目标资源和归一化参数做 canonical serialization / hash，得到 <code>canonicalRequestFingerprint</code>；再组合 tenant、planId、<code>intentId</code>、stepId 与 fingerprint。新计划的默认 intentId 含 planVersion，因此不同重规划意图不会因复用 S6 之类的 stepId 被误去重；同一 attempt 的有限重试从持久 <code>AuthorizedAttempt</code> 复用完全相同的 key。只有当新版本明确继续<strong>同一个</strong>已批准逻辑写意图，且目标、动作、canonical fingerprint 均未变化时，应用 <code>WriteIntentService</code> 才可从持久状态继承同一 intentId，以便跨版本查证 / 去重；模型不能请求继承，审批仍按新 planVersion 重新检查。目标或 payload 任何变化都签发新 intentId。</p>
 
       <h3 id="失败路由">有限重试、补偿、重规划和升级的决策表</h3>
       <div class="table-wrap"><table>
@@ -687,13 +758,17 @@ final class SpringChatPlanner implements Planner {
           <tr><td>缺失依赖</td><td>S2 依赖不存在的 S9</td><td>拒绝 <code>missing dependency</code>；不静默删除边</td></tr>
           <tr><td>重复步骤</td><td>两个步骤都叫 S1</td><td>拒绝 blank / duplicate ID；证据不会覆盖</td></tr>
           <tr><td>未知工具</td><td>模型提出 <code>shell.exec</code></td><td>可信目录查找失败；绝不动态反射或联网解析工具</td></tr>
+          <tr><td>本次未公布工具</td><td>主体对 <code>ticket.export</code> 全局有权，但它不在本 run 的 <code>allowedToolNames</code></td><td><code>PlanValidator</code> 拒绝 <code>tool outside run-scoped allowlist</code>；全局授权不能扩大本次最小工具集</td></tr>
           <tr><td>越权工具</td><td>主体只有 service.read，却计划 ticket.read</td><td>授权校验拒绝，公开错误不泄露工具目录</td></tr>
           <tr><td>不安全写操作</td><td>写工具不支持幂等键或无审批</td><td>验证失败；Executor 从未获得可执行 <code>PlanStep</code></td></tr>
           <tr><td>步骤超时</td><td>只读工具超过 deadline</td><td>取消 / 隔离结果，按策略有限重试；过期结果不能把步骤改为成功</td></tr>
-          <tr><td>不可重试失败</td><td>403、参数错误或业务冲突</td><td>直接 <code>FAILED_FINAL</code> / <code>ESCALATED</code>，attempt 不增加</td></tr>
+          <tr><td>不可重试失败</td><td>403、参数错误或业务冲突</td><td>首次 attempt 被记录，但不会产生后续重试；直接 <code>FAILED_FINAL</code> / <code>ESCALATED</code></td></tr>
           <tr><td>重试耗尽</td><td>瞬时 5xx 连续发生</td><td>最多执行 <code>maxAttempts</code> 次；没有第 N+1 次调用</td></tr>
           <tr><td>反思上限</td><td>两轮后仍返回同一失败建议</td><td>第 3 轮不调用模型，状态转 <code>ESCALATED</code></td></tr>
+          <tr><td>反思 cost 耗尽</td><td>轮次、时间、token、tool-call 尚足，但剩余 cost 低于 <code>MIN_REFLECTION_COST_MICROS</code>，或并发预占失败</td><td><code>tryReserveReflection</code> 不授权；ChatClient / 模型调用次数为 0，直接升级</td></tr>
           <tr><td>预算耗尽</td><td>并行 worker 同时争抢最后一次工具额度</td><td>原子 ledger 只允许一个 reservation；另一个转人工 / 等待</td></tr>
+          <tr><td>同一步骤并发 claim</td><td>两个 worker 同时对同一 READY 步骤调用 <code>claimAndReserve</code></td><td>只返回一个 <code>AuthorizedAttempt</code>、只产生一笔预算 reservation 和一次工具调用；失败 worker 既不执行也不扣预算</td></tr>
+          <tr><td>幂等意图与重规划</td><td>同 tenant / stepId 在 v1、v2 使用不同 payload；另测同 intentId + 相同 fingerprint 的恢复重试</td><td>不同逻辑写意图得到不同 key；同一获准意图的 retry / 查证复用完全相同 key，不重复写入</td></tr>
           <tr><td>部分完成</td><td>S1 成功产生副作用，S2 永久失败</td><td>仅评估预注册补偿；原步骤证据保留，补偿独立审计</td></tr>
           <tr><td>人工拒绝</td><td>审批服务返回 reject</td><td>步骤为 <code>HUMAN_REJECTED</code>，依赖写步骤永不 READY，不能反思绕过</td></tr>
           <tr><td>崩溃恢复</td><td>外部写成功后、数据库保存 evidence 前进程崩溃</td><td>恢复器用同一幂等键查询外部状态，不重复创建对象</td></tr>
@@ -709,7 +784,7 @@ final class SpringChatPlanner implements Planner {
         <li>实现 Kahn 拓扑校验与 ready-set 计算；准备两个无依赖只读步骤，证明它们可并行，但共享预算只被原子扣减。</li>
         <li>用 Spring AI 2.0.0 <code>ChatClient.call().entity(CandidatePlan.class)</code> 生成候选。让假模型依次返回 malformed JSON、循环计划和合法计划，证明只有最后一个能经业务 validator 产生 <code>ExecutionPlan</code>。</li>
         <li>实现持久化 <code>StepExecutor</code>，在 RUNNING 之后、保存结果之前注入崩溃；用幂等键查证外部结果并恢复，不重复创建工单。</li>
-        <li>加入 <code>MAX_REFLECTION_ROUNDS = 2</code>、总 deadline、token、工具次数和成本预算；证明第 3 次反思模型调用永远不会发生。</li>
+        <li>加入 <code>MAX_REFLECTION_ROUNDS = 2</code>、总 deadline、token、工具次数和成本预算；证明第 3 次反思、cost 不足或原子预占失败时，反思模型调用永远不会发生。</li>
         <li>模拟人工拒绝与补偿失败，验证自动路径停止并生成包含 planVersion、步骤证据、残余影响和待决定问题的人工升级记录。</li>
       </ol>
 
@@ -717,10 +792,10 @@ final class SpringChatPlanner implements Planner {
       <ul>
         <li>能用复杂度、不确定性、风险、延迟和成本解释为何选择固定工作流、单步循环、ReAct 或计划后执行，并明确反思只是有限增强层。</li>
         <li><code>CandidatePlan</code> 与 <code>ExecutionPlan</code> 分离；模型不能设置可信预算、授权、风险、审批、幂等键或补偿工具。</li>
-        <li><code>PlanValidator</code> 在执行前拒绝环、缺失依赖、重复步骤、未知工具、越权 / 不安全写入和按服务端估算超预算。</li>
-        <li><code>StepExecutor</code> 用 planVersion 和 fromStatus 做原子转换，保存 attempt、idempotencyKey、Observation 摘要 / 外部引用与预算消耗。</li>
+        <li><code>PlanValidator</code> 在执行前拒绝环、缺失依赖、重复步骤、未知工具、本次 run 未公布工具、越权 / 不安全写入和按服务端估算超预算；全局授权不能替代 <code>allowedToolNames</code> membership。</li>
+        <li><code>StepExecutor</code> 通过单事务 <code>claimAndReserve</code> 将 planVersion / fromStatus compare-and-set、attempt 递增与预算预占原子绑定；检查 <code>AuthorizedAttempt</code> 后才调用工具，并保存 idempotencyKey、Observation 摘要 / 外部引用与预算消耗。</li>
         <li>瞬时失败有限重试，不可重试失败直接停止；写结果未知先查证；补偿是独立获授权动作，失败时转人工。</li>
-        <li>反思只由新可验证证据触发，最多 2 轮，同时受 wall-clock、token、tool-call 和 cost 预算；达到任一上限即升级。</li>
+        <li>反思只由新可验证证据触发，最多 2 轮；每轮调用模型前通过 <code>tryReserveReflection</code> 原子预占 wall-clock、token、tool-call 和 cost，达到任一上限或预占竞争失败即升级且模型调用为 0。</li>
         <li>Spring AI 仅承担模型交互和结构化候选转换；页面和实现均未宣称它原生提供 Planner、DAG validator、审批、工作流引擎、持久状态机、Executor 或 reflection loop。</li>
         <li>循环、缺失依赖、重复步骤、未知 / 越权工具、不安全写入、超时、不可重试失败、重试耗尽、反思超限、预算耗尽、部分完成、人工拒绝、崩溃恢复和版本冲突全部有自动化断言。</li>
       </ul>
