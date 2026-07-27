@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agentic Search 与 RAG 学习页设计</title>
+</head>
+<body>
+  <main>
+    <article>
+      <h1>Agentic Search 与 RAG 学习页设计</h1>
+      <p>日期：2026-07-27</p>
+
+      <h2>方案选择</h2>
+      <p>选择“概念边界 + 选型对比 + Java/Spring AI 生产实现”的综合方案。纯理论方案难以转化为工程能力；只讲框架会把会变化的 API 误当成概念本身。综合方案先建立稳定心智模型，再用显式、有预算上限的 Java 循环落地，最后映射到 Spring AI 2.0.0。</p>
+
+      <h2>目标读者与学习结果</h2>
+      <ul>
+        <li>面向已经完成基础 Agent、Tool Calling 与 RAG 课程的 Java 开发者。</li>
+        <li>能区分经典 RAG、Agentic RAG、Agentic Search，理解它们是有交集而非互斥的概念。</li>
+        <li>能根据查询复杂度、时效性、风险、延迟和成本选择最小充分方案。</li>
+        <li>能实现有检索轮数、查询数、证据数、耗时和费用上限的搜索闭环。</li>
+        <li>能用证据覆盖率、引用正确率、答案正确性、成本和停止原因评测系统。</li>
+      </ul>
+
+      <h2>术语边界</h2>
+      <ul>
+        <li><strong>经典 RAG：</strong>应用按预先设计的流水线检索一次或固定次数，把结果作为上下文交给模型生成答案。</li>
+        <li><strong>Agentic RAG：</strong>模型可以判断是否检索、改写查询、评价结果并再次检索，目标仍是为生成答案提供可追踪知识。</li>
+        <li><strong>Agentic Search：</strong>更广义的目标驱动搜索闭环，模型参与任务拆解、选源、并行或迭代查询、证据缺口判断、冲突处理和停止决策；结果可以是答案、报告、候选集或供下游 Agent 使用的证据包。</li>
+        <li>“Agentic Search”不是跨厂商统一规范。页面将把以上定义标为工程归纳，并用微软、LangChain、ReAct 与 Self-RAG 的一手资料说明共同特征和边界。</li>
+      </ul>
+
+      <h2>页面信息架构</h2>
+      <ol>
+        <li>核心结论与三类概念的集合关系。</li>
+        <li>Agentic Search 闭环图及无图等价文字说明。</li>
+        <li>从固定单查询到受控搜索 Agent 的五级能力阶梯。</li>
+        <li>经典 RAG、Agentic RAG、Agentic Search 多维对比表和优缺点。</li>
+        <li>决策树与默认建议：先经典 RAG，指标证明不足后逐级增加自主性。</li>
+        <li>企业服务台多跳查询案例，展示查询拆分、跨源证据和停止原因。</li>
+        <li>Java 21 领域模型、显式循环、预算、证据账本和停止策略。</li>
+        <li>Spring AI 2.0.0 的 ChatClient、结构化输出、RAG Advisor 与 Tool Calling 映射。</li>
+        <li>安全、可观测性、评测、测试矩阵、练习和验收标准。</li>
+        <li>参考资料与检索日期。</li>
+      </ol>
+
+      <h2>可视化设计</h2>
+      <p>使用现有 <code>agent-call-flow</code> CSS 组件构造九节点闭环：目标 → 拆解 → 选源 → 查询 → 召回 → 证据评估 → 缺口分支 → 综合与引用 → 停止或升级。通过回环箭头文字表达迭代，设置 <code>role="img"</code> 和完整 <code>aria-label</code>，并在图后提供等价文字说明，不新增位图和 SVG 依赖。</p>
+
+      <h2>工程建议</h2>
+      <ul>
+        <li>默认采用渐进增强：经典混合 RAG → 查询改写/路由 → 有界 Agentic Search；不因为“更智能”而直接采用最高自治。</li>
+        <li>应用代码持有权限、预算、允许数据源、停止条件和发布门槛；模型只能在受限集合内提出计划。</li>
+        <li>模型输出只作为候选控制信号，必须反序列化、校验并由确定性代码执行。</li>
+        <li>证据账本记录来源、查询、片段、时间、授权范围和支持的声明；不把“模型觉得足够”作为唯一停止条件。</li>
+        <li>高风险领域对冲突、证据不足和预算耗尽采用拒答或人工升级。</li>
+      </ul>
+
+      <h2>集成与验收</h2>
+      <ul>
+        <li>新页面保存为 <code>public/notes/agent/2026-07-27-Agentic-Search与RAG对比.html</code>，分类为“Agent 开发”。</li>
+        <li>Agent 主学习目录和既有 RAG 课程增加进阶入口，形成双向链接。</li>
+        <li>页面包含稳定标题 ID、核心结论、参考资料、外链安全属性和完整转义代码块。</li>
+        <li>新增内容契约测试，检查三者定义、对比表、图、Java/Spring AI 示例、评测、安全、交叉入口和来源。</li>
+        <li>运行索引生成器、导航回归、语法、链接、锚点、重复 ID、外链属性和差异检查。</li>
+      </ul>
+    </article>
+  </main>
+</body>
+</html>

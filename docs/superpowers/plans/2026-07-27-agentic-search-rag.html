@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agentic Search 与 RAG 学习页实施计划</title>
+</head>
+<body>
+  <main>
+    <article>
+      <h1>Agentic Search 与 RAG 学习页实施计划</h1>
+      <p><strong>执行要求：</strong>实施时使用 superpowers:executing-plans，逐项完成并验证。</p>
+      <p><strong>目标：</strong>新增一篇能指导 Java 开发者理解、选型并实现 Agentic Search 的完整 HTML 学习页。</p>
+      <p><strong>架构：</strong>用独立进阶页承载概念、对比和实现；从 Agent 主目录与 RAG 基础课交叉链接；由现有生成器统一更新分类导航、右侧目录、前后篇和 manifest。</p>
+      <p><strong>技术栈：</strong>语义化 HTML、现有 CSS/JavaScript、Java 21、Spring Boot 4.0.x/4.1.x、Spring AI 2.0.0、Node.js ESM 验证脚本。</p>
+
+      <h2>全局约束</h2>
+      <ul>
+        <li>学习内容只写入 HTML，不新增 Markdown。</li>
+        <li>所有站内链接使用相对路径；所有外链带 <code>target="_blank"</code> 和 <code>rel="noopener noreferrer"</code>。</li>
+        <li>把“Agentic Search 非统一标准术语”明确标为基于一手资料的工程归纳。</li>
+        <li>示例不假设 Spring AI 提供名为 Agentic Search 的单一抽象；由应用代码显式管理循环与边界。</li>
+        <li>不得覆盖或重构无关页面内容。</li>
+      </ul>
+
+      <h2>任务一：建立内容契约测试</h2>
+      <p><strong>创建：</strong><code>scripts/test-agentic-search-note.mjs</code></p>
+      <ol>
+        <li>读取预期新页面、Agent 主目录和既有 RAG 页面。</li>
+        <li>断言新页面存在语义化结构、必需元数据、核心结论、参考资料和稳定章节 ID。</li>
+        <li>断言页面明确出现经典 RAG、Agentic RAG、Agentic Search、闭环图、对比表、决策树、Java 21、Spring AI 2.0.0、预算、停止条件、安全和评测。</li>
+        <li>断言两个既有入口都链接到新页面，外部链接安全属性完整。</li>
+        <li>运行 <code>node scripts/test-agentic-search-note.mjs</code>，预期因新页面不存在而失败。</li>
+      </ol>
+
+      <h2>任务二：编写 Agentic Search 学习页</h2>
+      <p><strong>创建：</strong><code>public/notes/agent/2026-07-27-Agentic-Search与RAG对比.html</code></p>
+      <ol>
+        <li>写入完整 head 元数据、语义结构、课程上下文和检索日期。</li>
+        <li>完成术语边界、集合关系、九节点闭环图与等价文字说明。</li>
+        <li>完成能力阶梯、十二维对比表、优缺点、选型决策树和反模式。</li>
+        <li>完成企业服务台案例，明确每轮查询、数据源、证据缺口与停止原因。</li>
+        <li>加入 Java 21 领域契约与有界循环，展示轮数、查询、耗时、证据和费用预算。</li>
+        <li>加入 Spring AI 2.0.0 依赖及应用控制示例，解释 ChatClient、结构化输出、RAG Advisor 和工具调用的职责。</li>
+        <li>完成安全、评测、测试、练习、验收和一手参考资料。</li>
+      </ol>
+
+      <h2>任务三：接入学习路线</h2>
+      <p><strong>修改：</strong><code>public/notes/agent/2026-07-27-Agent开发学习主目录.html</code>、<code>public/notes/agent/2026-07-27-04-Agent知识检索与RAG.html</code></p>
+      <ol>
+        <li>在主目录的检索与 RAG 阶段增加“Agentic Search 与 RAG 对比”进阶入口和学习说明。</li>
+        <li>在 RAG 课程的下一步学习位置增加新页面链接。</li>
+        <li>在新页面链接回基础 RAG 课程和主目录，确认路径均为相对 HTML。</li>
+        <li>运行内容契约测试，预期通过。</li>
+      </ol>
+
+      <h2>任务四：生成站点结构</h2>
+      <p><strong>更新：</strong><code>public/index.html</code>、<code>public/manifest.json</code>、全部知识页的生成导航区。</p>
+      <ol>
+        <li>运行 <code>node scripts/build-html-index.mjs</code>。</li>
+        <li>确认 Agent 分类文档数增加一，新页面出现在分类侧栏与首页分类列表。</li>
+        <li>确认新页面右侧目录由 h2～h4 生成，长标题沿用现有换行规则。</li>
+      </ol>
+
+      <h2>任务五：最终验证</h2>
+      <ol>
+        <li>运行 <code>node scripts/test-agentic-search-note.mjs</code> 和 <code>node scripts/test-html-navigation.mjs</code>。</li>
+        <li>运行 <code>node --check scripts/build-html-index.mjs</code>、<code>node --check scripts/test-agentic-search-note.mjs</code>、<code>node --check public/assets/app.js</code>。</li>
+        <li>运行站内链接、标题锚点、重复 ID、外链安全属性检查。</li>
+        <li>运行 <code>test -s public/index.html</code> 与 <code>git diff --check</code>。</li>
+        <li>复核来源日期、概念限定语、Java 代码转义、Spring AI 版本和发布入口。</li>
+      </ol>
+    </article>
+  </main>
+</body>
+</html>
