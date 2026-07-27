@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Agent 开发八阶段学习课程及 Spring AI 渐进示例的设计规格">
+  <title>Agent 开发八阶段学习课程设计规格</title>
+</head>
+<body>
+  <header>
+    <h1>Agent 开发八阶段学习课程设计规格</h1>
+    <p>确认日期：2026-07-27</p>
+  </header>
+  <main>
+    <article>
+      <section aria-labelledby="goal">
+        <h2 id="goal">目标与范围</h2>
+        <p>
+          将 Agent 开发主学习目录中的八个“待建设”阶段全部建设为独立 HTML 学习页，
+          形成面向 Java 全栈开发者的连续课程。每篇既可单独查阅，又沿用同一个共享案例，
+          使前一阶段的设计产物成为后一阶段的输入。
+        </p>
+        <p>
+          课程保持厂商无关的 Agent 心智模型，同时增加 Spring AI 工程示例。
+          页面必须明确区分 Spring AI 原生能力与需要业务代码自行实现的运行时、状态机、
+          权限、审批、评测、多 Agent 编排和故障恢复能力。
+        </p>
+      </section>
+
+      <section aria-labelledby="audience">
+        <h2 id="audience">读者与完成标准</h2>
+        <p>目标读者熟悉 Java、Spring Boot 和常规后端开发，但尚未系统建设生产级 Agent。</p>
+        <ul>
+          <li>八个阶段均有独立页面，主目录不再出现“待建设”。</li>
+          <li>读者可以按顺序完成从 Agent 边界设计到生产部署的完整学习闭环。</li>
+          <li>每篇同时说明通用原理、Java 21 表达方式和对应的 Spring AI 落地方式。</li>
+          <li>所有写操作、外部调用、记忆、检索和多 Agent 协作都具有明确安全边界。</li>
+          <li>最后一篇能够将前七篇产物组合成可观测、可恢复的 Spring Boot Agent 服务设计。</li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="approach">
+        <h2 id="approach">课程组织方式</h2>
+        <p>采用“渐进课程 + 共享案例”，不采用八篇互不相关的百科，也不合并为单篇超长教程。</p>
+        <p>
+          共享案例为“企业服务台 Agent”：查询服务状态和用户工单，从内部知识库检索故障处理规则，
+          分解诊断任务，在人工审批后创建工单；后续扩展为多 Agent，并加入评测、安全、成本和生产运维。
+        </p>
+        <p>
+          主目录现有的天气工具 Agent 保留为最小入门练习；八阶段课程使用企业服务台案例，
+          以支持状态、RAG、规划、多 Agent 和生产治理等连续演进。
+        </p>
+      </section>
+
+      <section aria-labelledby="example-layers">
+        <h2 id="example-layers">双层示例约定</h2>
+        <ol>
+          <li>
+            <strong>原理层：</strong>使用 Java 21 的 interface、record、sealed interface、状态对象和服务边界，
+            表达与模型厂商、SDK 和框架无关的设计。
+          </li>
+          <li>
+            <strong>工程层：</strong>使用检索时核验的 Spring AI 当前官方 API，
+            展示 Spring Boot 中的 ChatClient、Advisor、Tool Calling、Chat Memory、RAG、
+            Observability 和测试接入方式。
+          </li>
+        </ol>
+        <p>
+          Spring AI 示例不得把框架未提供的能力描述成原生功能。Planner、Coordinator、审批、
+          状态恢复、策略引擎和恢复队列等由业务 Bean 或基础设施实现时，必须显式标注。
+        </p>
+      </section>
+
+      <section aria-labelledby="topics">
+        <h2 id="topics">八篇专题页面</h2>
+
+        <h3 id="topic-1">1. Agent 基础概念与边界</h3>
+        <p>
+          建立目标、环境、状态、工具、模型、护栏和人工协作模型；比较聊天、固定工作流、
+          Agent 与 Agentic System；通过企业服务台需求完成四栏设计，并给出不应使用 Agent 的判断树。
+          Spring AI 示例说明 ChatClient、Advisor、工具和业务 Agent Runtime 的职责边界。
+        </p>
+
+        <h3 id="topic-2">2. 模型 API、结构化输出与 Tool Calling</h3>
+        <p>
+          解释结构化输出、JSON Schema、互斥决策分支、参数校验、工具白名单、超时和安全失败信息。
+          Java 示例使用 sealed interface 与 record；Spring AI 示例使用官方 Tool Calling API，
+          展示服务状态查询和工单查询工具。
+        </p>
+
+        <h3 id="topic-3">3. 状态、上下文与记忆</h3>
+        <p>
+          区分运行状态、提示上下文、短期会话记忆和长期业务记忆；覆盖序列化、恢复、脱敏、
+          保留期限和会话隔离。Spring AI 示例使用官方 Chat Memory 能力，同时说明业务状态不能只存于聊天消息。
+        </p>
+
+        <h3 id="topic-4">4. 知识检索与 RAG</h3>
+        <p>
+          覆盖文档采集、切分、元数据、嵌入、召回、过滤、重排、引用、检索评测和诚实降级。
+          Spring AI 示例使用官方 Document、ETL、VectorStore 和检索 Advisor/API，
+          为服务台知识答案保留来源。
+        </p>
+
+        <h3 id="topic-5">5. 规划、反思与任务分解</h3>
+        <p>
+          比较固定流程、动态计划、ReAct 和反思循环，解释何时规划有价值、何时只增加成本。
+          Java 与 Spring 示例使用显式 Planner、Executor、StepState Bean 和预算，
+          不虚构 Spring AI 自带通用规划器。
+        </p>
+
+        <h3 id="topic-6">6. 多 Agent 协作与编排</h3>
+        <p>
+          比较单 Agent、主管—执行者、流水线和并行拓扑，讨论角色工具隔离、共享状态版本、
+          冲突和失败传播。Spring AI 示例使用多个专用 ChatClient/服务 Bean 与显式 Coordinator，
+          并与单 Agent 基线比较。
+        </p>
+
+        <h3 id="topic-7">7. 评测、安全、权限与成本控制</h3>
+        <p>
+          建立离线数据集、结果评测、轨迹评测、策略门、审批、审计、提示注入防护、token 和工具预算。
+          Spring AI 示例使用 Advisor、工具策略、Micrometer/Observability 和 Spring 测试，
+          覆盖越权、超时、超预算及工具故障。
+        </p>
+
+        <h3 id="topic-8">8. Java 生产部署、可观测性与故障恢复</h3>
+        <p>
+          形成 Spring Boot API、同步/异步执行边界、日志、指标、Trace、幂等、重试、
+          熔断、恢复队列和安全重放方案。示例组合 Spring AI Observability、
+          Spring Boot Actuator、Micrometer/OpenTelemetry 和业务恢复机制。
+        </p>
+      </section>
+
+      <section aria-labelledby="page-template">
+        <h2 id="page-template">每篇统一结构</h2>
+        <ol>
+          <li>核心结论、学习目标、前置知识和本阶段产物。</li>
+          <li>直观理解、核心原理、概念边界和选择建议。</li>
+          <li>至少一张由语义化 HTML/CSS 构成的流程图、状态图或架构图，并提供等价文字说明。</li>
+          <li>厂商无关的 Java 21 核心模型或伪代码。</li>
+          <li>Spring AI 当前官方 API 示例、依赖说明和能力边界。</li>
+          <li>企业服务台案例在本阶段新增的组件、状态或约束。</li>
+          <li>常见错误、安全注意事项、练习和可验证的验收标准。</li>
+          <li>相关专题、上一篇/下一篇及一手参考资料。</li>
+        </ol>
+      </section>
+
+      <section aria-labelledby="files">
+        <h2 id="files">页面和导航</h2>
+        <ul>
+          <li><code>public/notes/agent/2026-07-27-01-Agent基础概念与边界.html</code></li>
+          <li><code>public/notes/agent/2026-07-27-02-模型API结构化输出与Tool-Calling.html</code></li>
+          <li><code>public/notes/agent/2026-07-27-03-Agent状态上下文与记忆.html</code></li>
+          <li><code>public/notes/agent/2026-07-27-04-Agent知识检索与RAG.html</code></li>
+          <li><code>public/notes/agent/2026-07-27-05-Agent规划反思与任务分解.html</code></li>
+          <li><code>public/notes/agent/2026-07-27-06-多Agent协作与编排.html</code></li>
+          <li><code>public/notes/agent/2026-07-27-07-Agent评测安全权限与成本控制.html</code></li>
+          <li><code>public/notes/agent/2026-07-27-08-Java-Agent生产部署可观测性与故障恢复.html</code></li>
+        </ul>
+        <p>
+          主目录的八个阶段改为真实链接和“已建设”状态。专题页面按 01～08 顺序互链，
+          同时保留索引脚本生成的全站上一篇/下一篇。不得生成指向未创建页面的链接。
+        </p>
+      </section>
+
+      <section aria-labelledby="research">
+        <h2 id="research">资料检索与事实边界</h2>
+        <ul>
+          <li>Spring AI 的版本、BOM、Spring Boot 兼容性、类型和方法以 2026-07-27 官方文档为准。</li>
+          <li>Agent 方法使用论文原文、标准组织、官方项目文档和源代码仓库交叉核验。</li>
+          <li>论文结论、框架能力、工程建议和推测必须明确区分。</li>
+          <li>每篇参考资料记录检索日期，正文关键结论尽量就近链接来源。</li>
+          <li>无法由官方资料确认的 API 不进入代码示例；存在版本差异时明确标注。</li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="error-handling">
+        <h2 id="error-handling">安全与错误处理</h2>
+        <ul>
+          <li>模型只提出工具请求，应用负责鉴权、校验、审批和执行。</li>
+          <li>外部文本、检索文档和工具 Observation 均视为不可信输入。</li>
+          <li>公开错误信息与私有诊断分离，不向用户泄露原始异常、密钥、内部 URL 或工具输出。</li>
+          <li>写操作必须说明幂等、审批、审计和补偿策略。</li>
+          <li>循环、并发、token、时间和工具调用都有明确预算和终止条件。</li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="validation">
+        <h2 id="validation">验证要求</h2>
+        <ul>
+          <li>八个页面均包含必需元数据、header、main、article、nav、核心结论和参考资料。</li>
+          <li>每篇的目录锚点唯一且可命中，站内链接使用相对路径，外链使用安全属性。</li>
+          <li>Java/Spring 代码中的 HTML 特殊字符正确转义，类型和方法与引用的官方版本一致。</li>
+          <li>每篇至少包含一项 Java 21 示例、一项 Spring AI 示例、一项练习和明确验收标准。</li>
+          <li>主目录八个专题链接全部存在，状态不再是“待建设”。</li>
+          <li>运行索引脚本后知识文档数为 17，并更新首页、侧栏、上一篇/下一篇和 manifest。</li>
+          <li>脚本语法、重复 ID、本地链接、标题锚点和外部链接属性检查全部通过。</li>
+        </ul>
+      </section>
+    </article>
+  </main>
+</body>
+</html>
