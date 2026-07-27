@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Agent 开发主学习目录的分步实现计划">
+  <title>Agent 开发主学习目录实现计划</title>
+</head>
+<body>
+  <header>
+    <h1>Agent 开发主学习目录实现计划</h1>
+    <p>
+      <strong>Agent 执行要求：</strong>
+      实现时必须逐项使用 superpowers:subagent-driven-development（推荐）
+      或 superpowers:executing-plans。
+    </p>
+    <p><strong>目标：</strong>创建一个面向 Java 开发者、厂商无关的 Agent 开发主学习入口，并把它接入现有静态知识库。</p>
+    <p>
+      <strong>架构：</strong>
+      正文使用单个语义化 HTML 页面；调用链和学习路线由语义化元素配合共享 CSS 呈现，
+      不引入第三方运行时或内联 SVG。现有索引脚本负责首页卡片、侧栏、上一篇/下一篇和 manifest。
+    </p>
+    <p><strong>技术栈：</strong>HTML5、CSS、现有原生 JavaScript、Node.js 索引脚本、Java 21 示例。</p>
+  </header>
+
+  <main>
+    <section aria-labelledby="constraints">
+      <h2 id="constraints">全局约束</h2>
+      <ul>
+        <li>正式页面路径固定为 <code>public/notes/agent/2026-07-27-Agent开发学习主目录.html</code>。</li>
+        <li>分类固定为“Agent 开发”，整理日期固定为 2026-07-27。</li>
+        <li>页面复用 <code>../../assets/style.css</code> 和 <code>../../assets/app.js</code>。</li>
+        <li>内容采用厂商无关定义；Java 示例使用 Java 21，不引入 SDK 依赖。</li>
+        <li>图示使用 HTML/CSS，并提供等价文字说明；不使用内联 SVG。</li>
+        <li>未创建的专题显示“待建设”，不得生成失效链接。</li>
+        <li>外部来源只使用一手资料，链接带 <code>target="_blank"</code> 和 <code>rel="noopener noreferrer"</code>。</li>
+      </ul>
+    </section>
+
+    <article>
+      <h2 id="task-1">任务 1：创建可独立阅读的 Agent 主学习页面</h2>
+      <p><strong>文件：</strong>新建 <code>public/notes/agent/2026-07-27-Agent开发学习主目录.html</code></p>
+      <p>
+        <strong>输入：</strong>现有文档页面结构、共享样式和确认后的设计规格。<br>
+        <strong>输出：</strong>包含完整目录、定义、调用过程、Java 映射、代码、学习路径、练习和参考资料的语义化页面。
+      </p>
+      <ol>
+        <li>
+          <p><strong>先运行存在性检查，确认测试失败：</strong></p>
+          <pre><code>test -f public/notes/agent/2026-07-27-Agent开发学习主目录.html</code></pre>
+          <p>预期：退出码非 0，因为页面尚未创建。</p>
+        </li>
+        <li>
+          <p><strong>创建页面骨架：</strong></p>
+          <ul>
+            <li>head 中包含 charset、viewport、description、color-scheme、study-category、study-date、title、共享 CSS 和 JS。</li>
+            <li>body 使用 <code>document-page</code>，包含 topbar、reader-layout、doc-sidebar、article-column、article 和 toc-sidebar。</li>
+            <li>页内目录包含以下稳定锚点：<code>核心结论</code>、<code>agent-通用释义</code>、<code>agent-不是什么</code>、<code>核心组成</code>、<code>一次完整调用过程</code>、<code>java-开发者映射</code>、<code>最小-java-实现</code>、<code>主学习路线</code>、<code>第一个实践项目</code>、<code>参考资料</code>。</li>
+          </ul>
+        </li>
+        <li>
+          <p><strong>写入定义与边界：</strong></p>
+          <ul>
+            <li>Software Agent：感知环境、依据规则或策略采取行动以实现目标的软件实体。</li>
+            <li>AI Agent：决策策略部分使用机器学习或生成式模型的 Agent。</li>
+            <li>LLM Agent：以大语言模型承担理解、推理、规划或工具选择的 AI Agent。</li>
+            <li>Agentic System：由一个或多个 Agent、工具、状态、控制逻辑与人类协作组成的完整系统。</li>
+            <li>用表格比较普通聊天机器人、固定工作流、单 Agent 和多 Agent 系统的控制方式、工具使用、状态和适用场景。</li>
+          </ul>
+        </li>
+        <li>
+          <p><strong>写入调用链：</strong></p>
+          <p>图中必须依次出现“用户目标、上下文组装、模型决策、工具调用、环境反馈、状态更新、循环判断、最终响应”，并将权限、校验、预算、人工审批和失败降级放入护栏层。</p>
+          <p>逐步文字说明明确两种分支：模型直接产生最终答案；模型请求工具后根据 Observation 继续循环。循环必须受最大步数、超时和成本预算约束。</p>
+        </li>
+        <li>
+          <p><strong>写入 Java 映射和最小代码：</strong></p>
+          <p>示例定义 <code>AgentModel</code>、<code>ToolRegistry</code>、<code>AgentState</code>、<code>ModelDecision</code> 和 <code>AgentRuntime.run(AgentRequest)</code>，用最大 8 步循环展示结构化工具调用、状态更新和终止条件。所有泛型尖括号必须经过 HTML 转义。</p>
+        </li>
+        <li>
+          <p><strong>写入八阶段学习路线：</strong></p>
+          <p>每阶段同时列出学习目标、关键问题、Java 实践和验收标准。未建设专题用非链接状态标签显示。</p>
+        </li>
+        <li>
+          <p><strong>写入练习和参考资料：</strong></p>
+          <p>练习为“带白名单城市与超时控制的天气工具 Agent”；验收包括结构化参数、工具白名单、最多 8 步、可追踪调用记录、错误降级和单元测试。</p>
+          <p>参考资料使用 Agent 定义、ReAct/Tool Use 原始论文或官方说明，以及 Spring AI、LangChain4j 的官方文档，并记录 2026-07-27 检索日期。</p>
+        </li>
+        <li>
+          <p><strong>验证页面存在且元数据完整：</strong></p>
+          <pre><code>test -s public/notes/agent/2026-07-27-Agent开发学习主目录.html
+rg -n 'study-category" content="Agent 开发"|id="核心结论"|id="一次完整调用过程"|id="参考资料"' public/notes/agent/2026-07-27-Agent开发学习主目录.html</code></pre>
+          <p>预期：文件非空，四个关键模式全部命中。</p>
+        </li>
+      </ol>
+
+      <h2 id="task-2">任务 2：为流程图和学习路线补充共享样式</h2>
+      <p><strong>文件：</strong>修改 <code>public/assets/style.css</code></p>
+      <p>
+        <strong>输入：</strong>任务 1 产生的 <code>agent-call-flow</code>、<code>agent-step</code>、<code>guardrail-band</code>、<code>learning-roadmap</code> 和 <code>roadmap-stage</code> 类。<br>
+        <strong>输出：</strong>同时适配明暗主题、桌面和手机的图示与路线样式。
+      </p>
+      <ol>
+        <li>
+          <p><strong>先检查样式不存在：</strong></p>
+          <pre><code>rg -n '^\.agent-call-flow|^\.learning-roadmap' public/assets/style.css</code></pre>
+          <p>预期：退出码非 0。</p>
+        </li>
+        <li>
+          <p><strong>添加最小样式：</strong></p>
+          <ul>
+            <li>复用 <code>--surface</code>、<code>--border</code>、<code>--accent</code>、<code>--accent-soft</code> 和文本变量，不硬编码只适用于浅色主题的颜色。</li>
+            <li>调用步骤使用 CSS Grid；连接符使用伪元素或独立文本节点。</li>
+            <li>护栏层使用低强调背景和清晰文字，不以颜色作为唯一语义。</li>
+            <li>学习路线保持有序编号，阶段内容可在窄屏自然换行。</li>
+            <li>在现有移动端媒体查询中，将流程改为单列并把横向连接符改为纵向提示。</li>
+          </ul>
+        </li>
+        <li>
+          <p><strong>验证样式定义和括号平衡：</strong></p>
+          <pre><code>rg -n '^\.agent-call-flow|^\.agent-step|^\.guardrail-band|^\.learning-roadmap|^\.roadmap-stage' public/assets/style.css
+node -e 'const s=require("fs").readFileSync("public/assets/style.css","utf8"); if((s.match(/\{/g)||[]).length !== (s.match(/\}/g)||[]).length) process.exit(1)'</code></pre>
+          <p>预期：五组类均命中，Node 检查退出码为 0。</p>
+        </li>
+      </ol>
+
+      <h2 id="task-3">任务 3：重建知识库导航并完成回归验证</h2>
+      <p><strong>文件：</strong>更新 <code>public/index.html</code>、<code>public/manifest.json</code> 和所有知识页的自动导航区。</p>
+      <p>
+        <strong>输入：</strong>任务 1 的页面和任务 2 的样式。<br>
+        <strong>输出：</strong>可从知识库首页进入的新分类及通过结构、链接、锚点和脚本检查的站点。
+      </p>
+      <ol>
+        <li>
+          <p><strong>先确认首页尚未收录：</strong></p>
+          <pre><code>rg -n 'Agent 开发学习主目录' public/index.html</code></pre>
+          <p>预期：首次运行退出码非 0。</p>
+        </li>
+        <li>
+          <p><strong>运行索引构建：</strong></p>
+          <pre><code>node scripts/build-html-index.mjs</code></pre>
+          <p>预期：输出“已索引 9 篇 HTML 文档”，并更新入口。</p>
+        </li>
+        <li>
+          <p><strong>运行基础检查：</strong></p>
+          <pre><code>test -s public/index.html
+node --check scripts/build-html-index.mjs
+node --check public/assets/app.js
+git diff --check</code></pre>
+          <p>预期：所有命令退出码为 0。</p>
+        </li>
+        <li>
+          <p><strong>运行本地链接与标题锚点检查：</strong></p>
+          <pre><code>node - &lt;&lt;'NODE'
+const fs = require("fs");
+const path = require("path");
+const root = path.resolve("public");
+const files = [];
+function walk(dir) {
+  for (const entry of fs.readdirSync(dir, {withFileTypes: true})) {
+    const target = path.join(dir, entry.name);
+    if (entry.isDirectory()) walk(target);
+    else if (entry.name.endsWith(".html")) files.push(target);
+  }
+}
+walk(root);
+const errors = [];
+for (const file of files) {
+  const html = fs.readFileSync(file, "utf8");
+  const ids = new Set([...html.matchAll(/\sid=["']([^"']+)["']/g)].map(match =&gt; match[1]));
+  for (const match of html.matchAll(/href=["']([^"']+)["']/g)) {
+    const href = match[1];
+    if (/^(https?:|mailto:|javascript:)/.test(href)) continue;
+    const [rawPath, hash] = href.split("#");
+    const target = rawPath ? path.resolve(path.dirname(file), rawPath) : file;
+    if (rawPath &amp;&amp; !fs.existsSync(target)) errors.push(`${file}: missing ${href}`);
+    if (hash &amp;&amp; target === file &amp;&amp; !ids.has(decodeURIComponent(hash))) errors.push(`${file}: missing #${hash}`);
+  }
+}
+if (errors.length) {
+  console.error(errors.join("\n"));
+  process.exit(1);
+}
+console.log(`checked ${files.length} HTML files`);
+NODE</code></pre>
+          <p>预期：输出检查到的 HTML 文件数量，退出码为 0。</p>
+        </li>
+        <li>
+          <p><strong>确认索引结果：</strong></p>
+          <pre><code>rg -n 'Agent 开发学习主目录|Agent 开发' public/index.html public/manifest.json</code></pre>
+          <p>预期：首页和 manifest 均包含新页面与分类。</p>
+        </li>
+      </ol>
+    </article>
+  </main>
+</body>
+</html>
