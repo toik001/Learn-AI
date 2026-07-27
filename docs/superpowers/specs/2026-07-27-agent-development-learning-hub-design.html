@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Agent 开发主学习目录页面的已确认设计规格">
+  <title>Agent 开发主学习目录设计规格</title>
+</head>
+<body>
+  <header>
+    <h1>Agent 开发主学习目录设计规格</h1>
+    <p>确认日期：2026-07-27</p>
+  </header>
+  <main>
+    <article>
+      <section aria-labelledby="goal">
+        <h2 id="goal">目标与范围</h2>
+        <p>
+          在现有 Java 全栈 AI 学习库中新建一个厂商无关的 Agent 开发主入口，
+          帮助有 Java、Spring Boot 背景的开发者先建立 AI Agent 的通用心智模型，
+          再按学习路线进入 Tool Calling、记忆、RAG、规划、多 Agent、评测、安全和部署等专题。
+        </p>
+        <p>
+          首页不绑定某个模型或 Agent 框架。Codex、Spring AI、LangChain4j 等产品与框架
+          只作为概念映射或后续专题，不作为 Agent 定义本身。
+        </p>
+      </section>
+
+      <section aria-labelledby="audience">
+        <h2 id="audience">读者与成功标准</h2>
+        <p>目标读者是熟悉 Java Web 开发，但尚未系统学习 AI Agent 的开发者。</p>
+        <ul>
+          <li>读者能用自己的话解释 Agent 与聊天机器人、固定工作流的差异。</li>
+          <li>读者能说出 Agent 一次调用中目标、模型、工具、状态和反馈循环的作用。</li>
+          <li>读者能将 Agent 的核心组件映射到常见 Java 分层与工程实践。</li>
+          <li>读者能按照页面中的路线选择下一阶段学习主题。</li>
+          <li>读者能理解并开始实现一个调用受控工具的最小 Java Agent。</li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="information-architecture">
+        <h2 id="information-architecture">页面信息架构</h2>
+        <ol>
+          <li><strong>核心结论：</strong>用简洁定义建立页面主旨。</li>
+          <li><strong>通用释义：</strong>区分 Software Agent、AI Agent、LLM Agent 和 Agentic System。</li>
+          <li><strong>边界辨析：</strong>比较聊天机器人、固定工作流、Agent 和多 Agent 系统。</li>
+          <li><strong>核心组成：</strong>解释目标、模型、指令、工具、知识、记忆、状态、规划、护栏与人工审批。</li>
+          <li><strong>调用过程：</strong>通过主流程图和逐步说明解释一次完整调用。</li>
+          <li><strong>Java 映射：</strong>将 Agent 组件映射到 Spring Boot 常见架构。</li>
+          <li><strong>最小代码：</strong>提供 Java 21 的厂商无关伪代码，展示工具调用循环。</li>
+          <li><strong>学习路线：</strong>建立从基础到生产的八阶段主目录。</li>
+          <li><strong>实践与验收：</strong>给出最小天气工具 Agent 练习及完成标准。</li>
+          <li><strong>参考资料：</strong>列出用于定义、调用模型和 Java 映射的一手资料。</li>
+        </ol>
+      </section>
+
+      <section aria-labelledby="visual-design">
+        <h2 id="visual-design">流程图设计</h2>
+        <p>
+          使用语义化 HTML 与共享 CSS 绘制响应式流程图，不使用装饰性图片或内联 SVG。
+          桌面端按主调用链横向或分段排列，窄屏按步骤纵向重排。
+        </p>
+        <p>
+          主链为：用户目标 → 上下文组装 → 模型决策 → 工具调用 → 环境反馈 →
+          状态更新 → 循环判断 → 最终响应。
+        </p>
+        <p>
+          权限校验、参数校验、人工确认、超时、重试上限和失败降级作为跨步骤护栏显示，
+          防止流程图造成“Agent 可以无限自主运行”的误解。流程图同时提供文字版说明，
+          以满足屏幕阅读器和无法显示复杂布局时的可访问性要求。
+        </p>
+      </section>
+
+      <section aria-labelledby="java-mapping">
+        <h2 id="java-mapping">Java 映射与代码边界</h2>
+        <ul>
+          <li>Agent Runtime 对应应用服务与编排层。</li>
+          <li>Tool 对应受控的 Service、Gateway 或 Adapter，而不是允许模型执行任意代码。</li>
+          <li>Memory 对应会话状态、短期上下文和持久化存储。</li>
+          <li>Knowledge/RAG 对应检索服务及其数据源。</li>
+          <li>Guardrail 对应参数校验、鉴权、业务规则、限流和输出校验。</li>
+          <li>Observation Loop 对应有预算和终止条件的状态循环，不等同于普通单次 Controller 调用。</li>
+        </ul>
+        <p>
+          示例使用 Java 21 语法，只定义必要接口与循环控制，不引入厂商 SDK，
+          从而保证概念可迁移到 Spring AI、LangChain4j 或直接模型 API。
+        </p>
+      </section>
+
+      <section aria-labelledby="learning-path">
+        <h2 id="learning-path">主学习路线</h2>
+        <ol>
+          <li>Agent 基础概念与边界。</li>
+          <li>模型 API、结构化输出与 Tool Calling。</li>
+          <li>状态、上下文与记忆。</li>
+          <li>知识检索与 RAG。</li>
+          <li>规划、反思与任务分解。</li>
+          <li>多 Agent 协作与编排。</li>
+          <li>评测、安全、权限与成本控制。</li>
+          <li>Java 生产部署、可观测性与故障恢复。</li>
+        </ol>
+        <p>
+          当前主入口为每个阶段提供学习目标、关键问题、实践任务和验收标准。
+          尚未创建的子专题显示为“待建设”，不生成失效链接。
+        </p>
+      </section>
+
+      <section aria-labelledby="implementation">
+        <h2 id="implementation">文件与集成</h2>
+        <ul>
+          <li>新页面：<code>public/notes/agent/2026-07-27-Agent开发学习主目录.html</code></li>
+          <li>分类：<code>Agent 开发</code></li>
+          <li>复用资源：<code>public/assets/style.css</code> 与 <code>public/assets/app.js</code></li>
+          <li>仅为流程图和学习路线补充必要的共享 CSS，不改变已有页面视觉结构。</li>
+          <li>运行索引脚本，自动更新首页、文档侧栏、上一篇/下一篇和 manifest。</li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="validation">
+        <h2 id="validation">验证要求</h2>
+        <ul>
+          <li>页面包含 header、main、article、nav、核心结论和参考资料。</li>
+          <li>标题锚点唯一，目录链接可以命中对应章节。</li>
+          <li>站内链接全部使用相对路径，外部链接使用安全的新窗口属性。</li>
+          <li>流程图在桌面和手机宽度下均不重叠、不截断。</li>
+          <li>Java 代码中的 HTML 特殊字符正确转义。</li>
+          <li>索引构建成功，脚本语法检查通过，本地链接和标题锚点检查通过。</li>
+        </ul>
+      </section>
+    </article>
+  </main>
+</body>
+</html>
