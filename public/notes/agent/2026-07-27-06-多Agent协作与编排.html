@@ -307,7 +307,8 @@ record MergeContext(
         String planStepId,
         SharedStateVersion expectedVersion,
         Instant mergeTime,
-        Set&lt;AgentRole&gt; expectedRoles) {
+        Set&lt;AgentRole&gt; requiredRoles,
+        Set&lt;AgentRole&gt; optionalRoles) {
     MergeContext {
         Objects.requireNonNull(tenantId);
         Objects.requireNonNull(principalId);
@@ -316,7 +317,19 @@ record MergeContext(
         Objects.requireNonNull(planStepId);
         Objects.requireNonNull(expectedVersion);
         Objects.requireNonNull(mergeTime);
-        expectedRoles = Set.copyOf(expectedRoles);
+        requiredRoles = Set.copyOf(requiredRoles);
+        optionalRoles = Set.copyOf(optionalRoles);
+        if (!java.util.Collections.disjoint(requiredRoles, optionalRoles)) {
+            throw new IllegalArgumentException(
+                    "role cannot be required and optional");
+        }
+    }
+
+    Set&lt;AgentRole&gt; expectedRoles() {
+        var all = java.util.EnumSet.noneOf(AgentRole.class);
+        all.addAll(requiredRoles);
+        all.addAll(optionalRoles);
+        return Set.copyOf(all);
     }
 }
 
@@ -354,6 +367,18 @@ interface HandoffLedger {
 
     // 未登记 ID 必须失败，不能根据 AgentResult 猜测或重建 handoff。
     AgentHandoff require(UUID handoffId);
+}
+
+interface RolePatchSchema {
+    // 必须只看 key 就先拒绝未知字段和不属于该角色的字段，之后才能读取 value。
+    void requireKnownAndOwned(AgentRole role, Set&lt;String&gt; keys);
+
+    // 同字段确需多源合并时使用服务端领域规则；禁止按完成顺序覆盖。
+    String mergeOwnedField(
+            AgentRole role, String key, String existing, String incoming);
+
+    // optional 角色缺失时生成固定、可审计的系统缺口状态，不伪造业务值。
+    Map&lt;String, String&gt; optionalGapPatch(Set&lt;AgentRole&gt; missingRoles);
 }</code></pre>
       <p><code>ExecutionPlan</code> 与 <code>PlanStep</code> 沿用上一课的已校验计划模型。生产实现还应持久化 dispatch claim、attempt、deadline、预算、取消原因与终态，不能只把 <code>CompletableFuture</code> 留在内存。</p>
 
@@ -378,14 +403,17 @@ final class DeterministicMerger {
     private final Map&lt;AgentRole, RoleToolSet&gt; toolSets;
     private final VersionedStateStore stateStore;
     private final HandoffLedger handoffLedger;
+    private final RolePatchSchema patchSchema;
 
     DeterministicMerger(
             Map&lt;AgentRole, RoleToolSet&gt; toolSets,
             VersionedStateStore stateStore,
-            HandoffLedger handoffLedger) {
+            HandoffLedger handoffLedger,
+            RolePatchSchema patchSchema) {
         this.toolSets = Map.copyOf(toolSets);
         this.stateStore = stateStore;
         this.handoffLedger = handoffLedger;
+        this.patchSchema = patchSchema;
     }
 
     SharedStateVersion merge(
@@ -398,6 +426,27 @@ final class DeterministicMerger {
         }
 
         var ordered = unorderedResults.stream().sorted(ORDER).toList();
+        var roleCounts = new java.util.EnumMap&lt;AgentRole, Integer&gt;(
+                AgentRole.class);
+        for (var result : ordered) {
+            if (!context.expectedRoles().contains(result.role())) {
+                throw new HandoffValidationException("unexpected result role");
+            }
+            roleCounts.merge(result.role(), 1, Integer::sum);
+        }
+        context.requiredRoles().forEach(role -&gt; {
+            if (roleCounts.getOrDefault(role, 0) != 1) {
+                throw new HandoffValidationException(
+                        "required role must return exactly once");
+            }
+        });
+        context.optionalRoles().forEach(role -&gt; {
+            if (roleCounts.getOrDefault(role, 0) &gt; 1) {
+                throw new HandoffValidationException(
+                        "optional role returned more than once");
+            }
+        });
+
         var patch = new java.util.LinkedHashMap&lt;String, String&gt;();
         var provenance = new java.util.ArrayList&lt;Provenance&gt;();
         var seenHandoffs = new java.util.HashSet&lt;UUID&gt;();
@@ -413,14 +462,31 @@ final class DeterministicMerger {
             result.reportedToolsUsed().forEach(toolName -&gt;
                     toolSets.get(result.role())
                             .requireAllowed(result.role(), toolName));
-            result.patch().forEach((key, value) -&gt; {
-                var previous = patch.putIfAbsent(key, value);
-                if (previous != null &amp;&amp; !previous.equals(value)) {
-                    throw new StateConflictException("conflict at " + key);
+            // 先一次性验证 key 集合，避免读取任何未授权字段的 value。
+            patchSchema.requireKnownAndOwned(
+                    result.role(), result.patch().keySet());
+            result.patch().forEach((key, incoming) -&gt; {
+                if (!patch.containsKey(key)) {
+                    patch.put(key, incoming);
+                }
+                else {
+                    patch.put(key, patchSchema.mergeOwnedField(
+                            result.role(), key, patch.get(key), incoming));
                 }
             });
             provenance.addAll(result.provenance());
         }
+
+        var missingOptional = java.util.EnumSet.noneOf(AgentRole.class);
+        missingOptional.addAll(context.optionalRoles());
+        missingOptional.removeAll(roleCounts.keySet());
+        var gapPatch = patchSchema.optionalGapPatch(Set.copyOf(missingOptional));
+        gapPatch.forEach((key, value) -&gt; {
+            if (patch.putIfAbsent(key, value) != null) {
+                throw new StateConflictException(
+                        "optional gap conflicts at " + key);
+            }
+        });
 
         var update = expected.next();
         if (!stateStore.compareAndSet(expected, update, patch, provenance)) {
@@ -738,10 +804,13 @@ final class ServiceDeskCoordinator {
           <tr><td>重复派发</td><td>相同 run / step / idempotencyKey 并发到达两次</td><td>只有一个 dispatch claim 和一次角色 / 工具执行；第二请求取得同一终态</td><td>重复 action、审批或工单</td></tr>
           <tr><td>陈旧合并版本</td><td>分支返回 version 7，存储已是 version 8</td><td>CAS 拒绝、后续 action 未调用、冲突审计包含两个版本</td><td>覆盖 version 8 或静默丢弃</td></tr>
           <tr><td>伪造 handoff</td><td>结果携带从未 append 到 <code>HandoffLedger</code> 的随机 handoff ID，或重复提交同一 ID</td><td><code>require</code> / duplicate 检查在读取 patch 前拒绝；CAS、action 与工具调用均为 0</td><td>从结果字段猜测 handoff，或接受未登记来源</td></tr>
+          <tr><td>required 角色缺失或重复</td><td>缺少 KNOWLEDGE、空结果列表，或同一 required role 用两个不同 handoff 返回</td><td>角色基数校验在读取 patch 前拒绝；CAS 为 0；每个 required role 必须恰好一次</td><td>把不完整结果当成功，或由同一角色投多票</td></tr>
+          <tr><td>optional 角色缺失</td><td>STATUS 被显式建模为 optional 且未在 deadline 前返回</td><td>保存固定 <code>STATUS_UNAVAILABLE</code> 缺口状态；禁止生成依赖实时状态的字段</td><td>静默省略，或把缺失状态写成“正常”</td></tr>
           <tr><td>过期 handoff</td><td>ledger 原件的 deadline 等于或早于 <code>MergeContext.mergeTime</code></td><td>绑定校验返回 <code>HandoffValidationException</code>；保留超时审计且不合并</td><td>因为角色已返回成功就忽略 deadline</td></tr>
           <tr><td>错 run / 上下文</td><td>handoff 原件的 run、tenant、principal、correlation、plan / step 或 from / to 任一不匹配</td><td>逐字段绑定校验拒绝；即使 expectedVersion 数字相同也不 CAS、不调用 action</td><td>只比 version 数字，或相信结果自报角色</td></tr>
           <tr><td>schema / provenance 篡改</td><td>旧 schema，或结果未继承 handoff 的输入 provenance</td><td>合并前拒绝，记录 handoff ID 与私有原因；公开错误不泄露来源内容</td><td>丢失输入来源后继续生成提案</td></tr>
           <tr><td>冲突输出</td><td>两个角色修改同一受保护字段且值不同</td><td>无领域规则时进入 <code>CONFLICT</code>；保留两份 provenance</td><td>按完成先后 / 模型偏好选择</td></tr>
+          <tr><td>未知字段或跨角色写入</td><td>KNOWLEDGE 返回未注册字段，或尝试写 STATUS / ACTION 拥有的字段</td><td><code>RolePatchSchema</code> 在读取 value 前拒绝；CAS 为 0；受保护字段只走显式领域合并规则</td><td>因为没有同名冲突就接受越权字段</td></tr>
           <tr><td>角色工具越权</td><td>用计数 fake delegate 包裹 callback；受信 KNOWLEDGE 角色请求 <code>ticket.create</code>，并伪报 <code>reportedToolsUsed</code></td><td>执行前 wrapper 拒绝；断言 delegate 调用次数为 0、安全审计为 1、异常类型为 <code>ToolExecutionException</code>、<code>getToolDefinition()</code> 与真实 callback 定义相同、cause 只有固定安全消息；<code>DefaultToolExecutionExceptionProcessor(true)</code> 可按框架类型识别并重抛，模型收到的普通可继续工具错误为 0</td><td>直接抛 <code>SecurityException</code> 绕过 processor，等结果合并才拒绝，或把工具输入 / tenant / 凭证 / 原始异常消息发给模型</td></tr>
           <tr><td>超时与取消</td><td>knowledge 卡住，status 快速成功，总 deadline 到期</td><td>传播绝对 deadline、取消后续 action、保存可用 status 证据和超时原因</td><td>后台幽灵任务继续消耗预算</td></tr>
           <tr><td>部分成功</td><td>optional status 失败，knowledge 成功</td><td>仅当计划允许时输出 PARTIAL，明确缺口；不得生成依赖 status 的字段</td><td>把缺失状态写成“正常”</td></tr>
@@ -751,6 +820,36 @@ final class ServiceDeskCoordinator {
           <tr><td>密钥泄露</td><td>工具异常含 credential / header，角色互传 handoff</td><td>公开结果、Prompt、handoff、Trace 均脱敏；密钥只在适配器内</td><td>Agent 看到或转发共享密钥</td></tr>
         </tbody>
       </table></div>
+      <pre><code class="language-java">@Test
+void missingOrDuplicateRequiredRoleNeverReachesCas() {
+    assertThatThrownBy(() -&gt; merger.merge(
+            context(required(KNOWLEDGE, STATUS), optional()),
+            List.of(knowledgeResult())))
+            .isInstanceOf(HandoffValidationException.class);
+
+    assertThatThrownBy(() -&gt; merger.merge(
+            context(required(KNOWLEDGE), optional()),
+            List.of(knowledgeResult("handoff-1"),
+                    knowledgeResult("handoff-2"))))
+            .isInstanceOf(HandoffValidationException.class);
+
+    assertThat(stateStore.compareAndSetCalls()).isZero();
+}
+
+@Test
+void foreignRoleFieldIsRejectedBeforeValueRead() {
+    var schema = recordingSchemaRejectingForeignKeys();
+    var merger = mergerUsing(schema);
+    var malicious = knowledgeResult(
+            Map.of("currentServiceStatus", "forged"));
+
+    assertThatThrownBy(() -&gt; merger.merge(context, List.of(malicious)))
+            .isInstanceOf(HandoffValidationException.class);
+
+    assertThat(schema.keySetValidationCalls()).isEqualTo(1);
+    assertThat(schema.valueMergeCalls()).isZero();
+    assertThat(stateStore.compareAndSetCalls()).isZero();
+}</code></pre>
       <h3 id="生产评测指标">生产评测指标</h3>
       <ul>
         <li><strong>端到端：</strong>任务成功率、引用支持率、提案接受率、安全失败率、p50 / p95 / p99、总 token、总模型与工具调用、单位成功任务成本。</li>
@@ -776,8 +875,8 @@ final class ServiceDeskCoordinator {
         <li>能根据依赖、并行性、角色权限和评审信号在四种拓扑中选择，且能说明何时固定工作流更合适。</li>
         <li><code>PolicyEnforcingToolCallback</code> 使用服务器固定角色与实际 callback name，在 delegate 前执行 <code>RoleToolSet</code>；越权时 delegate 计数为 0、产生安全审计，并以真实 <code>ToolDefinition</code> 和固定安全 cause 抛出 <code>ToolExecutionException</code>。always-throw processor 向调用方重抛，不能生成给模型继续推理的工具错误。任意角色都看不到共享密钥，action 没有 <code>ticket.create</code>。</li>
         <li><code>AgentHandoff</code> 包含 tenant / principal、correlation / plan / step / handoff ID、from / to、schema、provenance、expected version、deadline 和 idempotency key，并在派发前不可变写入 <code>HandoffLedger</code>；伪造、过期、错 run / 上下文或来源断链的结果被拒绝。</li>
-        <li>并行结果按稳定顺序合并并使用 CAS；字段冲突、版本冲突和重复派发有确定性测试，不能依赖线程完成顺序。</li>
-        <li>超时能向子任务和后续节点传播取消；required / optional 部分失败规则显式，重启后从持久记录恢复而不盲重放。</li>
+        <li>并行结果按稳定顺序合并并使用 CAS；required 角色恰好返回一次，optional 缺失写入固定缺口状态；字段冲突、版本冲突和重复派发有确定性测试，不能依赖线程完成顺序。</li>
+        <li><code>RolePatchSchema</code> 在读取 value 前拒绝未知字段与跨角色字段；受保护字段只使用显式领域规则。超时能向子任务和后续节点传播取消；重启后从持久记录恢复而不盲重放。</li>
         <li>所有建单都经过统一 <code>ApprovalService</code> 与人工决定；拒绝、过期、提案变更和未知写入结果均安全停止。</li>
         <li>外链安全、标题锚点唯一、图示有等价文字说明，Java 泛型与 Lambda 符号已正确转义。</li>
       </ul>
