@@ -1,0 +1,779 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="面向 Java 开发者的生产级 Agent 运维课程：设计同步与异步运行、持久状态、幂等、韧性、可观测性、恢复队列和安全重放。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="Agent 开发">
+  <meta name="study-date" content="2026-07-27">
+  <title>Java Agent 生产部署、可观测性与故障恢复｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="2026-07-27-Agent开发学习主目录.html"><span class="brand-mark">J</span><span>Agent 开发学习主目录</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a href="2026-07-27-Agent开发学习主目录.html">课程主目录</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <label class="sidebar-search"><span class="sr-only">筛选文档</span><input type="search" placeholder="筛选文档…" data-sidebar-search></label>
+    <nav class="doc-nav" aria-label="文档列表">
+      <a class="doc-nav-item" href="2026-07-27-Agent开发学习主目录.html"><span>Agent 开发学习主目录</span><small>Agent 开发</small></a>
+      <a class="doc-nav-item is-active" href="#java-agent-生产运维"><span>8. Java Agent 生产运维</span><small>当前页面</small></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta">
+      <a href="2026-07-27-Agent开发学习主目录.html">Agent 开发学习主目录</a>
+      <span>·</span><span>第 8 课</span><span>·</span>
+      <time datetime="2026-07-27">2026-07-27</time>
+    </div>
+    <article class="markdown-body">
+      <h1 id="java-agent-生产运维"><a class="heading-anchor" href="#java-agent-生产运维" aria-label="链接到本节">#</a>Java Agent 生产部署、可观测性与故障恢复</h1>
+      <blockquote>
+        <p>把 Agent 上线，不是把一次 <code>ChatClient.call()</code> 放进 Controller，而是把不可预测的多步执行约束成可寻址、可暂停、可审计、可恢复且不会重复制造副作用的业务运行。</p>
+        <p>本文使用 Java 21、Spring AI 2.0.0 与 Spring Boot 4.0.x / 4.1.x，保持模型供应商中立。整理日期与官方资料检索日期：2026-07-27。</p>
+      </blockquote>
+
+      <nav aria-label="本课快速目录">
+        <strong>学习路径：</strong>
+        <a href="#核心结论">核心结论</a> ·
+        <a href="#学习目标与本阶段产物">目标与产物</a> ·
+        <a href="#生产拓扑">生产拓扑</a> ·
+        <a href="#同步异步与状态机">同步异步</a> ·
+        <a href="#超时重试熔断与背压">韧性</a> ·
+        <a href="#可观测性">可观测性</a> ·
+        <a href="#幂等与一致性">幂等</a> ·
+        <a href="#故障恢复与安全重放">恢复</a> ·
+        <a href="#java-21-运行模型">Java 21</a> ·
+        <a href="#spring-boot-与-spring-ai">Spring</a> ·
+        <a href="#企业服务台案例">案例</a> ·
+        <a href="#生产检查与故障演练">演练</a> ·
+        <a href="#练习与验收">练习与验收</a> ·
+        <a href="#参考资料">参考资料</a>
+      </nav>
+
+      <h2 id="核心结论"><a class="heading-anchor" href="#核心结论" aria-label="链接到本节">#</a>核心结论</h2>
+      <ul>
+        <li><strong>运行（run）是第一等业务资源。</strong>长任务必须先持久化 <code>AgentRun</code> 和命令，再返回 <code>202 Accepted</code>；实例重启后，新 worker 能从检查点继续，而不是依赖原 JVM 的线程、内存或聊天上下文。</li>
+        <li><strong>投递通常是至少一次，副作用必须做到“效果至多一次”。</strong>队列可能重复、HTTP 客户端会重发、worker 会在提交前后崩溃。入口幂等、步骤幂等、写工具幂等和 transactional outbox 共同把重复投递变成可安全吸收的事实。</li>
+        <li><strong>重试是分类决策，不是通用注解。</strong>只重试瞬态且幂等的调用；认证、授权、参数、配额硬上限、策略拒绝和确定性数据冲突直接失败。超时不会自动取消下游，必须传播绝对 deadline，并为迟到结果设计隔离与对账。</li>
+        <li><strong>恢复不是“重新发原 Prompt”。</strong>从结构化检查点生成新恢复命令，用当前身份、当前策略、当前数据版本和当前审批重新决策；写操作不得继承旧授权，批准内容或目标变化时必须重新审批。</li>
+        <li><strong>三类基础设施职责不同。</strong>Spring AI / Spring Boot / Micrometer 提供模型、工具、向量库与应用的观测集成；队列、幂等账本、持久状态、outbox、恢复队列、重放策略和人工操作台都是业务拥有的基础设施，不能归因于框架。</li>
+        <li><strong>内容默认不进入遥测。</strong>Prompt、completion、检索正文、工具参数、工具结果、审批凭证和密钥不得进入默认日志、指标或 Trace。Spring AI 2.0.0 的 <code>spring.ai.tools.observations.include-content</code> 默认为 <code>false</code>，生产配置继续显式保持关闭。</li>
+        <li><strong>可观测性服务于决策，而不是“多打日志”。</strong>必须能回答哪个阶段慢、哪类依赖失败、队列是否积压、运行是否卡住、预算如何消耗、恢复是否成功；metric 标签必须有界，<code>requestId</code>、<code>runId</code>、原始 <code>tenantId</code> 和用户 ID 不能成为无界标签。</li>
+      </ul>
+
+      <h2 id="学习目标与本阶段产物"><a class="heading-anchor" href="#学习目标与本阶段产物" aria-label="链接到本节">#</a>学习目标与本阶段产物</h2>
+      <p>本课消费前七课的工具契约、持久状态、引用式 RAG、计划 / 多 Agent 步骤、策略、审批、预算和不可变审计。目标不是重新设计这些能力，而是把它们组合成可部署、可运营的边界。</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>目标</th><th>本阶段产物</th><th>可验证结果</th></tr></thead>
+        <tbody>
+          <tr><td>把请求变成持久运行</td><td><code>AgentRun</code>、<code>RunStatus</code> 与状态转移守卫</td><td>重启不丢 run；非法回退或跳转被拒绝</td></tr>
+          <tr><td>吸收重复投递</td><td><code>IdempotencyKey</code>、请求指纹与步骤效果账本</td><td>相同作用域 + key + 指纹返回同一 run，不重复写</td></tr>
+          <tr><td>控制故障放大</td><td>deadline、重试分类、熔断、限流、bulkhead 与背压策略</td><td>下游 429 / 5xx 不会把队列和线程池拖垮</td></tr>
+          <tr><td>定位系统状态</td><td>安全日志字段、业务指标、Trace 父子关系和告警</td><td>能从 request 找 run、从 run 找步骤，同时指标序列有界</td></tr>
+          <tr><td>安全恢复</td><td><code>RecoveryCommand</code>、<code>ReplayPolicy.authorize</code> 与恢复队列</td><td>旧审批、旧数据、冲突写入和越权重放均 fail closed</td></tr>
+          <tr><td>形成上线门</td><td>生产检查清单与十类故障演练矩阵</td><td>演练有注入、期望、证据、恢复时间和负责人</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="生产拓扑"><a class="heading-anchor" href="#生产拓扑" aria-label="链接到本节">#</a>生产拓扑：八节点与三条控制平面</h2>
+      <div class="agent-call-flow" role="img" aria-label="八节点生产 Agent 拓扑：一，API 与认证授权；二，持久命令与任务队列；三，Agent Runtime；四，模型、工具与 RAG 依赖；五，状态库与检查点；六，审计与 transactional outbox；七，安全日志、指标与 Trace；八，恢复队列与人工操作台。身份、租户、策略、审批、预算、deadline、幂等和内容最小化横切所有节点。">
+        <div class="agent-step">1. API / Auth<br>principal · tenant · 202</div>
+        <div class="agent-step">2. Durable command / queue<br>quota · partition · lag</div>
+        <div class="agent-step">3. Agent Runtime<br>lease · state machine · budget</div>
+        <div class="agent-step">4. Model / Tool / RAG<br>timeout · policy · bulkhead</div>
+        <div class="agent-step">5. State / Checkpoint<br>version · snapshot · effect ledger</div>
+        <div class="agent-step">6. Audit / Outbox<br>append-only · atomic publish</div>
+        <div class="agent-step">7. Logs / Metrics / Traces<br>redacted · bounded labels · SLO</div>
+        <div class="agent-step">8. Recovery / Operator<br>quarantine · inspect · approve</div>
+        <div class="guardrail-band">横切护栏：trusted identity + tenant · current policy · approval · absolute deadline · execution budget · idempotency · encryption · content minimization</div>
+      </div>
+      <p class="diagram-text"><strong>等价文字说明：</strong>API 只接受经过认证的主体并在服务端确定 tenant；短只读请求可同步进入 Runtime，长任务则在同一事务中保存 run 与待发布 outbox，relay 将命令投递到持久队列。Runtime 领取有 lease 的任务，从版本化检查点执行模型、只读工具或 RAG；任何写工具都经过当前策略与审批。状态、效果账本和 outbox 以事务边界保持一致，安全审计记录决策与结果引用。日志、指标、Trace 从各节点采集不含业务正文的信号。超过自动恢复阈值的消息进入业务恢复队列，由受权操作员检查、修正或发起受控重放。身份、策略、审批、deadline、预算、幂等和内容最小化贯穿八个节点。</p>
+
+      <h3 id="框架能力与业务责任">框架能力与业务责任</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>能力</th><th>原生支持</th><th>业务必须拥有</th></tr></thead>
+        <tbody>
+          <tr><td>模型 / 工具 / 向量库观测</td><td>Spring AI 2.0.0 observations；Micrometer 生成 metrics / spans</td><td>run / step 语义、SLO、内容脱敏、告警和事故关联</td></tr>
+          <tr><td>应用健康与遥测出口</td><td>Spring Boot Actuator、<code>ObservationRegistry</code>、Micrometer Tracing / OTLP</td><td>endpoint 暴露策略、网络隔离、采样、保留和访问控制</td></tr>
+          <tr><td>调用韧性装饰器</td><td>Resilience4j CircuitBreaker、Retry、RateLimiter、Bulkhead、TimeLimiter</td><td>错误分类、幂等判断、全局 deadline、降级语义和依赖隔离边界</td></tr>
+          <tr><td>持久执行与恢复</td><td>无通用 Agent run / recovery queue 原生实现</td><td>命令队列、run 状态机、lease、checkpoint、幂等账本、outbox、恢复与重放</td></tr>
+          <tr><td>治理</td><td>Advisor / callback 等集成点</td><td>认证、对象级授权、策略、审批、审计、数据版本与补偿</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="同步异步与状态机"><a class="heading-anchor" href="#同步异步与状态机" aria-label="链接到本节">#</a>同步、异步与持久状态机</h2>
+      <p><strong>同步适用：</strong>一次模型调用或一次只读工具、预计在网关 deadline 内完成、没有人工等待、可安全取消，并且失败可直接返回。即使同步执行，也先创建可审计 run，传播 deadline，客户端断开后停止不必要工作。</p>
+      <p><strong>异步适用：</strong>多步骤、写操作、审批、长 RAG、不可预测模型延迟、需要排队 / 限流 / checkpoint 或跨实例恢复。<code>POST /agent-runs</code> 返回 <code>202 Accepted</code>、<code>Location: /agent-runs/{runId}</code> 与稳定状态摘要；客户端轮询 GET，或订阅经过授权的 Webhook / SSE / 消息事件。事件投递本身也需序列号、幂等和断线续传，不能把 SSE 连接当状态库。</p>
+      <div class="agent-call-flow" role="img" aria-label="AgentRun 状态机：ACCEPTED 进入 QUEUED，worker 领取后 RUNNING；RUNNING 可进入 WAITING_APPROVAL、RETRY_SCHEDULED、SUCCEEDED、FAILED 或 CANCELLED；等待审批通过后回到 QUEUED，重试到期后回到 QUEUED；无法自动恢复的 FAILED 进入 RECOVERY_REQUIRED；经授权恢复后创建新 attempt 并进入 QUEUED；所有终态不可原地重开。">
+        <div class="agent-step">ACCEPTED<br>run + outbox committed</div>
+        <div class="agent-step">QUEUED<br>durable command</div>
+        <div class="agent-step">RUNNING<br>lease + checkpoint CAS</div>
+        <div class="agent-step">WAITING_APPROVAL<br>no worker held</div>
+        <div class="agent-step">RETRY_SCHEDULED<br>backoff + jitter</div>
+        <div class="agent-step">SUCCEEDED / CANCELLED<br>terminal</div>
+        <div class="agent-step">FAILED<br>classified evidence</div>
+        <div class="agent-step">RECOVERY_REQUIRED<br>operator decision</div>
+        <div class="guardrail-band">状态只可经 compare-and-set 转移；每次转移写 sequence、expectedVersion、reasonCode、checkpointRef 和 audit event；恢复创建新 attempt，不改写历史。</div>
+      </div>
+      <p class="diagram-text"><strong>等价文字说明：</strong>入口事务写入 ACCEPTED run 和 outbox，发布后为 QUEUED；worker 以 lease 领取并用版本 CAS 切换 RUNNING。审批等待不占 worker；批准或重试到期重新排队。成功、取消和不可恢复失败进入终态。需要人工判断的失败进入 RECOVERY_REQUIRED；授权恢复以旧 run 和 checkpoint 为来源创建新 attempt，历史 run 保持不可变。任何陈旧 worker 的 checkpoint CAS 都会失败，避免双执行者覆盖状态。</p>
+
+      <h3 id="状态与检查点纪律">状态与检查点纪律</h3>
+      <ul>
+        <li>检查点只保存结构化、版本化且最小化的数据：已完成 step、输出引用、知识快照版本、工具效果 ID、预算余额、下一动作；不保存可直接重放的原始 Prompt、Bearer token 或审批令牌。</li>
+        <li>lease 到期只表示任务可被其他 worker <em>认领</em>，不证明旧下游已取消；所有工具效果必须用 <code>(runId, stepId, effectId)</code> 幂等并能对账。</li>
+        <li>取消是持久意图。Runtime 在步骤边界检查取消标志，并向支持取消的下游传播；不可取消写入必须等待对账后再标记终态。</li>
+        <li>状态转移、outbox 和效果账本尽量同库同事务；跨系统无法原子提交时，使用明确的 pending / confirmed / unknown 状态与补偿，不伪装成分布式强一致。</li>
+      </ul>
+
+      <h2 id="超时重试熔断与背压"><a class="heading-anchor" href="#超时重试熔断与背压" aria-label="链接到本节">#</a>超时、重试、熔断与背压</h2>
+      <p>入口生成一个绝对 deadline，各层只能缩短不能延长：<code>stepTimeout = min(stepPolicy, remainingDeadline - cleanupMargin)</code>。连接、读取、模型、工具、数据库、队列可见性和人工等待分别配置上限；人工等待通常暂停活动执行预算，但仍受审批有效期和 run 最长保留期约束。Resilience4j 可装饰调用，但业务分类必须先于装饰器配置。<a href="https://resilience4j.readme.io/docs/getting-started" target="_blank" rel="noopener noreferrer">Resilience4j 官方文档</a></p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>失败</th><th>是否自动重试</th><th>前提与动作</th></tr></thead>
+        <tbody>
+          <tr><td>模型 429 / 瞬态 5xx / 网络抖动</td><td>是，有限次</td><td>读取 <code>Retry-After</code>，指数退避 + full jitter，服从 deadline / token / 成本预算；跨供应商降级需显式质量策略</td></tr>
+          <tr><td>只读工具 408 / 429 / 5xx</td><td>是，有限次</td><td>工具确定为幂等；每次尝试计入预算；超时后迟到结果不得覆盖新检查点</td></tr>
+          <tr><td>写工具超时 / 连接中断</td><td>不直接重发</td><td>先用业务 effect key 查询结果；对方支持同一幂等键才可重试，否则进入 UNKNOWN 并对账 / 补偿</td></tr>
+          <tr><td>400 / Schema / 参数校验</td><td>否</td><td>修正模型输出或终止；同一 payload 重试没有意义</td></tr>
+          <tr><td>401 / 403 / 策略拒绝 / 审批过期</td><td>否</td><td>fail closed；刷新认证也不能自动继承旧审批，交给用户或操作员重新授权</td></tr>
+          <tr><td>知识版本冲突 / 乐观锁冲突</td><td>条件性</td><td>重新读取并重新规划；不得用重试覆盖他人更新</td></tr>
+          <tr><td>模型拒答 / 幻觉 / 低置信</td><td>通常否</td><td>这是语义结果而非基础设施瞬态错误；诚实降级或转人工，避免“多问几次直到碰巧成功”</td></tr>
+          <tr><td>毒消息 / 确定性代码错误</td><td>否</td><td>达到小次数阈值后隔离到恢复队列，避免热循环</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="韧性组件的组合边界">韧性组件的组合边界</h3>
+      <ul>
+        <li><strong>RateLimiter：</strong>按模型 / 工具配额和公平性限制到达率；tenant 配额在业务层执行，不能把原始 tenant 作为指标标签。</li>
+        <li><strong>Bulkhead：</strong>模型、RAG、每类工具使用独立并发舱和连接池；一个慢工单系统不能耗尽全部 worker。虚拟线程降低线程占用，不会消除连接、内存、token 或下游容量上限。</li>
+        <li><strong>CircuitBreaker：</strong>按依赖 + 操作类别划分，统计技术失败 / 慢调用；OPEN 快速失败，HALF_OPEN 只放少量探针。业务拒绝、404“未找到”和策略拒绝不应计为依赖故障。</li>
+        <li><strong>Retry：</strong>放在整体 deadline 和 bulkhead 纪律内，限制总尝试；不要形成 SDK、HTTP、业务和队列四层乘法重试。记录 original attempt 与 retry attempt。</li>
+        <li><strong>Backpressure：</strong>入口按全局 / tenant / 风险层配额拒绝或延迟；监控 queue depth、oldest age 和 consumption rate。高水位时停止低优先级接收、降低并发或返回 <code>429</code> / <code>503</code> + 重试建议，而不是无限扩容内存队列。</li>
+        <li><strong>Recovery queue：</strong>它是<strong>业务基础设施</strong>，保存 runRef、stepRef、checkpointRef、错误分类、attempt、策略 / 数据版本和安全证据引用；不是日志桶，也不是 Spring AI / Actuator / Resilience4j 自动提供的能力。</li>
+      </ul>
+
+      <h2 id="可观测性"><a class="heading-anchor" href="#可观测性" aria-label="链接到本节">#</a>可观测性：安全关联、指标和 Trace</h2>
+      <p>Spring Boot 将 observability 概括为日志、指标和 Trace 三柱，并通过 Micrometer Observation 连接指标与 Trace；注入 <code>ObservationRegistry</code> 可创建业务 observation。Micrometer Tracing 是 tracer facade，注册 tracing <code>ObservationHandler</code> 后，一次 Observation 会对应创建、启动、停止并上报 span。<a href="https://docs.spring.io/spring-boot/reference/actuator/observability.html" target="_blank" rel="noopener noreferrer">Spring Boot Observability</a> · <a href="https://docs.micrometer.io/tracing/reference/" target="_blank" rel="noopener noreferrer">Micrometer Tracing</a></p>
+
+      <h3 id="关联字段与基数">关联字段与基数</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>信号</th><th>安全字段</th><th>禁止 / 限制</th></tr></thead>
+        <tbody>
+          <tr><td>结构化日志</td><td><code>requestId</code>、<code>runId</code>、<code>traceId</code>、受控 <code>tenantRef</code>、step、attempt、outcomeCode、duration</td><td>日志受访问控制与保留期约束；tenant 采用内部 pseudonymous ref。禁止 Prompt、检索正文、工具内容、token、审批凭证和原始异常响应</td></tr>
+          <tr><td>Metric 低基数标签</td><td>operation、dependencyClass、riskTier、outcome、retryable、model family（有界时）</td><td><code>requestId</code>、<code>runId</code>、user、原始 tenant、ticket ID、完整模型名 / URL 不得进入标签；除非 tenant 集合有严格上限与容量评审</td></tr>
+          <tr><td>Trace 高基数属性</td><td>必要时使用 runRef、stepRef、requestId；错误码、版本和安全资源引用</td><td>高基数仍有成本和隐私风险；采样不等于脱敏。tenantId 仅在合规允许且受控映射时进入 Trace，不默认采集用户 ID</td></tr>
+          <tr><td>审计</td><td>主体引用、tenantRef、策略 / 审批版本、动作、资源、decision、effectId、前后摘要</td><td>审计与调试日志分离、append-only；不把完整业务内容当“为了审计必须保存”</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="业务指标与告警">业务指标与告警</h3>
+      <ul>
+        <li><strong>运行：</strong><code>agent.run.active</code> gauge、<code>agent.run.completed</code> counter、端到端 / 活动执行 timer，按有界 outcome / riskTier 分组；等待审批与执行时间分开。</li>
+        <li><strong>步骤：</strong>step / tool / model / retrieval duration、error、timeout、retry、circuit-open；工具名只在严格 allowlist 且数量有界时成为标签。</li>
+        <li><strong>队列：</strong>depth、oldest-message-age、enqueue / dequeue rate、processing lease expiry、recovery queue inflow / age；只看 depth 会漏掉“小队列中的超老消息”。</li>
+        <li><strong>预算：</strong>token、模型调用、工具调用、成本和 deadline 消耗；同时记录成功与失败成本。告警优先使用 burn rate、队列年龄、失败分类和恢复积压。</li>
+        <li><strong>饱和度：</strong>worker active / configured、bulkhead available、连接池、限流等待、heap / GC。<code>active</code> 与 <code>completed</code> 必须同时看，只有 completed 会漏掉卡住调用。</li>
+      </ul>
+
+      <h3 id="spring-ai-2-0-观测名称">Spring AI 2.0.0 的精确观测边界</h3>
+      <p>以下名称以 2026-07-27 的 Spring AI 2.0.0 官方文档为准。低基数键进入 metrics 与 traces，高基数键只进入 traces；“高基数可进 Trace”不代表可以放敏感正文。<a href="https://docs.spring.io/spring-ai/reference/observability/index.html" target="_blank" rel="noopener noreferrer">Spring AI Observability</a></p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>组件</th><th>Observation / metric 基名</th><th>用途与边界</th></tr></thead>
+        <tbody>
+          <tr><td>ChatClient</td><td><code>spring.ai.chat.client</code> observation；Prometheus 文档列出 <code>gen_ai_chat_client_operation_seconds_*</code></td><td>测量 call / stream；Prompt / completion 默认不记录</td></tr>
+          <tr><td>Advisor</td><td><code>spring.ai.advisor</code></td><td>Advisor 链耗时；其 span 包含内部 Advisor 时间，解读时避免重复相加</td></tr>
+          <tr><td>ChatModel</td><td><code>gen_ai.client.operation</code></td><td>模型调用 timer / span；Prometheus 为 <code>gen_ai_client_operation_seconds_*</code></td></tr>
+          <tr><td>Token</td><td><code>gen_ai.client.token.usage</code></td><td>Prometheus 为 <code>gen_ai_client_token_usage_total</code>，按 input / output / total token type 区分</td></tr>
+          <tr><td>Tool Calling</td><td><code>spring.ai.tool</code></td><td><code>gen_ai.operation.name=execute_tool</code>；arguments / result 只有显式开启才导出，生产保持关闭</td></tr>
+          <tr><td>VectorStore</td><td><code>db.vector.client.operation</code></td><td>query / add / remove 的 timer / Trace；查询正文与响应默认不记录</td></tr>
+        </tbody>
+      </table></div>
+      <p><strong>OpenTelemetry 说明：</strong>Spring AI 的 <code>gen_ai.*</code> 命名遵循其文档声明的 GenAI 语义方向，但应用只应依赖当前 Spring AI 2.0.0 明确导出的契约。OpenTelemetry 原 <code>/semconv/gen-ai/</code> 页面已于检索日标为“已迁移且不再维护”，最新 GenAI spans、metrics、events 与 MCP 约定在独立官方仓库继续演进；上线前固定 collector 映射与仪表板版本。<a href="https://opentelemetry.io/docs/specs/semconv/gen-ai/" target="_blank" rel="noopener noreferrer">迁移公告</a> · <a href="https://github.com/open-telemetry/semantic-conventions-genai" target="_blank" rel="noopener noreferrer">OpenTelemetry GenAI 语义约定仓库</a></p>
+
+      <h3 id="trace-父子关系">Trace 父子关系</h3>
+      <p>同步链路采用 <code>HTTP server → agent.run → step → ChatClient / Advisor → ChatModel | VectorStore | tool</code>。异步链路以 API span 创建 queue producer span；consumer 提取传播上下文并创建 consumer / run attempt span。若任务等待数小时或由人工恢复，不强行保持超长父 span：新的 attempt 使用 span link 指向原 trace，并通过持久 <code>runId</code> / <code>attempt</code> 关联。必须对 worker 线程 / reactive / 消息边界验证上下文传播；Spring Boot 文档特别指出自定义异步执行器需配置 context propagation，不能假设 ThreadLocal 自动穿越所有边界。</p>
+
+      <h2 id="幂等与一致性"><a class="heading-anchor" href="#幂等与一致性" aria-label="链接到本节">#</a>幂等与一致性</h2>
+      <p>幂等键必须有明确作用域与过期策略。推荐入口唯一键为 <code>(tenantRef, operation, idempotencyKey)</code>，账本同时存 canonical request fingerprint、runId、状态和首次响应。相同 key + 相同 fingerprint 返回已有 run；相同 key + 不同 fingerprint 返回 <code>409 Conflict</code>，绝不能把两个请求合并。</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>层级</th><th>唯一约束</th><th>原子边界</th><th>冲突处理</th></tr></thead>
+        <tbody>
+          <tr><td>API 请求</td><td>tenant + operation + client key</td><td>幂等账本 + AgentRun + outbox 同事务</td><td>指纹不同返回 409；不启动第二个 run</td></tr>
+          <tr><td>队列命令</td><td>commandId / run attempt</td><td>inbox 去重 + 状态 CAS + 新 outbox</td><td>已处理则 ack；处理中由 lease / version 判定</td></tr>
+          <tr><td>步骤</td><td>runId + attempt + stepId + inputVersion</td><td>checkpoint + step outcome</td><td>读取既有结果；版本变更须重新规划</td></tr>
+          <tr><td>外部副作用</td><td>稳定 effectId / provider idempotency key</td><td>本地 effect ledger + 远端幂等 API / 对账</td><td>UNKNOWN 不盲重发；查询、确认、补偿或人工处理</td></tr>
+          <tr><td>事件发布</td><td>outbox eventId</td><td>业务写 + outbox 同事务；relay 可重复发布</td><td>消费者 inbox 去重；不要假设 broker exactly-once 等于业务 exactly-once</td></tr>
+        </tbody>
+      </table></div>
+      <p><strong>Outbox 的价值：</strong>避免“数据库提交成功但消息未发”和“消息发出但数据库回滚”的双写窗口。relay 仍可能重复发布，所以消费者去重不可省。审计与写副作用的关系必须按风险定义：高风险动作若要求审计先存在，则审计 append 不可用时 fail closed；若远端已写而本地确认失败，则进入 UNKNOWN / RECOVERY_REQUIRED 做对账，不能返回“失败”后静默重试。</p>
+
+      <h2 id="故障恢复与安全重放"><a class="heading-anchor" href="#故障恢复与安全重放" aria-label="链接到本节">#</a>故障恢复与安全重放</h2>
+      <p>恢复队列只接收已经停止自动重试、具备持久证据并需要业务判断的 run。操作员先分类：可从检查点继续、需要重新规划、需要补偿 / 对账、需要用户重新提交、或永久拒绝。任何“重放”都创建新的 <code>RecoveryCommand</code> 与 attempt，保留原失败链路。</p>
+      <ol>
+        <li><strong>重新认证操作员：</strong>校验 operator、tenant scope、职责分离和恢复动作权限；队列可见不等于可执行。</li>
+        <li><strong>重新读取当前事实：</strong>读取最新 run / checkpoint version、知识快照、外部 effect 状态和业务对象 ETag；不信任恢复请求自带的状态。</li>
+        <li><strong>重新执行当前策略：</strong><code>ReplayPolicy.authorize</code> 使用当前 policy version、工具 allowlist、预算、数据保留与风险规则；旧的 ALLOW 只作为历史证据。</li>
+        <li><strong>重新校验审批：</strong>所有写操作要求当前、未过期且绑定准确 action、resource、arguments digest、data version 与 policy version 的审批。内容、目标、版本、风险任何变化都使旧审批失效。</li>
+        <li><strong>核对幂等与副作用：</strong>先查 effect ledger 和远端状态。已完成则只修复本地确认；UNKNOWN 先对账；只有已证明未执行且远端支持幂等时才发起写。</li>
+        <li><strong>从结构化边界恢复：</strong>使用 checkpoint 与受控引用重新构造上下文；不盲目重放原始 Prompt、工具 arguments、检索正文或曾获授权的写调用。</li>
+        <li><strong>创建新 attempt 并审计：</strong>记录 sourceRunId、sourceCheckpointVersion、operatorRef、reasonCode、policy decision、approvalRef 和新 runId；原 run 不改写。</li>
+      </ol>
+      <p><strong>Fail closed：</strong>找不到策略版本、数据版本过旧、审批过期、指纹不一致、状态 CAS 冲突、effect 状态 UNKNOWN 且无法对账、审计不可用，均不得自动执行写操作。允许的降级是只读诊断、向用户解释和转人工，而不是跳过检查。</p>
+
+      <h2 id="java-21-运行模型"><a class="heading-anchor" href="#java-21-运行模型" aria-label="链接到本节">#</a>Java 21：运行、幂等、转移与恢复契约</h2>
+      <p>以下是业务运行层类型，不是 Spring AI 原生类型。record 只持有不可变状态；repository 必须以数据库唯一约束和 compare-and-set 实现，不可依赖 JVM 内 <code>ConcurrentHashMap</code>。</p>
+      <pre><code class="language-java">import java.time.Instant;
+import java.util.EnumMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+
+enum RunStatus {
+    ACCEPTED,
+    QUEUED,
+    RUNNING,
+    WAITING_APPROVAL,
+    RETRY_SCHEDULED,
+    SUCCEEDED,
+    FAILED,
+    CANCELLED,
+    RECOVERY_REQUIRED
+}
+
+record IdempotencyKey(
+        String tenantRef,
+        String operation,
+        String clientKey,
+        String requestFingerprint) {
+    IdempotencyKey {
+        tenantRef = requireToken(tenantRef, "tenantRef");
+        operation = requireToken(operation, "operation");
+        clientKey = requireToken(clientKey, "clientKey");
+        requestFingerprint = requireToken(
+                requestFingerprint, "requestFingerprint");
+    }
+
+    String scope() {
+        return tenantRef + ":" + operation + ":" + clientKey;
+    }
+
+    private static String requireToken(String value, String name) {
+        if (value == null || value.isBlank() || value.length() &gt; 200) {
+            throw new IllegalArgumentException("invalid " + name);
+        }
+        return value;
+    }
+}
+
+record AgentRun(
+        UUID runId,
+        String tenantRef,
+        String principalRef,
+        RunStatus status,
+        int attempt,
+        long version,
+        Instant deadline,
+        Instant updatedAt,
+        String policyVersion,
+        String inputRef,
+        Optional&lt;String&gt; checkpointRef,
+        Optional&lt;String&gt; outcomeCode) {
+    AgentRun {
+        Objects.requireNonNull(runId);
+        Objects.requireNonNull(status);
+        Objects.requireNonNull(deadline);
+        Objects.requireNonNull(updatedAt);
+        checkpointRef =
+                checkpointRef == null ? Optional.empty() : checkpointRef;
+        outcomeCode =
+                outcomeCode == null ? Optional.empty() : outcomeCode;
+        if (attempt &lt; 0 || version &lt; 0) {
+            throw new IllegalArgumentException("negative run coordinate");
+        }
+        // inputRef 是受控内容引用，不是原始 prompt。
+    }
+}
+
+enum RecoveryMode {
+    RESUME_FROM_CHECKPOINT,
+    REPLAN_FROM_CURRENT_STATE,
+    RECONCILE_EXTERNAL_EFFECT,
+    COMPENSATE
+}
+
+record RecoveryCommand(
+        UUID commandId,
+        UUID sourceRunId,
+        long expectedRunVersion,
+        String checkpointRef,
+        long expectedCheckpointVersion,
+        RecoveryMode mode,
+        String operatorRef,
+        String reasonCode,
+        String currentPolicyVersion,
+        Optional&lt;String&gt; approvalRef,
+        Instant requestedAt) {
+    RecoveryCommand {
+        approvalRef =
+                approvalRef == null ? Optional.empty() : approvalRef;
+        if (expectedRunVersion &lt; 0 || expectedCheckpointVersion &lt; 0) {
+            throw new IllegalArgumentException("negative expected version");
+        }
+        // 无 prompt / tool arguments / secret / approval token 字段。
+    }
+}
+
+final class RunTransitions {
+    private static final Map&lt;RunStatus, Set&lt;RunStatus&gt;&gt; ALLOWED =
+            allowedTransitions();
+
+    static AgentRun move(
+            AgentRun current,
+            RunStatus next,
+            long expectedVersion,
+            Instant now,
+            Optional&lt;String&gt; checkpointRef,
+            Optional&lt;String&gt; outcomeCode) {
+        if (current.version() != expectedVersion) {
+            throw new StaleRunVersionException(current.runId());
+        }
+        if (!ALLOWED.getOrDefault(current.status(), Set.of()).contains(next)) {
+            throw new IllegalRunTransitionException(
+                    current.status(), next);
+        }
+        return new AgentRun(
+                current.runId(),
+                current.tenantRef(),
+                current.principalRef(),
+                next,
+                current.attempt(),
+                current.version() + 1,
+                current.deadline(),
+                now,
+                current.policyVersion(),
+                current.inputRef(),
+                checkpointRef,
+                outcomeCode);
+    }
+
+    private static Map&lt;RunStatus, Set&lt;RunStatus&gt;&gt; allowedTransitions() {
+        var result = new EnumMap&lt;RunStatus, Set&lt;RunStatus&gt;&gt;(
+                RunStatus.class);
+        result.put(RunStatus.ACCEPTED, Set.of(RunStatus.QUEUED));
+        result.put(
+                RunStatus.QUEUED,
+                Set.of(RunStatus.RUNNING, RunStatus.CANCELLED));
+        result.put(
+                RunStatus.RUNNING,
+                Set.of(
+                        RunStatus.WAITING_APPROVAL,
+                        RunStatus.RETRY_SCHEDULED,
+                        RunStatus.SUCCEEDED,
+                        RunStatus.FAILED,
+                        RunStatus.CANCELLED,
+                        RunStatus.RECOVERY_REQUIRED));
+        result.put(
+                RunStatus.WAITING_APPROVAL,
+                Set.of(
+                        RunStatus.QUEUED,
+                        RunStatus.CANCELLED,
+                        RunStatus.RECOVERY_REQUIRED));
+        result.put(
+                RunStatus.RETRY_SCHEDULED,
+                Set.of(RunStatus.QUEUED, RunStatus.CANCELLED));
+        result.put(
+                RunStatus.FAILED,
+                Set.of(RunStatus.RECOVERY_REQUIRED));
+        return Map.copyOf(result);
+    }
+}
+
+enum ReplayEffect { ALLOW_READ_ONLY, REQUIRE_APPROVAL, DENY }
+
+record ReplayDecision(
+        ReplayEffect effect,
+        String reasonCode,
+        String policyVersion) {
+    boolean permitsWrite() {
+        return effect == ReplayEffect.REQUIRE_APPROVAL;
+    }
+}
+
+interface ReplayPolicy {
+    ReplayDecision authorize(
+            TrustedOperator operator,
+            AgentRun source,
+            RecoveryCommand command,
+            CurrentResourceSnapshot resources,
+            ExternalEffectState effects,
+            Optional&lt;BoundApproval&gt; approval);
+}
+
+final class RecoveryService {
+    private final AgentRunRepository runs;
+    private final CheckpointRepository checkpoints;
+    private final ReplayPolicy policy;
+    private final EffectLedger effects;
+    private final RecoveryQueue recoveryQueue;
+    private final AuditStore audit;
+
+    UUID recover(TrustedOperator operator, RecoveryCommand command) {
+        AgentRun source =
+                runs.requireVersion(
+                        command.sourceRunId(), command.expectedRunVersion());
+        Checkpoint checkpoint =
+                checkpoints.requireVersion(
+                        command.checkpointRef(),
+                        command.expectedCheckpointVersion());
+        CurrentResourceSnapshot resources =
+                loadCurrentResources(source, checkpoint);
+        ExternalEffectState effectState =
+                effects.reconcile(source.runId(), checkpoint.stepId());
+        Optional&lt;BoundApproval&gt; approval =
+                loadCurrentApproval(command.approvalRef());
+
+        ReplayDecision decision =
+                policy.authorize(
+                        operator,
+                        source,
+                        command,
+                        resources,
+                        effectState,
+                        approval);
+        audit.appendRecoveryDecision(source, command, decision);
+        if (decision.effect() == ReplayEffect.DENY) {
+            throw new RecoveryDeniedException(decision.reasonCode());
+        }
+        if (checkpoint.nextStepWrites()
+                &amp;&amp; (!decision.permitsWrite()
+                    || approval.isEmpty()
+                    || !approval.get().matchesCurrent(
+                            resources, command.currentPolicyVersion()))) {
+            throw new RecoveryDeniedException(
+                    "CURRENT_BOUND_APPROVAL_REQUIRED");
+        }
+        if (effectState == ExternalEffectState.UNKNOWN) {
+            throw new RecoveryDeniedException(
+                    "EXTERNAL_EFFECT_RECONCILIATION_REQUIRED");
+        }
+
+        UUID newRunId =
+                runs.createRecoveryAttempt(
+                        source,
+                        checkpoint.safeReference(),
+                        command.currentPolicyVersion());
+        recoveryQueue.enqueueAuthorized(newRunId, command.commandId());
+        return newRunId;
+    }
+
+    private CurrentResourceSnapshot loadCurrentResources(
+            AgentRun source, Checkpoint checkpoint) {
+        throw new UnsupportedOperationException("application implementation");
+    }
+
+    private Optional&lt;BoundApproval&gt; loadCurrentApproval(
+            Optional&lt;String&gt; approvalRef) {
+        throw new UnsupportedOperationException("application implementation");
+    }
+}</code></pre>
+      <p><strong>关键性质：</strong><code>ReplayPolicy.authorize</code> 的输入来自服务器重新读取的 current snapshots，而非模型或命令自报；即使策略返回 REQUIRE_APPROVAL，代码仍检查审批是否绑定当前资源和策略。<code>UNKNOWN</code> 外部效果阻止重放。真实实现应将“创建 recovery attempt + outbox”置于一个事务，而不是先创建 run 再调用不可靠 broker。</p>
+
+      <h2 id="spring-boot-与-spring-ai"><a class="heading-anchor" href="#spring-boot-与-spring-ai" aria-label="链接到本节">#</a>Spring Boot 与 Spring AI：API、Service、Actuator 和 Observation</h2>
+      <p>Spring AI 2.0.0 支持 Spring Boot 4.0.x / 4.1.x；依赖版本由 Boot 与 Spring AI BOM 管理，不在单个 dependency 上散落版本。下列片段表达边界，不绑定具体 broker、数据库、模型供应商或 OTLP 后端。</p>
+      <pre><code class="language-xml">&lt;dependencyManagement&gt;
+  &lt;dependencies&gt;
+    &lt;dependency&gt;
+      &lt;groupId&gt;org.springframework.ai&lt;/groupId&gt;
+      &lt;artifactId&gt;spring-ai-bom&lt;/artifactId&gt;
+      &lt;version&gt;2.0.0&lt;/version&gt;
+      &lt;type&gt;pom&lt;/type&gt;
+      &lt;scope&gt;import&lt;/scope&gt;
+    &lt;/dependency&gt;
+  &lt;/dependencies&gt;
+&lt;/dependencyManagement&gt;
+
+&lt;dependencies&gt;
+  &lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-boot-starter-web&lt;/artifactId&gt;
+  &lt;/dependency&gt;
+  &lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-boot-starter-actuator&lt;/artifactId&gt;
+  &lt;/dependency&gt;
+  &lt;dependency&gt;
+    &lt;groupId&gt;io.micrometer&lt;/groupId&gt;
+    &lt;artifactId&gt;micrometer-registry-prometheus&lt;/artifactId&gt;
+  &lt;/dependency&gt;
+  &lt;dependency&gt;
+    &lt;groupId&gt;io.micrometer&lt;/groupId&gt;
+    &lt;artifactId&gt;micrometer-tracing-bridge-otel&lt;/artifactId&gt;
+  &lt;/dependency&gt;
+  &lt;dependency&gt;
+    &lt;groupId&gt;io.opentelemetry&lt;/groupId&gt;
+    &lt;artifactId&gt;opentelemetry-exporter-otlp&lt;/artifactId&gt;
+  &lt;/dependency&gt;
+  &lt;!-- 再按供应商选择一个 Spring AI model starter。 --&gt;
+&lt;/dependencies&gt;</code></pre>
+
+      <h3 id="安全配置基线">安全配置基线</h3>
+      <pre><code class="language-yaml">management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  tracing:
+    sampling:
+      probability: 0.10
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: ${OTLP_TRACES_ENDPOINT}
+
+spring:
+  task:
+    execution:
+      propagate-context: true
+  ai:
+    chat:
+      observations:
+        log-prompt: false
+        log-completion: false
+        include-error-logging: false
+      client:
+        observations:
+          log-prompt: false
+          log-completion: false
+    tools:
+      observations:
+        include-content: false
+    vectorstore:
+      observations:
+        log-query-response: false</code></pre>
+      <p>生产环境只通过独立管理端口 / 网络策略暴露必要 Actuator endpoint，并对 Prometheus / OTLP 出口鉴权和加密。readiness 表示实例能否接新流量，liveness 只表示进程是否需重启；模型或向量库短暂故障通常不应让 liveness 失败造成重启风暴。采样比例不替代错误 span 保留、尾部采样与内容脱敏。</p>
+
+      <h3 id="controller-service-与-observationregistry">Controller / Service 与 ObservationRegistry</h3>
+      <pre><code class="language-java">import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
+import java.net.URI;
+import java.security.Principal;
+import java.time.Instant;
+import java.util.UUID;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+record StartAgentRequest(String intentRef, boolean allowsWrite) {}
+record RunAccepted(UUID runId, RunStatus status, String statusUrl) {}
+record RunView(UUID runId, RunStatus status, int attempt, long version) {}
+
+@RestController
+@RequestMapping("/agent-runs")
+final class AgentRunController {
+    private final AgentRunService service;
+
+    AgentRunController(AgentRunService service) {
+        this.service = service;
+    }
+
+    @PostMapping
+    ResponseEntity&lt;RunAccepted&gt; start(
+            @RequestHeader("Idempotency-Key") String clientKey,
+            @RequestBody StartAgentRequest request,
+            Principal principal) {
+        // tenant / principal 从可信认证上下文解析，不接受 request 中的 tenant。
+        TrustedRequestContext context =
+                TrustedRequestContext.from(principal);
+        RunAccepted accepted =
+                service.accept(context, clientKey, request);
+        return ResponseEntity.accepted()
+                .location(URI.create(accepted.statusUrl()))
+                .body(accepted);
+    }
+
+    @GetMapping("/{runId}")
+    RunView get(@PathVariable UUID runId, Principal principal) {
+        return service.readAuthorized(
+                TrustedRequestContext.from(principal), runId);
+    }
+}
+
+final class AgentRunService {
+    private final RunUnitOfWork unitOfWork;
+    private final ObservationRegistry observations;
+
+    AgentRunService(
+            RunUnitOfWork unitOfWork,
+            ObservationRegistry observations) {
+        this.unitOfWork = unitOfWork;
+        this.observations = observations;
+    }
+
+    RunAccepted accept(
+            TrustedRequestContext context,
+            String clientKey,
+            StartAgentRequest request) {
+        IdempotencyKey key =
+                new IdempotencyKey(
+                        context.tenantRef(),
+                        "START_AGENT_RUN",
+                        clientKey,
+                        canonicalFingerprint(request));
+
+        return Observation
+                .createNotStarted("agent.run.accept", observations)
+                // 只用有界枚举做低基数标签；不放 tenant / run / user。
+                .lowCardinalityKeyValue(
+                        "agent.operation", "start")
+                .lowCardinalityKeyValue(
+                        "agent.risk_tier",
+                        request.allowsWrite() ? "write" : "read_only")
+                .observe(() -&gt;
+                        unitOfWork.createRunAndOutboxAtomically(
+                                context, key, request, Instant.now()));
+    }
+
+    RunView readAuthorized(
+            TrustedRequestContext context, UUID runId) {
+        return unitOfWork.readAuthorized(context, runId);
+    }
+
+    private String canonicalFingerprint(StartAgentRequest request) {
+        throw new UnsupportedOperationException("canonical JSON + SHA-256");
+    }
+}</code></pre>
+      <p><strong>边界说明：</strong><code>RunUnitOfWork</code> 在一个业务事务中处理幂等唯一约束、创建 run 与 outbox；Controller 不直接把请求交给模型。relay、broker、worker lease、checkpoint repository、恢复队列与重放操作台仍是业务基础设施。<code>ObservationRegistry</code> 只观测业务边界；Spring AI 会自动为 ChatClient、Advisor、ChatModel、tool 和 VectorStore 产生其官方 observations，不必再套同名 observation 造成重复计时。</p>
+
+      <h3 id="worker-观测与内容最小化">Worker 观测与内容最小化</h3>
+      <pre><code class="language-java">final class AgentWorker {
+    private final ObservationRegistry observations;
+    private final AgentRuntime runtime;
+
+    void handle(DurableRunCommand command) {
+        Observation.createNotStarted("agent.run.attempt", observations)
+                .lowCardinalityKeyValue(
+                        "agent.operation", "execute")
+                .lowCardinalityKeyValue(
+                        "agent.attempt.kind",
+                        command.recovery() ? "recovery" : "initial")
+                // runId 只作为受治理的高基数 Trace 属性，不进入 metric。
+                .highCardinalityKeyValue(
+                        "agent.run.id", command.runId().toString())
+                .observe(() -&gt; runtime.resumeFromCheckpoint(command));
+    }
+}</code></pre>
+      <p>日志只记录固定错误码与受限诊断引用。禁止在 catch 中直接记录 <code>exception.getMessage()</code>，因为 SDK 异常可能包含请求、响应或 URL 参数；先经错误分类器提取 provider-neutral code，把原始证据加密放入受限事故存储并设置短 TTL。</p>
+
+      <h2 id="企业服务台案例"><a class="heading-anchor" href="#企业服务台案例" aria-label="链接到本节">#</a>企业服务台案例：最终生产状态</h2>
+      <ol>
+        <li>用户以租户身份提交“诊断支付 API 失败”；API 从认证态获得 principal / tenant，校验客户端幂等键，创建异步 diagnostic run，返回 202 与 Location。</li>
+        <li>outbox relay 投递命令；worker 从 QUEUED run 领取 lease。第一检查点记录输入引用、策略版本、预算和知识快照，不保存原始 Prompt。</li>
+        <li>Runtime 只给 triage 角色暴露服务状态、工单查询等只读工具；每次调用重新做 tenant / 对象级授权。模型 429 遵循 Retry-After 与有限退避，工具池与模型池用独立 bulkhead。</li>
+        <li>RAG 按 tenant ACL、文档版本和有效期检索 runbook，答案必须带文档 ID、标题、版本与 URI；向量库故障时停止“凭记忆猜答案”，返回诊断待恢复或转人工。</li>
+        <li>诊断完成后保存 checkpoint、引用、step outcome 与 outbox。若需建单，只生成结构化提案；用户审批绑定 ticket fields digest、目标系统、资源版本、策略版本和有效期。</li>
+        <li>执行写入前重新授权并检查审批；用 <code>effectId</code> 调用支持幂等的建单 API。本地状态与远端结果不确定时进入 UNKNOWN 并对账，不盲重试。</li>
+        <li>审计链记录主体引用、策略决定、审批引用、effectId 和 outcome；Trace 连接 API、队列、Runtime、RAG、模型和工具；指标只用有界 operation / outcome / riskTier。</li>
+        <li>实例重启后新 worker 从最后 confirmed checkpoint 继续。毒消息、过期审批或冲突写入进入恢复队列；操作员只能通过 <code>RecoveryCommand</code> 和当前 <code>ReplayPolicy</code> 发起新 attempt。</li>
+      </ol>
+
+      <h2 id="生产检查与故障演练"><a class="heading-anchor" href="#生产检查与故障演练" aria-label="链接到本节">#</a>生产检查与故障演练</h2>
+      <h3 id="生产就绪清单">生产就绪清单</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>领域</th><th>上线门</th></tr></thead>
+        <tbody>
+          <tr><td>身份与网络</td><td>tenant 只来自认证态；服务 / 用户身份分离；模型、工具、RAG、管理端口和 OTLP 出口均有最小网络权限、TLS 与密钥轮换</td></tr>
+          <tr><td>运行与数据</td><td>run / command / checkpoint / effect / audit 有 schema version、迁移、备份恢复和保留期；无 JVM 内唯一状态</td></tr>
+          <tr><td>一致性</td><td>入口唯一约束、inbox / outbox、状态 CAS、lease、effect ledger、对账与补偿均经过并发 / 崩溃测试</td></tr>
+          <tr><td>容量与背压</td><td>按依赖做容量模型；入口配额、队列高水位、bulkhead、连接池、限流和恢复队列阈值有 owner 与 runbook</td></tr>
+          <tr><td>韧性</td><td>全局 deadline；错误分类；单层有限重试；circuit breaker 排除业务拒绝；降级不绕过授权 / 引用 / 审批</td></tr>
+          <tr><td>可观测性</td><td>run 可跨日志 / Trace 关联；active / completed、队列年龄、依赖延迟错误、预算、恢复指标与 SLO 告警可用；标签基数经过测试</td></tr>
+          <tr><td>隐私与审计</td><td>Prompt / completion / tool / RAG 内容导出关闭；日志字段 allowlist、受限证据库、访问审计、TTL 和删除流程验证</td></tr>
+          <tr><td>恢复</td><td>操作员最小权限与双人审批；重放重新认证、重新策略、重新数据 / 审批 / 幂等检查；原 run 不改写</td></tr>
+          <tr><td>部署</td><td>readiness / liveness 语义正确；滚动发布先停止领取、完成或释放 lease；schema 与事件兼容；可回滚且旧 worker 不消费新命令</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="故障演练矩阵">故障演练矩阵</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>注入故障</th><th>期望行为</th><th>必须收集的证据</th></tr></thead>
+        <tbody>
+          <tr><td>Runtime 实例在 checkpoint 前 / 后重启</td><td>lease 到期后新 worker 接管；已确认步骤不重复，未确认写入先对账</td><td>run version、lease、checkpoint、effectId、重复副作用为 0、恢复时间</td></tr>
+          <tr><td>同 tenant 重复提交相同 key</td><td>相同指纹返回同一 run；不同指纹返回 409</td><td>唯一约束命中、run 数 = 1、outbox 数 = 1</td></tr>
+          <tr><td>模型 429 / 5xx</td><td>遵循 Retry-After / jitter，受 deadline 与预算限制；熔断后快速降级</td><td>attempt 数、等待、token / 成本、breaker transition、无乘法重试</td></tr>
+          <tr><td>只读工具连续 5xx</td><td>有限重试后 circuit open；不占满其他工具 bulkhead，run 可恢复 / 转人工</td><td>工具舱并发、队列年龄、错误分类、其他工具 SLO</td></tr>
+          <tr><td>向量数据库不可用</td><td>RAG 步骤失败或诚实降级；不生成无引用事实，不放宽 tenant 过滤</td><td><code>db.vector.client.operation</code>、答案引用数、策略决定</td></tr>
+          <tr><td>远端建单成功、本地确认前崩溃</td><td>状态为 UNKNOWN；以 effectId 查询远端并确认，不创建第二张工单</td><td>远端工单数 = 1、effect ledger、对账审计、终态</td></tr>
+          <tr><td>确定性毒消息</td><td>有限消费后进入恢复队列，不热循环；相同代码版本不自动重放</td><td>delivery count、recovery age、worker CPU、隔离原因和 owner</td></tr>
+          <tr><td>审批在排队期间过期</td><td>写入前当前检查拒绝；转 WAITING_APPROVAL / RECOVERY_REQUIRED，请求新审批</td><td>delegate 调用 = 0、审批版本、策略 reason code</td></tr>
+          <tr><td>知识快照过期或文档撤权</td><td>重新检索当前 ACL / 版本；旧引用不能支持新写入，必要时重新规划</td><td>旧 / 新 knowledge version、ACL decision、引用更新</td></tr>
+          <tr><td>操作员重放时资源版本冲突</td><td>expectedVersion CAS 失败；不覆盖新状态、不执行写，重新评估</td><td>409 / stale reason、写调用 = 0、原 run 与新状态完整</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="练习与验收"><a class="heading-anchor" href="#练习与验收" aria-label="链接到本节">#</a>练习与验收</h2>
+      <h3 id="练习">练习</h3>
+      <ol>
+        <li><strong>入口幂等：</strong>用 Spring Boot + 数据库实现 <code>POST /agent-runs</code>。并发发送 20 个相同 key / 指纹请求，再发送一个相同 key / 不同指纹请求。</li>
+        <li><strong>可恢复 worker：</strong>实现 lease、状态 CAS 和三个 checkpoint，在“远端写成功、本地提交前”注入进程退出，并通过 effectId 对账。</li>
+        <li><strong>韧性实验：</strong>为模型、只读工具和向量库建立独立 bulkhead / circuit breaker；模拟 429、慢调用和 5xx，证明总尝试受 deadline / 预算限制且没有乘法重试。</li>
+        <li><strong>安全遥测：</strong>接入 Actuator、ObservationRegistry 和 Spring AI observations；用 canary secret 放入 Prompt、工具参数、结果与异常，扫描日志、metrics、spans，要求零泄露。</li>
+        <li><strong>安全恢复：</strong>实现 <code>RecoveryCommand</code> 与 <code>ReplayPolicy</code>，测试过期审批、撤销权限、资源版本冲突、UNKNOWN effect 和当前合法只读恢复。</li>
+      </ol>
+
+      <h3 id="验收标准">验收标准</h3>
+      <ul>
+        <li>同步路径只承载短只读动作；多步 / 写 / 审批均返回 202 + Location，并能通过 GET 或授权事件读取持久状态。</li>
+        <li>相同幂等 key + 指纹只产生 1 个 run / outbox / 外部效果；不同指纹稳定返回 409。进程重启和消息重复测试均通过。</li>
+        <li>状态机拒绝非法转移与陈旧 version；终态不原地重开，恢复创建带 sourceRunId 的新 attempt。</li>
+        <li>429 / 5xx、超时、circuit open、bulkhead full、queue high-water 都有确定 outcome；总尝试、deadline、token、工具与成本预算有硬上限。</li>
+        <li>故障矩阵十类场景均有自动化或演练证据；部分写入没有重复副作用，毒消息不会热循环。</li>
+        <li>Dashboard 同时展示 active / completed、queue oldest age、step / model / tool / RAG latency-error、budget 与 recovery age；metric 中不存在 run / user / 原始 tenant 等无界标签。</li>
+        <li>Spring AI 2.0.0 的 ChatClient、Advisor、ChatModel、tool、VectorStore observations 可见，trace 父子 / link 关系正确，异步边界上下文传播经过测试。</li>
+        <li>Prompt、completion、RAG query / result、工具 arguments / result、secret 和审批凭证在默认日志、metrics、Trace 中均未出现；<code>spring.ai.tools.observations.include-content=false</code> 保持关闭。</li>
+        <li>恢复时重新认证、读取当前状态、执行当前策略并重新校验审批 / 幂等；过期审批、撤权、冲突或 UNKNOWN effect 的写 delegate 调用数为 0。</li>
+        <li>团队能明确指出：Spring AI / Boot / Micrometer 提供观测集成；队列、run 状态、幂等、outbox、recovery queue 和 replay policy 是业务基础设施。</li>
+      </ul>
+
+      <h2 id="参考资料"><a class="heading-anchor" href="#参考资料" aria-label="链接到本节">#</a>参考资料</h2>
+      <p>以下资料均为官方一手来源，检索于 <time datetime="2026-07-27">2026-07-27</time>。版本、配置名与语义约定可能继续变化，升级时需重新核验并做遥测契约回归。</p>
+      <ul>
+        <li><a href="https://docs.spring.io/spring-ai/reference/observability/index.html" target="_blank" rel="noopener noreferrer">Spring AI 2.0.0 — Observability</a>：ChatClient、Advisor、ChatModel、Tool Calling、VectorStore 的 observation、metric 名与内容默认值。</li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/getting-started.html" target="_blank" rel="noopener noreferrer">Spring AI 2.0.0 — Getting Started</a>：BOM 与 Spring Boot 4.0.x / 4.1.x 基线。</li>
+        <li><a href="https://docs.spring.io/spring-boot/reference/actuator/observability.html" target="_blank" rel="noopener noreferrer">Spring Boot 4.1 — Observability</a>：ObservationRegistry、低 / 高基数、异步上下文传播、Micrometer 与 OpenTelemetry 支持。</li>
+        <li><a href="https://docs.spring.io/spring-boot/reference/actuator/endpoints.html" target="_blank" rel="noopener noreferrer">Spring Boot — Actuator Endpoints</a>：endpoint 暴露、健康信息与安全配置。</li>
+        <li><a href="https://docs.micrometer.io/tracing/reference/" target="_blank" rel="noopener noreferrer">Micrometer Tracing 参考文档</a>：tracer facade、ObservationHandler、bridge 与 reporter。</li>
+        <li><a href="https://opentelemetry.io/docs/specs/semconv/gen-ai/" target="_blank" rel="noopener noreferrer">OpenTelemetry — GenAI 语义约定迁移公告</a>：原页面已迁移且不再维护。</li>
+        <li><a href="https://github.com/open-telemetry/semantic-conventions-genai" target="_blank" rel="noopener noreferrer">OpenTelemetry GenAI Semantic Conventions</a>：继续演进的 spans、metrics、events、MCP 与供应商约定官方仓库。</li>
+        <li><a href="https://resilience4j.readme.io/docs/getting-started" target="_blank" rel="noopener noreferrer">Resilience4j 官方文档</a>：CircuitBreaker、RateLimiter、Retry、Bulkhead 与 TimeLimiter 模块及组合方式。</li>
+      </ul>
+
+      <p><strong>课程收束：</strong>前七课定义了 Agent 应该知道什么、能做什么、如何计划协作以及怎样受治理；本课把这些契约放进持久 run、明确事务边界、有限资源、可观测信号和安全恢复流程。生产级的核心不是让 Agent 永不失败，而是让失败可分类、影响被限制、状态可证明、恢复不扩权、每个副作用都有负责人。</p>
+    </article>
+  </main>
+</div>
+</body>
+</html>
