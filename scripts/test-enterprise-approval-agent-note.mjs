@@ -183,12 +183,30 @@ const decodeCode = (value) =>
     .replaceAll("&quot;", '"')
     .replaceAll("&#39;", "'")
     .replaceAll("-&gt;", "->");
-const javaBlocks = [
+const decodedJavaBlocks = [
   ...note.matchAll(
     /<pre><code class="language-java" data-java-fixture="enterprise-approval-core">([\s\S]*?)<\/code><\/pre>/g,
   ),
-].map((match) => decodeCode(match[1]).replace(/^import [^;]+;\s*$/gm, ""));
-assert.equal(javaBlocks.length, 3, "必须有三段来自页面本身的 Java 21 核心编译夹具");
+].map((match) => decodeCode(match[1]));
+assert.equal(
+  decodedJavaBlocks.length,
+  3,
+  "必须有三段来自页面本身的 Java 21 核心编译夹具",
+);
+const javaImports = [
+  ...new Set(
+    decodedJavaBlocks.flatMap((block) =>
+      [...block.matchAll(/^import [^;]+;$/gm)].map((match) => match[0]),
+    ),
+  ),
+];
+assert.ok(
+  javaImports.includes("import java.util.Optional;"),
+  "恢复接口使用 Optional 时必须在页面示例中显式导入",
+);
+const javaBlocks = decodedJavaBlocks.map((block) =>
+  block.replace(/^import [^;]+;\s*$/gm, ""),
+);
 const fixtureDir = await fs.mkdtemp(
   path.join(os.tmpdir(), "enterprise-approval-java-"),
 );
@@ -196,7 +214,7 @@ try {
   const fixturePath = path.join(fixtureDir, "EnterpriseApprovalExample.java");
   await fs.writeFile(
     fixturePath,
-    `import java.time.Instant;\nimport java.util.*;\n${javaBlocks.join("\n")}`,
+    `${javaImports.join("\n")}\n${javaBlocks.join("\n")}`,
     "utf8",
   );
   const compiled = spawnSync(

@@ -493,7 +493,9 @@ final class IntelligentApprovalCoordinator {
     }
 }</code></pre>
       <p><strong>并行边界：</strong>为了让控制流一眼可读，上述教学骨架按固定顺序执行四个只读 Agent。生产实现可以在有界线程池中并行，但必须传播同一 deadline、取消信号与预算；合并前按角色检查“每个必需角色恰好一个结果”，并按稳定顺序排序证据。任何写工具和审批任务都不能并行越过合并门。</p>
-      <pre><code class="language-java" data-java-fixture="enterprise-approval-core">record ApprovedExecution(
+      <pre><code class="language-java" data-java-fixture="enterprise-approval-core">import java.util.Optional;
+
+record ApprovedExecution(
         String tenantId,
         UUID caseId,
         UUID proposalId,
