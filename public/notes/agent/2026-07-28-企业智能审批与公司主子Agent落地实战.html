@@ -151,16 +151,19 @@
 
       <h2 id="采购审批实例"><a class="heading-anchor" href="#采购审批实例" aria-label="链接到本节">#</a>采购审批实例：28 万元 SaaS 续费</h2>
       <p><strong>输入：</strong>某业务部门申请续费一套 SaaS，含申请单、供应商报价、上一年度合同和安全问卷。成本中心预算充足，但本次报价比去年高 12%，申请材料没有新的数据处理协议（DPA）。</p>
+      <blockquote>
+        <p><strong>教学假设：</strong>所有金额阈值、角色、制度编号和 DPA 路由均为教学假设，不是通用法规或行业标准。实际项目必须由本企业流程 Owner、财务、法务、合规与适用法律共同确定，并以版本化 BPMN/DMN 发布。</p>
+      </blockquote>
       <div class="table-wrap"><table>
         <thead><tr><th>时点</th><th>系统/角色动作</th><th>结果</th><th>为什么可审计</th></tr></thead>
         <tbody>
-          <tr><td>T0 提交</td><td>BPMN 创建 case，绑定 requester、tenant、成本中心和文件引用</td><td><code>CASE_OPEN</code></td><td>主体来自认证态，原文件只读留存</td></tr>
+          <tr><td>T0 提交</td><td>BPMN 创建 case，绑定 requester、tenant、成本中心和文件引用</td><td><code>COLLECTING</code></td><td>主体来自认证态，原文件只读留存</td></tr>
           <tr><td>T1 硬校验</td><td>Schema + DMN 检查金额、品类、职责分离</td><td>金额超过 20 万，需要经理 + 财务 + 法务</td><td>规则版本 <code>PROC-2026.07</code> 和命中行可还原</td></tr>
-          <tr><td>T2 并行取证</td><td>材料、制度、财务、合规四个子 Agent 只读执行</td><td>预算足够；涨价 12%；DPA 缺失；制度要求处理个人数据必须有 DPA</td><td>每项含 sourceRef、版本、观察时间和摘要 hash</td></tr>
-          <tr><td>T3 首次提案</td><td>主 Agent 合并证据，规则服务决定路由</td><td><code>REQUEST_INFO</code>，要求补 DPA 和涨价说明</td><td>不是模型直接拒绝；提案 hash 冻结当时证据</td></tr>
-          <tr><td>T4 补件</td><td>申请人上传 DPA 与议价说明，旧提案自动失效</td><td>重新取证并生成新 <code>proposalHash</code></td><td>材料变化触发新版本，旧批准不可复用</td></tr>
-          <tr><td>T5 会签</td><td>经理、财务、法务分别完成 BPMN 用户任务</td><td>三方批准；法务意见绑定 DPA 版本</td><td>审批人、角色、时间、MFA 强度和提案 hash 被记录</td></tr>
-          <tr><td>T6 执行</td><td>采购执行器校验有效审批并调用 SRM/ERP</td><td>以 <code>idempotencyKey</code> 创建采购订单一次</td><td>超时后按幂等键查询，不盲目重复创建</td></tr>
+          <tr><td>T2 并行取证</td><td>状态进入 <code>ANALYZING</code>；材料、制度、财务、合规四个子 Agent 只读执行</td><td>预算足够；涨价 12%；DPA 缺失；示例制度要求处理个人数据必须有 DPA</td><td>每项含 caseVersion、sourceRef、版本、观察时间和摘要 hash</td></tr>
+          <tr><td>T3 首次提案</td><td>主 Agent 合并证据，规则服务决定路由</td><td>进入 <code>NEEDS_INFO</code>，要求补 DPA 和涨价说明</td><td>不是模型直接拒绝；提案 hash 冻结当时证据</td></tr>
+          <tr><td>T4 补件</td><td>申请人上传 DPA 与议价说明，caseVersion 递增并重新进入 <code>ANALYZING</code></td><td>旧提案失效，重新取证并生成新 <code>proposalHash</code></td><td>任何材料、金额、供应商或拟执行动作变化都会使旧审批失效</td></tr>
+          <tr><td>T5 会签</td><td>状态进入 <code>PENDING_APPROVAL</code>；经理、财务、法务分别完成 BPMN 用户任务</td><td>三方批准后进入 <code>APPROVED</code>；法务意见绑定 DPA 版本</td><td>审批人、角色、时间、MFA 强度、认证上下文和提案 hash 被记录</td></tr>
+          <tr><td>T6 执行</td><td>状态进入 <code>EXECUTING</code>；采购执行器校验有效审批并调用 SRM/ERP</td><td>通过原子 claim 和 <code>idempotencyKey</code> 创建一次采购订单，成功后进入 <code>COMPLETED</code></td><td>超时后由恢复任务按同一幂等键查询，不盲目重复创建</td></tr>
         </tbody>
       </table></div>
       <p>如果预算查询超时，结果应为 <code>ESCALATE</code> 或等待重试，而不是让模型根据历史语境猜测“预算应该够”。如果报价单与申请金额冲突，则固定进入 <code>REQUEST_INFO</code>；如果供应商命中硬性制裁规则，则确定性规则返回拒绝原因码，并由合规负责人复核。</p>
@@ -187,20 +190,32 @@
   tenant_id varchar(64) not null,
   requester_id varchar(128) not null,
   process_instance_id varchar(128) not null unique,
-  state varchar(32) not null,
-  state_version bigint not null,
+  current_state varchar(32) not null,
+  current_version bigint not null,
   created_at timestamp with time zone not null
+);
+
+-- 每次材料、金额、供应商或拟执行动作变化都追加版本，不覆盖旧快照。
+create table approval_case_version (
+  case_id uuid not null references approval_case(case_id),
+  case_version bigint not null,
+  snapshot_hash varchar(64) not null,
+  created_at timestamp with time zone not null,
+  primary key (case_id, case_version)
 );
 
 create table approval_evidence (
   case_id uuid not null,
+  case_version bigint not null,
   evidence_id uuid primary key,
   evidence_type varchar(48) not null,
   source_ref varchar(256) not null,
   source_version varchar(96) not null,
   observed_at timestamp with time zone not null,
   content_hash varchar(64) not null,
-  conclusion_code varchar(64) not null
+  conclusion_code varchar(64) not null,
+  foreign key (case_id, case_version)
+    references approval_case_version(case_id, case_version)
 );
 
 create table approval_proposal (
@@ -210,32 +225,77 @@ create table approval_proposal (
   recommendation varchar(32) not null,
   policy_version varchar(64) not null,
   proposal_hash varchar(64) not null unique,
-  status varchar(32) not null
+  status varchar(32) not null,
+  foreign key (case_id, case_version)
+    references approval_case_version(case_id, case_version)
 );
 
 create table approval_decision (
   decision_id uuid primary key,
-  proposal_id uuid not null,
+  proposal_id uuid not null references approval_proposal(proposal_id),
+  proposal_hash varchar(64) not null,
   approver_id varchar(128) not null,
   approver_role varchar(64) not null,
+  auth_context_ref varchar(256) not null,
+  mfa_strength varchar(32) not null,
   decision varchar(24) not null,
-  decided_at timestamp with time zone not null
+  decided_at timestamp with time zone not null,
+  unique (proposal_id, approver_id, approver_role)
+);
+
+-- claim 必须在一个事务中依赖唯一键原子创建；禁止“先查后写”。
+create table approval_execution (
+  execution_id uuid primary key,
+  tenant_id varchar(64) not null,
+  case_id uuid not null references approval_case(case_id),
+  proposal_id uuid not null references approval_proposal(proposal_id),
+  idempotency_key varchar(128) not null,
+  status varchar(32) not null,
+  external_ref varchar(256),
+  claimed_at timestamp with time zone not null,
+  completed_at timestamp with time zone,
+  unique (tenant_id, idempotency_key)
+);
+
+-- 仅追加事件；数据库写角色不得 UPDATE/DELETE，内容正文放受限证据库。
+create table approval_audit_event (
+  event_id uuid primary key,
+  case_id uuid not null references approval_case(case_id),
+  sequence_no bigint not null,
+  event_type varchar(64) not null,
+  actor_ref varchar(128) not null,
+  auth_context_ref varchar(256),
+  proposal_hash varchar(64),
+  policy_version varchar(64),
+  outcome_code varchar(64) not null,
+  external_ref varchar(256),
+  previous_hash varchar(64),
+  event_hash varchar(64) not null,
+  occurred_at timestamp with time zone not null,
+  unique (case_id, sequence_no)
 );</code></pre>
       <div class="table-wrap"><table>
         <thead><tr><th>状态</th><th>允许进入</th><th>允许离开</th><th>关键不变量</th></tr></thead>
         <tbody>
-          <tr><td><code>COLLECTING</code></td><td>创建 case、补件</td><td><code>ANALYZING</code> / <code>CANCELLED</code></td><td>必填结构字段有效</td></tr>
-          <tr><td><code>ANALYZING</code></td><td>材料冻结、开始取证</td><td><code>NEEDS_INFO</code> / <code>PENDING_APPROVAL</code> / <code>ESCALATED</code></td><td>子 Agent 只读；证据绑定 caseVersion</td></tr>
-          <tr><td><code>NEEDS_INFO</code></td><td>缺证或字段冲突</td><td><code>COLLECTING</code> / <code>CANCELLED</code></td><td>新增材料必须递增版本</td></tr>
-          <tr><td><code>PENDING_APPROVAL</code></td><td>提案与路由已冻结</td><td><code>APPROVED</code> / <code>REJECTED</code> / <code>ESCALATED</code></td><td>决定绑定 proposalHash</td></tr>
+          <tr><td><code>COLLECTING</code></td><td>创建 case 或补件</td><td><code>ANALYZING</code> / <code>CANCELLED</code></td><td>必填结构字段有效；每次变化追加 caseVersion</td></tr>
+          <tr><td><code>ANALYZING</code></td><td>材料版本冻结并开始取证</td><td><code>NEEDS_INFO</code> / <code>ANALYSIS_RETRYABLE</code> / <code>NEEDS_REVIEW</code> / <code>PENDING_APPROVAL</code> / <code>ESCALATED</code></td><td>子 Agent 只读；证据绑定 caseVersion</td></tr>
+          <tr><td><code>NEEDS_INFO</code></td><td>缺证或字段冲突</td><td><code>COLLECTING</code> / <code>CANCELLED</code></td><td>旧提案作废；补件生成新版本</td></tr>
+          <tr><td><code>ANALYSIS_RETRYABLE</code></td><td>模型或只读依赖暂时故障</td><td><code>ANALYZING</code> / <code>ESCALATED</code> / <code>CANCELLED</code></td><td>有限重试，不产生业务副作用</td></tr>
+          <tr><td><code>NEEDS_REVIEW</code></td><td>证据冲突或低置信</td><td><code>COLLECTING</code> / <code>PENDING_APPROVAL</code> / <code>ESCALATED</code></td><td>保留所有冲突来源，不静默覆盖</td></tr>
+          <tr><td><code>PENDING_APPROVAL</code></td><td>提案与路由冻结</td><td><code>APPROVED</code> / <code>REJECTED</code> / <code>ESCALATED</code> / <code>CANCELLED</code></td><td>每个决定绑定 proposalHash 与 auth context</td></tr>
+          <tr><td><code>ESCALATED</code></td><td>超预算、硬门或无法自动恢复</td><td><code>COLLECTING</code> / <code>PENDING_APPROVAL</code> / <code>REJECTED</code> / <code>CANCELLED</code></td><td>由明确的人工角色接管</td></tr>
           <tr><td><code>APPROVED</code></td><td>全部必需审批有效</td><td><code>EXECUTING</code></td><td>审批人权限仍有效，提案未变化</td></tr>
-          <tr><td><code>EXECUTING</code></td><td>受控执行器获得 claim</td><td><code>COMPLETED</code> / <code>EXECUTION_UNKNOWN</code></td><td>同一 idempotencyKey 最多一次外部副作用</td></tr>
+          <tr><td><code>REJECTED</code></td><td>授权人或硬门复核后拒绝</td><td>终态</td><td>保留原因码与证据，不执行写操作</td></tr>
+          <tr><td><code>EXECUTING</code></td><td>原子执行 claim 成功</td><td><code>COMPLETED</code> / <code>EXECUTION_UNKNOWN</code></td><td>同一 tenant + idempotencyKey 只有一个 claim</td></tr>
+          <tr><td><code>EXECUTION_UNKNOWN</code></td><td>目标调用超时或回执丢失</td><td><code>EXECUTING</code> / <code>COMPLETED</code> / <code>ESCALATED</code></td><td>先用同一幂等键查真实结果</td></tr>
+          <tr><td><code>COMPLETED</code></td><td>外部回执已持久化</td><td>终态</td><td>执行结果和审计 hash 链完整</td></tr>
+          <tr><td><code>CANCELLED</code></td><td>申请人撤回或流程管理员取消</td><td>终态</td><td>未执行外部副作用</td></tr>
         </tbody>
       </table></div>
 
       <h2 id="java领域契约"><a class="heading-anchor" href="#java领域契约" aria-label="链接到本节">#</a>Java 21：领域契约</h2>
       <p>Agent handoff 不传完整对话，而传版本化、最小化、可验证的记录。以下是应用领域类型，不是 Spring AI 框架类型。</p>
-      <pre><code class="language-java">import java.time.Instant;
+      <pre><code class="language-java" data-java-fixture="enterprise-approval-core">import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -243,16 +303,33 @@ import java.util.UUID;
 
 enum Recommendation { APPROVE, REJECT, REQUEST_INFO, ESCALATE }
 enum EvidenceKind { DOCUMENT, POLICY, BUDGET, VENDOR, COMPLIANCE }
+enum ApprovalCaseState {
+    COLLECTING,
+    ANALYZING,
+    NEEDS_INFO,
+    ANALYSIS_RETRYABLE,
+    NEEDS_REVIEW,
+    PENDING_APPROVAL,
+    ESCALATED,
+    APPROVED,
+    REJECTED,
+    EXECUTING,
+    EXECUTION_UNKNOWN,
+    COMPLETED,
+    CANCELLED
+}
 
 record ApprovalCaseRef(
         UUID caseId,
         String tenantId,
         long caseVersion,
+        ApprovalCaseState state,
         String requesterId,
         String processInstanceId) {}
 
 record EvidenceRef(
         UUID evidenceId,
+        long caseVersion,
         EvidenceKind kind,
         String sourceRef,
         String sourceVersion,
@@ -337,11 +414,11 @@ class ApprovalAgentConfiguration {
                 ApprovalAgentRole.COMPLIANCE, tools);
     }
 }</code></pre>
-      <p><strong>工具目录要求：</strong>role 来自服务器固定 Bean，而不是 Prompt 或工具参数；每个 callback 在 delegate 前重新检查 principal、tenant、role、action、resource 和 deadline。不要创建一个携带全公司工具的共享 <code>ChatClient</code> 再依靠 system prompt 限制角色。</p>
+      <p><strong>工具目录要求：</strong>role 来自服务器固定 Bean，而不是 Prompt 或工具参数；每个 callback 在 delegate 前重新检查 principal、tenant、role、action、resource 和 deadline。不要创建一个携带全公司工具的共享 <code>ChatClient</code> 再依靠 system prompt 限制角色。执行器不能作为任何 Agent 的工具暴露，只能消费工作流发出的受信命令。</p>
 
       <h2 id="确定性协调器"><a class="heading-anchor" href="#确定性协调器" aria-label="链接到本节">#</a>确定性 Coordinator 与审批写入门</h2>
       <p>多 Agent 的真正 owner 是普通 Spring Application Service。它决定运行哪些角色、如何合并、何时停止和什么时候创建人类任务；模型不能递归生成无限子 Agent。</p>
-      <pre><code class="language-java">import java.util.List;
+      <pre><code class="language-java" data-java-fixture="enterprise-approval-core">import java.util.List;
 import java.util.UUID;
 
 interface EvidenceAgent {
@@ -406,7 +483,8 @@ final class IntelligentApprovalCoordinator {
         return proposal; // 返回提案，不执行采购或付款。
     }
 }</code></pre>
-      <pre><code class="language-java">record ApprovedExecution(
+      <p><strong>并行边界：</strong>为了让控制流一眼可读，上述教学骨架按固定顺序执行四个只读 Agent。生产实现可以在有界线程池中并行，但必须传播同一 deadline、取消信号与预算；合并前按角色检查“每个必需角色恰好一个结果”，并按稳定顺序排序证据。任何写工具和审批任务都不能并行越过合并门。</p>
+      <pre><code class="language-java" data-java-fixture="enterprise-approval-core">record ApprovedExecution(
         UUID caseId,
         UUID proposalId,
         String proposalHash,
@@ -418,21 +496,53 @@ interface ApprovalVerifier {
 }
 
 interface ProcurementWriter {
+    // 目标系统必须原生接受并兑现 command.idempotencyKey()。
     String createPurchaseOrder(ApprovedExecution command);
-    String findByIdempotencyKey(String idempotencyKey);
+}
+
+sealed interface ExecutionClaim
+        permits AcquiredExecution, CompletedExecution, InProgressExecution {}
+record AcquiredExecution(UUID executionId) implements ExecutionClaim {}
+record CompletedExecution(UUID executionId, String externalRef)
+        implements ExecutionClaim {}
+record InProgressExecution(UUID executionId) implements ExecutionClaim {}
+
+interface ApprovalExecutionStore {
+    // 在一个事务内 INSERT；(tenantId, idempotencyKey) 唯一冲突时返回已有 claim。
+    ExecutionClaim claim(ApprovedExecution command);
+    void complete(UUID executionId, String externalRef);
 }
 
 final class ApprovedProcurementExecutor {
     private final ApprovalVerifier verifier;
+    private final ApprovalExecutionStore executions;
     private final ProcurementWriter writer;
+
+    ApprovedProcurementExecutor(
+            ApprovalVerifier verifier,
+            ApprovalExecutionStore executions,
+            ProcurementWriter writer) {
+        this.verifier = Objects.requireNonNull(verifier);
+        this.executions = Objects.requireNonNull(executions);
+        this.writer = Objects.requireNonNull(writer);
+    }
 
     String execute(ApprovedExecution command) {
         verifier.requireCurrentAndFullyApproved(command);
-        String existing = writer.findByIdempotencyKey(command.idempotencyKey());
-        return existing != null ? existing : writer.createPurchaseOrder(command);
+        return switch (executions.claim(command)) {
+            case CompletedExecution completed -&gt; completed.externalRef();
+            case InProgressExecution inProgress -&gt;
+                    throw new IllegalStateException(
+                            "execution already in progress: " + inProgress.executionId());
+            case AcquiredExecution acquired -&gt; {
+                String externalRef = writer.createPurchaseOrder(command);
+                executions.complete(acquired.executionId(), externalRef);
+                yield externalRef;
+            }
+        };
     }
 }</code></pre>
-      <p>执行器不能作为任何 Agent 的工具暴露；它只消费工作流在全部审批完成后发出的受信命令。若外部调用超时，状态进入 <code>EXECUTION_UNKNOWN</code>，先按 <code>idempotencyKey</code> 查询真实结果。</p>
+      <p><code>ApprovalExecutionStore.claim</code> 必须通过数据库唯一约束原子获得执行权，不能用“先查后写”。<code>ProcurementWriter</code> 还必须把同一个幂等键传给目标系统；如果进程在目标写入后、<code>complete</code> 前崩溃，恢复任务将状态置为 <code>EXECUTION_UNKNOWN</code>，使用同一幂等键查询目标系统并补录回执，不能直接再次调用 create。</p>
 
       <h2 id="权限审计与安全"><a class="heading-anchor" href="#权限审计与安全" aria-label="链接到本节">#</a>权限、审计与安全</h2>
       <div class="table-wrap"><table>
@@ -459,7 +569,7 @@ final class ApprovedProcurementExecutor {
           <tr><td>子 Agent 证据冲突</td><td><code>NEEDS_REVIEW</code></td><td>保留两个来源与时间，交规则/人判断</td><td>主 Agent 静默覆盖不一致证据</td></tr>
           <tr><td>人类任务超时</td><td><code>PENDING_APPROVAL</code></td><td>BPMN 定时器提醒、代理或升级</td><td>超时自动视为同意</td></tr>
           <tr><td>执行调用结果未知</td><td><code>EXECUTION_UNKNOWN</code></td><td>按幂等键查询，确认未执行后再重试</td><td>直接重复写入</td></tr>
-          <tr><td>模型服务整体不可用</td><td>降级模式</td><td>保留原 BPMN/DMN 人工审批路径</td><td>阻断企业核心审批</td></tr>
+          <tr><td>模型服务整体不可用</td><td><code>ESCALATED</code></td><td>保留原 BPMN/DMN 人工审批路径</td><td>阻断企业核心审批</td></tr>
         </tbody>
       </table></div>
       <p>工作流任务和 Job Worker 天然适合表达等待、完成、失败、剩余重试和 incident；实现必须让 Agent 失败成为一个可恢复服务任务，而不是让整个审批状态消失在内存会话中。<a href="https://docs.camunda.io/docs/components/concepts/job-workers/" target="_blank" rel="noopener noreferrer">Camunda Job workers</a></p>

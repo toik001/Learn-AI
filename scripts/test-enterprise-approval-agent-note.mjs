@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { promises as fs } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 const rootDir = process.cwd();
@@ -101,6 +103,106 @@ assert.ok(
   !note.includes(".defaultToolCallbacks("),
   "Spring AI 2.0 示例不得继续使用已弃用的 defaultToolCallbacks API",
 );
+for (const safetyBoundary of [
+  "执行器不能作为任何 Agent 的工具暴露",
+  "每个 callback 在 delegate 前重新检查 principal",
+  "任何材料、金额、供应商或拟执行动作变化都会使旧审批失效",
+  "最终决定由规则引擎或授权审批人完成",
+  "所有金额阈值、角色、制度编号和 DPA 路由均为教学假设",
+]) {
+  assert.ok(note.includes(safetyBoundary), `缺少关键安全边界：${safetyBoundary}`);
+}
+assert.match(
+  note,
+  /enum ApprovalCaseState\s*\{\s*COLLECTING,\s*ANALYZING,\s*NEEDS_INFO,\s*ANALYSIS_RETRYABLE,\s*NEEDS_REVIEW,\s*PENDING_APPROVAL,\s*ESCALATED,\s*APPROVED,\s*REJECTED,\s*EXECUTING,\s*EXECUTION_UNKNOWN,\s*COMPLETED,\s*CANCELLED\s*\}/,
+  "Java 领域契约必须定义完整且唯一的审批状态集合",
+);
+for (const state of [
+  "COLLECTING",
+  "ANALYZING",
+  "NEEDS_INFO",
+  "ANALYSIS_RETRYABLE",
+  "NEEDS_REVIEW",
+  "PENDING_APPROVAL",
+  "ESCALATED",
+  "APPROVED",
+  "REJECTED",
+  "EXECUTING",
+  "EXECUTION_UNKNOWN",
+  "COMPLETED",
+  "CANCELLED",
+]) {
+  assert.ok(
+    note.includes(`<tr><td><code>${state}</code></td>`),
+    `状态转移表缺少 ${state}`,
+  );
+}
+assert.ok(!note.includes("<code>CASE_OPEN</code>"), "不得出现未定义的 CASE_OPEN 状态");
+for (const storageContract of [
+  "create table approval_case_version",
+  "case_version bigint not null",
+  "create table approval_execution",
+  "unique (tenant_id, idempotency_key)",
+  "create table approval_audit_event",
+  "auth_context_ref",
+  "mfa_strength",
+  "previous_hash",
+  "event_hash",
+]) {
+  assert.ok(note.includes(storageContract), `存储契约缺少：${storageContract}`);
+}
+assert.match(
+  note,
+  /record EvidenceRef\([\s\S]*?long caseVersion,/,
+  "证据契约必须绑定产生证据时的 caseVersion",
+);
+assert.match(
+  note,
+  /final class ApprovedProcurementExecutor \{[\s\S]*?ApprovedProcurementExecutor\([\s\S]*?this\.verifier = Objects\.requireNonNull\(verifier\);[\s\S]*?this\.writer = Objects\.requireNonNull\(writer\);/,
+  "执行器必须显式初始化 final 依赖",
+);
+assert.ok(
+  !note.includes("findByIdempotencyKey"),
+  "执行示例不得使用先查后写的竞态幂等模式",
+);
+
+const decodeCode = (value) =>
+  value
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&amp;", "&")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'")
+    .replaceAll("-&gt;", "->");
+const javaBlocks = [
+  ...note.matchAll(
+    /<pre><code class="language-java" data-java-fixture="enterprise-approval-core">([\s\S]*?)<\/code><\/pre>/g,
+  ),
+].map((match) => decodeCode(match[1]).replace(/^import [^;]+;\s*$/gm, ""));
+assert.equal(javaBlocks.length, 3, "必须有三段来自页面本身的 Java 21 核心编译夹具");
+const fixtureDir = await fs.mkdtemp(
+  path.join(os.tmpdir(), "enterprise-approval-java-"),
+);
+try {
+  const fixturePath = path.join(fixtureDir, "EnterpriseApprovalExample.java");
+  await fs.writeFile(
+    fixturePath,
+    `import java.time.Instant;\nimport java.util.*;\n${javaBlocks.join("\n")}`,
+    "utf8",
+  );
+  const compiled = spawnSync(
+    "javac",
+    ["--release", "21", "-d", fixtureDir, fixturePath],
+    { encoding: "utf8" },
+  );
+  assert.equal(
+    compiled.status,
+    0,
+    `Java 21 页面示例无法编译：${compiled.stderr || compiled.stdout}`,
+  );
+} finally {
+  await fs.rm(fixtureDir, { recursive: true, force: true });
+}
 
 for (const diagramClass of ["approval-agent-flow", "company-agent-map"]) {
   assert.match(
