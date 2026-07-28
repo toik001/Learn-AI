@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-28T07:24:22.846Z",
-  "documentCount": 19,
+  "generatedAt": "2026-07-28T08:28:33.845Z",
+  "documentCount": 20,
   "documents": [
     {
       "output": "notes/agent/2026-07-27-01-Agent基础概念与边界.html",
@@ -71,6 +71,13 @@
       "category": "Agent 开发",
       "date": "2026-07-27",
       "sections": 28
+    },
+    {
+      "output": "notes/agent/2026-07-28-企业智能审批与公司主子Agent落地实战.html",
+      "title": "企业智能审批与公司主子 Agent 落地实战",
+      "category": "Agent 开发",
+      "date": "2026-07-28",
+      "sections": 19
     },
     {
       "output": "notes/codex/2026-07-24-AI开发工作流选型与小团队沉淀指南.html",

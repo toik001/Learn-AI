@@ -143,7 +143,7 @@ for (const expectedUrl of [
   "https://docs.spring.io/spring-ai/reference/api/chatclient.html",
   "https://docs.spring.io/spring-ai/reference/observability/index.html",
   "https://docs.camunda.io/docs/components/modeler/bpmn/user-tasks/",
-  "https://docs.camunda.io/docs/8.8/components/modeler/dmn/decision-table/",
+  "https://docs.camunda.io/docs/components/modeler/dmn/decision-table/",
   "https://airc.nist.gov/airmf-resources/airmf/5-sec-core/",
 ]) {
   assert.ok(externalUrls.has(expectedUrl), `缺少关键一手来源：${expectedUrl}`);

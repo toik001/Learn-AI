@@ -25,8 +25,18 @@
       <a class="sidebar-home-link" href="../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
       <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
     </div>
+    <div class="sidebar-category-summary">
+      <span class="eyebrow">当前分类</span>
+      <a class="sidebar-category-link" href="../../index.html#category-agent-开发-fm6pdx">
+        <strong>Agent 开发</strong>
+        <small>11 篇文档</small>
+      </a>
+      <a class="sidebar-featured-link" href="2026-07-27-Agent开发学习主目录.html">分类主目录<span>Agent 开发学习主目录</span></a>
+    </div>
     <label class="sidebar-search"><span class="sr-only">筛选文档</span><input type="search" placeholder="筛选当前分类…" data-sidebar-search></label>
-    <nav class="doc-nav" aria-label="当前分类文档"></nav>
+    <nav class="doc-nav" aria-label="当前分类文档">
+      <a class="doc-nav-item" href="2026-07-27-01-Agent基础概念与边界.html"><span>Agent 基础概念与边界</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-02-模型API结构化输出与Tool-Calling.html"><span>模型 API、结构化输出与 Tool Calling</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-03-Agent状态上下文与记忆.html"><span>Agent 状态、上下文与记忆</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-04-Agent知识检索与RAG.html"><span>Agent 知识检索与 RAG</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-05-Agent规划反思与任务分解.html"><span>Agent 规划、反思与任务分解</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-06-多Agent协作与编排.html"><span>多 Agent 协作与编排</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-07-Agent评测安全权限与成本控制.html"><span>Agent 评测、安全、权限与成本控制</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-08-Java-Agent生产部署可观测性与故障恢复.html"><span>Java Agent 生产部署、可观测性与故障恢复</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-Agent开发学习主目录.html"><span>Agent 开发学习主目录</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-Agentic-Search与RAG对比.html"><span>Agentic Search 与 RAG：边界、对比与 Java 实现</span><small>2026-07-27</small></a><a class="doc-nav-item is-active" href="2026-07-28-企业智能审批与公司主子Agent落地实战.html" aria-current="page"><span>企业智能审批与公司主子 Agent 落地实战</span><small>2026-07-28</small></a>
+    </nav>
   </aside>
   <main class="article-column">
     <div class="article-meta">
@@ -275,7 +285,6 @@ record ApprovalProposal(
       <h2 id="spring-ai实现"><a class="heading-anchor" href="#spring-ai实现" aria-label="链接到本节">#</a>Spring AI：独立角色与工具白名单</h2>
       <p>Spring AI 的 Tool Calling 中，模型只能提出工具请求，客户端应用负责解析、执行并返回结果，这是生产权限边界。当前 2.0 文档以 <code>ToolCallback</code> 表达工具，并支持由 <code>ChatClient</code> 与 Tool Calling Advisor 管理调用循环；需要条件控制时也可以由应用掌控执行循环。<a href="https://docs.spring.io/spring-ai/reference/api/tools.html" target="_blank" rel="noopener noreferrer">Spring AI Tool Calling</a> · <a href="https://docs.spring.io/spring-ai/reference/api/chatclient.html" target="_blank" rel="noopener noreferrer">Spring AI ChatClient</a></p>
       <pre><code class="language-java">import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -290,40 +299,40 @@ interface GuardedToolCatalog {
 class ApprovalAgentConfiguration {
 
     private ChatClient roleClient(
-            ChatModel model,
+            ChatClient.Builder builder,
             String systemPolicy,
             ApprovalAgentRole role,
             GuardedToolCatalog tools) {
-        return ChatClient.builder(model)
+        return builder
                 .defaultSystem(systemPolicy)
                 .defaultToolCallbacks(tools.callbacksFor(role))
                 .build();
     }
 
     @Bean("documentApprovalAgent")
-    ChatClient documentAgent(ChatModel model, GuardedToolCatalog tools) {
-        return roleClient(model,
+    ChatClient documentAgent(ChatClient.Builder builder, GuardedToolCatalog tools) {
+        return roleClient(builder,
                 "只抽取申请材料并返回 DocumentEvidence；不得给出批准结论。",
                 ApprovalAgentRole.DOCUMENT, tools);
     }
 
     @Bean("policyApprovalAgent")
-    ChatClient policyAgent(ChatModel model, GuardedToolCatalog tools) {
-        return roleClient(model,
+    ChatClient policyAgent(ChatClient.Builder builder, GuardedToolCatalog tools) {
+        return roleClient(builder,
                 "只检索当前主体可见且在申请日有效的制度；每项结论必须引用版本。",
                 ApprovalAgentRole.POLICY, tools);
     }
 
     @Bean("financeApprovalAgent")
-    ChatClient financeAgent(ChatModel model, GuardedToolCatalog tools) {
-        return roleClient(model,
+    ChatClient financeAgent(ChatClient.Builder builder, GuardedToolCatalog tools) {
+        return roleClient(builder,
                 "只使用预算和历史交易只读工具；不得修改预算或创建付款。",
                 ApprovalAgentRole.FINANCE, tools);
     }
 
     @Bean("complianceApprovalAgent")
-    ChatClient complianceAgent(ChatModel model, GuardedToolCatalog tools) {
-        return roleClient(model,
+    ChatClient complianceAgent(ChatClient.Builder builder, GuardedToolCatalog tools) {
+        return roleClient(builder,
                 "只返回供应商与数据合规证据；硬门由规则服务和授权人决定。",
                 ApprovalAgentRole.COMPLIANCE, tools);
     }
@@ -521,7 +530,7 @@ final class ApprovedProcurementExecutor {
         <li><a href="https://docs.spring.io/spring-ai/reference/api/chatclient.html" target="_blank" rel="noopener noreferrer">Spring AI — ChatClient</a>：Java/Spring 模型交互入口和多配置客户端。</li>
         <li><a href="https://docs.spring.io/spring-ai/reference/observability/index.html" target="_blank" rel="noopener noreferrer">Spring AI — Observability</a>：模型、ChatClient、Advisor 与工具调用 Observation，以及敏感内容导出边界。</li>
         <li><a href="https://docs.camunda.io/docs/components/modeler/bpmn/user-tasks/" target="_blank" rel="noopener noreferrer">Camunda — User tasks</a>：人工任务、候选人与到期时间，流程等待人完成后继续。</li>
-        <li><a href="https://docs.camunda.io/docs/8.8/components/modeler/dmn/decision-table/" target="_blank" rel="noopener noreferrer">Camunda — DMN Decision table</a>：用输入、输出和规则表达可版本化的确定性决策。</li>
+        <li><a href="https://docs.camunda.io/docs/components/modeler/dmn/decision-table/" target="_blank" rel="noopener noreferrer">Camunda — DMN Decision table</a>：用输入、输出和规则表达可版本化的确定性决策。</li>
         <li><a href="https://docs.camunda.io/docs/components/concepts/job-workers/" target="_blank" rel="noopener noreferrer">Camunda — Job workers</a>：任务完成、失败、重试退避和 incident。</li>
         <li><a href="https://airc.nist.gov/airmf-resources/airmf/5-sec-core/" target="_blank" rel="noopener noreferrer">NIST AI RMF Core</a>：组织治理、人机角色、责任、监督与持续风险管理。</li>
       </ol>
@@ -532,9 +541,19 @@ final class ApprovedProcurementExecutor {
     </article>
     <footer class="article-footer">
       <div class="source-path">HTML 页面：<code>notes/agent/2026-07-28-企业智能审批与公司主子Agent落地实战.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="2026-07-27-Agentic-Search与RAG对比.html"><small>上一篇</small><span>Agentic Search 与 RAG：边界、对比与 Java 实现</span></a>
+        <span class="pager-spacer"></span>
+      </nav>
     </footer>
   </main>
-  <aside class="toc-sidebar"></aside>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#业务场景与目标">业务场景与目标</a></li><li class="toc-level-2"><a href="#智能审批闭环">智能审批八步闭环</a></li><li class="toc-level-3"><a href="#各层所有权">各层所有权</a></li><li class="toc-level-2"><a href="#公司主子agent架构">公司主 Agent 与子 Agent 架构</a></li><li class="toc-level-2"><a href="#角色职责与权限">角色职责与权限</a></li><li class="toc-level-2"><a href="#采购审批实例">采购审批实例：28 万元 SaaS 续费</a></li><li class="toc-level-2"><a href="#公司级应用场景">公司主/子 Agent 的实际应用场景</a></li><li class="toc-level-2"><a href="#领域状态与数据">领域状态与数据设计</a></li><li class="toc-level-2"><a href="#java领域契约">Java 21：领域契约</a></li><li class="toc-level-2"><a href="#spring-ai实现">Spring AI：独立角色与工具白名单</a></li><li class="toc-level-2"><a href="#确定性协调器">确定性 Coordinator 与审批写入门</a></li><li class="toc-level-2"><a href="#权限审计与安全">权限、审计与安全</a></li><li class="toc-level-2"><a href="#失败恢复与降级">失败恢复与降级</a></li><li class="toc-level-2"><a href="#评测与业务指标">评测与业务指标</a></li><li class="toc-level-2"><a href="#分阶段落地路线">分阶段落地路线</a></li><li class="toc-level-2"><a href="#实施检查单">实施检查单</a></li><li class="toc-level-3"><a href="#常见反模式">常见反模式</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
 </div>
 </body>
 </html>
