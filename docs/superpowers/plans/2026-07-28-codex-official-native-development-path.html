@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Codex 官方原生项目开发最佳路径实施计划</title>
+</head>
+<body>
+  <main>
+    <article>
+      <h1>Codex 官方原生项目开发最佳路径实施计划</h1>
+      <p><strong>执行要求：</strong>实施时使用 superpowers:executing-plans，逐项完成并验证。</p>
+      <p><strong>目标：</strong>新增一篇仅依赖 Codex 官方原生能力、Git 和项目命令的端到端项目开发最佳路径 HTML。</p>
+      <p><strong>架构：</strong>独立页面承载统一闭环、表面映射和 Java 模板；既有 Codex 最佳实践与工作流选型页提供交叉入口；现有生成器统一更新分类导航、右侧目录、前后篇、首页和 manifest。</p>
+      <p><strong>技术栈：</strong>语义化 HTML、现有 CSS/JavaScript、Node.js ESM 内容测试、Codex 官方手册、Java 21、Spring Boot、Maven/Gradle 示例。</p>
+
+      <h2>全局约束</h2>
+      <ul>
+        <li>学习内容只写入 HTML，不新增 Markdown 笔记。</li>
+        <li>页面明确排除 AIDLC、OpenSpec、Superpowers 和第三方工作流依赖。</li>
+        <li>只引用 OpenAI 官方手册中的官方页面；外链使用安全属性。</li>
+        <li>区分“官方明确建议”和“基于官方建议综合出的默认顺序”。</li>
+        <li>站内链接使用相对路径；不改动无关正文。</li>
+      </ul>
+
+      <h2>任务一：建立内容契约测试</h2>
+      <p><strong>创建：</strong><code>scripts/test-codex-official-development-path.mjs</code></p>
+      <ol>
+        <li>读取预期新页面、既有 Codex 最佳实践页和工作流选型页。</li>
+        <li>断言语义结构、元数据、核心结论、参考资料与稳定章节 ID。</li>
+        <li>断言“无附加工作流”边界、十一阶段、Goal/Context/Constraints/Done、<code>/init</code>、<code>AGENTS.md</code>、Plan mode、worktree、sandbox、<code>/diff</code>、<code>/review</code>、PR 和 Java 模板。</li>
+        <li>断言来源日期为 2026-07-28，外链域名属于官方来源且安全属性完整。</li>
+        <li>断言两个既有页面包含新页面入口，新页面链接回它们。</li>
+        <li>运行测试，确认因新页面缺失而失败。</li>
+      </ol>
+
+      <h2>任务二：编写官方原生路径页面</h2>
+      <p><strong>创建：</strong><code>public/notes/codex/2026-07-28-Codex官方原生项目开发最佳路径.html</code></p>
+      <ol>
+        <li>写入完整 head 元数据、语义结构、资料范围和检索日期。</li>
+        <li>完成官方原生边界、核心结论、十一阶段闭环图及等价文字说明。</li>
+        <li>完成任务规模决策表和 CLI / IDE / 桌面 App 表面映射。</li>
+        <li>逐阶段说明准备、规则、隔离、提示、计划、实现、验证、diff、review、提交、复盘。</li>
+        <li>加入 Java 21 + Spring Boot 最小 <code>AGENTS.md</code> 模板。</li>
+        <li>加入功能开发、Bug 修复、审查三套提示词和验证金字塔。</li>
+        <li>完成权限基线、反模式、交付检查单与官方参考资料。</li>
+      </ol>
+
+      <h2>任务三：接入既有 Codex 知识路径</h2>
+      <p><strong>修改：</strong><code>public/notes/codex/2026-07-24-Codex全栈开发最佳实践.html</code>、<code>public/notes/codex/2026-07-24-AI开发工作流选型与小团队沉淀指南.html</code></p>
+      <ol>
+        <li>在 Codex 最佳实践页增加“无附加工作流的官方原生路径”入口。</li>
+        <li>在工作流选型页增加“先从官方原生闭环开始”的入口。</li>
+        <li>新页面链接回两篇既有页面，形成双向导航。</li>
+        <li>运行内容契约测试，确认通过。</li>
+      </ol>
+
+      <h2>任务四：重建发布结构</h2>
+      <ol>
+        <li>运行 <code>node scripts/build-html-index.mjs</code>。</li>
+        <li>确认 manifest 文档数增加一，Codex 分类文档数增加一。</li>
+        <li>确认首页分类列表、新页面左侧分类导航、右侧目录和前后篇均生成。</li>
+      </ol>
+
+      <h2>任务五：最终验证</h2>
+      <ol>
+        <li>运行新内容契约测试和 <code>node scripts/test-html-navigation.mjs</code>。</li>
+        <li>运行生成器、测试脚本和 <code>public/assets/app.js</code> 的 Node 语法检查。</li>
+        <li>检查所有 HTML 的本地链接、片段锚点、重复 ID 和外链安全属性。</li>
+        <li>在临时副本运行生成器，确认 HTML 与当前提交一致、manifest 除时间戳外一致。</li>
+        <li>运行 <code>test -s public/index.html</code>、<code>git diff --check</code> 和工作区清洁检查。</li>
+      </ol>
+    </article>
+  </main>
+</body>
+</html>
