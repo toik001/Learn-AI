@@ -226,13 +226,14 @@ create table approval_proposal (
   policy_version varchar(64) not null,
   proposal_hash varchar(64) not null unique,
   status varchar(32) not null,
+  unique (proposal_id, proposal_hash),
   foreign key (case_id, case_version)
     references approval_case_version(case_id, case_version)
 );
 
 create table approval_decision (
   decision_id uuid primary key,
-  proposal_id uuid not null references approval_proposal(proposal_id),
+  proposal_id uuid not null,
   proposal_hash varchar(64) not null,
   approver_id varchar(128) not null,
   approver_role varchar(64) not null,
@@ -240,7 +241,9 @@ create table approval_decision (
   mfa_strength varchar(32) not null,
   decision varchar(24) not null,
   decided_at timestamp with time zone not null,
-  unique (proposal_id, approver_id, approver_role)
+  unique (proposal_id, approver_id, approver_role),
+  foreign key (proposal_id, proposal_hash)
+    references approval_proposal(proposal_id, proposal_hash)
 );
 
 -- claim 必须在一个事务中依赖唯一键原子创建；禁止“先查后写”。
@@ -248,13 +251,16 @@ create table approval_execution (
   execution_id uuid primary key,
   tenant_id varchar(64) not null,
   case_id uuid not null references approval_case(case_id),
-  proposal_id uuid not null references approval_proposal(proposal_id),
+  proposal_id uuid not null,
+  proposal_hash varchar(64) not null,
   idempotency_key varchar(128) not null,
   status varchar(32) not null,
   external_ref varchar(256),
   claimed_at timestamp with time zone not null,
   completed_at timestamp with time zone,
-  unique (tenant_id, idempotency_key)
+  unique (tenant_id, idempotency_key),
+  foreign key (proposal_id, proposal_hash)
+    references approval_proposal(proposal_id, proposal_hash)
 );
 
 -- 仅追加事件；数据库写角色不得 UPDATE/DELETE，内容正文放受限证据库。
@@ -485,6 +491,7 @@ final class IntelligentApprovalCoordinator {
 }</code></pre>
       <p><strong>并行边界：</strong>为了让控制流一眼可读，上述教学骨架按固定顺序执行四个只读 Agent。生产实现可以在有界线程池中并行，但必须传播同一 deadline、取消信号与预算；合并前按角色检查“每个必需角色恰好一个结果”，并按稳定顺序排序证据。任何写工具和审批任务都不能并行越过合并门。</p>
       <pre><code class="language-java" data-java-fixture="enterprise-approval-core">record ApprovedExecution(
+        String tenantId,
         UUID caseId,
         UUID proposalId,
         String proposalHash,
