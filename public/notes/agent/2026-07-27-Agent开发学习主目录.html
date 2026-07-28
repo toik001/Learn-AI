@@ -199,6 +199,7 @@ final class AgentRuntime {
         <section class="roadmap-stage"><h3>6. <a href="2026-07-27-06-多Agent协作与编排.html">多 Agent 协作与编排</a> <span class="status-tag">已建设</span></h3><p><strong>目标：</strong>只在角色边界明确时引入协作。<br><strong>关键问题：</strong>共享状态如何避免冲突？<br><strong>Java 实践：</strong>实现协调器与角色专属工具集。<br><strong>验收：</strong>单 Agent 基线与协作方案可比较。</p></section>
         <section class="roadmap-stage"><h3>7. <a href="2026-07-27-07-Agent评测安全权限与成本控制.html">评测、安全、权限与成本控制</a> <span class="status-tag">已建设</span></h3><p><strong>目标：</strong>把正确性、安全性和成本变成可测指标。<br><strong>关键问题：</strong>谁有权执行不可逆操作？<br><strong>Java 实践：</strong>增加策略校验、审计和 token/调用预算。<br><strong>验收：</strong>越权、超时、超预算与工具故障都有测试。</p></section>
         <section class="roadmap-stage"><h3>8. <a href="2026-07-27-08-Java-Agent生产部署可观测性与故障恢复.html">Java 生产部署、可观测性与故障恢复</a> <span class="status-tag">已建设</span></h3><p><strong>目标：</strong>交付可运维的 Agent 服务。<br><strong>关键问题：</strong>如何重放一次失败调用？<br><strong>Java 实践：</strong>接入日志、指标、trace、重试与恢复队列。<br><strong>验收：</strong>能用调用记录定位一次失败并安全恢复。</p></section>
+        <section class="roadmap-stage"><h3>9. <a href="2026-07-28-企业智能审批与公司主子Agent落地实战.html">企业智能审批与公司主子 Agent 落地实战</a> <span class="status-tag">已建设</span></h3><p><strong>目标：</strong>把主 Agent、专业子 Agent、BPMN/DMN、人工审批和企业系统组成可问责闭环。<br><strong>关键问题：</strong>Agent 建议与最终审批权如何分离？<br><strong>Java 实践：</strong>实现结构化证据、审批提案、Spring AI 角色客户端和确定性 Coordinator。<br><strong>验收：</strong>陈旧提案、越权工具和重复业务写入均被阻断。</p></section>
       </div>
 
       <h2 id="第一个实践项目"><a class="heading-anchor" href="#第一个实践项目" aria-label="链接到本节">#</a>第一个实践项目</h2>
@@ -212,6 +213,7 @@ final class AgentRuntime {
         <li><strong>错误降级：</strong>城市不在白名单、超时、服务 5xx 或模型请求异常时，明确说明不能取得实时结果。</li>
         <li><strong>单元测试：</strong>覆盖合法城市、越权城市、未知工具、超时、工具失败与第 8 步上限。</li>
       </ul>
+      <p><strong>进阶企业实践：</strong>完成最小工具 Agent 后，进入<a href="2026-07-28-企业智能审批与公司主子Agent落地实战.html">企业智能审批与公司主子 Agent 落地实战</a>，学习如何让 Agent 只生成提案，由 BPMN/DMN、授权人和受控执行器完成最终决定与写入。</p>
 
       <h2 id="参考资料"><a class="heading-anchor" href="#参考资料" aria-label="链接到本节">#</a>参考资料</h2>
       <p>以下均为一手论文、标准机构或项目官方文档，检索于 2026-07-27：</p>

@@ -998,6 +998,56 @@ button {
   margin: 24px 0;
 }
 
+.company-agent-map {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 24px 0;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.company-agent-hub,
+.company-agent-node,
+.company-agent-systems {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface-muted);
+  text-align: center;
+}
+
+.company-agent-hub {
+  grid-column: 1 / -1;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.company-agent-hub strong,
+.company-agent-node strong,
+.company-agent-systems strong {
+  display: block;
+  color: var(--text);
+}
+
+.company-agent-hub p,
+.company-agent-node span,
+.company-agent-systems span {
+  display: block;
+  margin: 7px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.company-agent-systems {
+  grid-column: 1 / -1;
+  border-style: dashed;
+}
+
 .roadmap-stage {
   min-width: 0;
   padding: 19px 20px;
@@ -1315,6 +1365,15 @@ button {
 
   .learning-roadmap {
     grid-template-columns: 1fr;
+  }
+
+  .company-agent-map {
+    grid-template-columns: 1fr;
+  }
+
+  .company-agent-hub,
+  .company-agent-systems {
+    grid-column: 1;
   }
 }
 

@@ -793,6 +793,7 @@ final class ServiceDeskCoordinator {
 
       <h2 id="企业服务台案例"><a class="heading-anchor" href="#企业服务台案例" aria-label="链接到本节">#</a>企业服务台案例</h2>
       <p><strong>请求：</strong>“华东订单服务持续超时，按运行手册排查；如果需要，请帮我提工单。”入口已经从认证态得到 tenant、principal 与允许服务范围，不能从用户正文接受 tenant 替换。</p>
+      <p><strong>另一个完整企业案例：</strong><a href="2026-07-28-企业智能审批与公司主子Agent落地实战.html">企业智能审批与公司主子 Agent 落地实战</a>展示了公司主 Agent 如何协调材料、制度、财务和合规子 Agent，同时把最终决定留给 BPMN/DMN、授权审批人与受控执行器。</p>
       <ol>
         <li><strong>Intake：</strong>生成 correlation ID 和请求幂等键；加载上一课已校验的 <code>ExecutionPlan</code>，其中知识 / 状态步骤为并行只读，action 依赖两者合并，ticket write 依赖人工审批。</li>
         <li><strong>Triage：</strong>只查看脱敏描述和 taxonomy，分类为 <code>ORDER_LATENCY</code>，输出 service / region 缺失检查与路由标签；不能检索或建单。</li>
