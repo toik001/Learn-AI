@@ -945,6 +945,40 @@ button {
   transform: translateY(-50%);
 }
 
+.agent-call-flow.codex-native-flow .agent-step:nth-child(8)::after {
+  content: "↓";
+  right: 50%;
+  bottom: -28px;
+  transform: translateX(50%);
+}
+
+.agent-call-flow.codex-native-flow .agent-step:nth-child(9) {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+.agent-call-flow.codex-native-flow .agent-step:nth-child(10) {
+  grid-column: 2;
+  grid-row: 3;
+}
+
+.agent-call-flow.codex-native-flow .agent-step:nth-child(11) {
+  grid-column: 3;
+  grid-row: 3;
+}
+
+.agent-call-flow.codex-native-flow .agent-step:nth-child(9)::after,
+.agent-call-flow.codex-native-flow .agent-step:nth-child(10)::after {
+  content: "→";
+  top: 50%;
+  right: -27px;
+  transform: translateY(-50%);
+}
+
+.agent-call-flow.codex-native-flow .agent-step:nth-child(11)::after {
+  content: none;
+}
+
 .guardrail-band {
   grid-column: 1 / -1;
   padding: 11px 14px;
@@ -1264,6 +1298,19 @@ button {
     bottom: -25px;
     left: auto;
     transform: translateX(50%);
+  }
+
+  .agent-call-flow.codex-native-flow .agent-step::after {
+    content: "↓";
+    top: auto;
+    right: 50%;
+    bottom: -25px;
+    left: auto;
+    transform: translateX(50%);
+  }
+
+  .agent-call-flow.codex-native-flow .agent-step:nth-child(11)::after {
+    content: none;
   }
 
   .learning-roadmap {

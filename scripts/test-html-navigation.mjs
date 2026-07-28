@@ -236,6 +236,24 @@ try {
       );
     }
 
+    const footerPager =
+      /<footer class="article-footer">[\s\S]*?<nav class="pager" aria-label="上一篇和下一篇">([\s\S]*?)<\/nav>[\s\S]*?<\/footer>/i.exec(
+        html,
+      )?.[1] ?? "";
+    assert.ok(footerPager, `${document.output} 缺少篇章页尾导航`);
+    const pagerLinks = [
+      ...footerPager.matchAll(/<a class="pager-link[^"]*"([^>]*)>/gi),
+    ];
+    for (const pagerLink of pagerLinks) {
+      const href = decodeEntities(attribute(pagerLink[1], "href"));
+      assert.ok(
+        expectedCategoryOutputs.has(
+          path.resolve(path.dirname(outputPath), href),
+        ),
+        `${document.output} 页尾导航出现跨分类链接：${href}`,
+      );
+    }
+
     const asides = tocAsides(html);
     assert.equal(
       asides.length,

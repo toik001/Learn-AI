@@ -306,11 +306,14 @@ function ensureMeta(html, name, value) {
   return html.replace("</head>", `  ${tag}\n</head>`);
 }
 
-function updateDocumentHtml(document, documents, currentIndex) {
+function updateDocumentHtml(document, documents) {
   let updated = document.html;
   const categoryDocuments = documentsInCategory(
     documents,
     document.category,
+  );
+  const categoryIndex = categoryDocuments.findIndex(
+    (candidate) => candidate.outputPath === document.outputPath,
   );
   updated = ensureMeta(updated, "study-category", document.category);
   updated = ensureMeta(updated, "study-date", document.date);
@@ -353,7 +356,7 @@ function updateDocumentHtml(document, documents, currentIndex) {
       }
     }
   }
-  const footer = articleFooter(documents, currentIndex, document);
+  const footer = articleFooter(categoryDocuments, categoryIndex, document);
   const existingFooter =
     /^[ \t]*<footer class="article-footer">[\s\S]*?<\/footer>/im;
   updated = existingFooter.test(updated)
@@ -501,10 +504,10 @@ async function main() {
     documents.push(extractDocument(outputPath, html));
   }
 
-  for (const [index, document] of documents.entries()) {
+  for (const document of documents) {
     await fs.writeFile(
       document.outputPath,
-      updateDocumentHtml(document, documents, index),
+      updateDocumentHtml(document, documents),
       "utf8",
     );
   }

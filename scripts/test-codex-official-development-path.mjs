@@ -102,10 +102,23 @@ for (const phrase of [
 
 assert.match(
   note,
-  /class="agent-call-flow"[^>]*role="img"[^>]*aria-label="[^"]+"/,
+  /class="agent-call-flow codex-native-flow"[^>]*role="img"[^>]*aria-label="[^"]+"/,
   "开发闭环图必须有可访问名称",
 );
 assert.match(note, /class="diagram-text"/, "开发闭环图必须有等价文字说明");
+const flowSteps = [
+  ...note.matchAll(/<div class="agent-step">(\d+)\.[\s\S]*?<\/div>/g),
+];
+assert.equal(flowSteps.length, 11, "官方原生开发闭环必须恰有十一站");
+assert.deepEqual(
+  flowSteps.map((match) => Number(match[1])),
+  Array.from({ length: 11 }, (_, index) => index),
+  "官方原生开发闭环必须按 0～10 连续编号",
+);
+assert.ok(
+  note.includes("不是 OpenAI 发布的固定 SDLC 标准"),
+  "必须明确十一站是工程综合，而不是 OpenAI 固定 SDLC",
+);
 assert.ok((note.match(/<table\b/g) ?? []).length >= 4, "至少需要四张决策或映射表");
 assert.ok(
   (note.match(/<pre><code/g) ?? []).length >= 4,
@@ -116,6 +129,7 @@ const officialLinks = [
   ...note.matchAll(/<a\b([^>]*\bhref="https?:\/\/[^"]+"[^>]*)>/gi),
 ];
 assert.ok(officialLinks.length >= 7, "至少需要七个官方来源链接");
+const officialUrls = new Set();
 for (const [, attributes] of officialLinks) {
   assert.match(attributes, /\btarget="_blank"/, "官方外链缺少 target=_blank");
   assert.match(
@@ -124,11 +138,25 @@ for (const [, attributes] of officialLinks) {
     "官方外链缺少 rel=noopener noreferrer",
   );
   const url = /\bhref="([^"]+)"/.exec(attributes)?.[1] ?? "";
+  officialUrls.add(url);
   const host = new URL(url).hostname;
   assert.ok(
     host === "learn.chatgpt.com" || host === "developers.openai.com",
     `出现非 OpenAI 官方来源：${host}`,
   );
+}
+for (const expectedUrl of [
+  "https://learn.chatgpt.com/guides/best-practices",
+  "https://learn.chatgpt.com/docs/prompting",
+  "https://learn.chatgpt.com/docs/projects",
+  "https://learn.chatgpt.com/docs/agent-configuration/agents-md",
+  "https://learn.chatgpt.com/docs/agent-approvals-security",
+  "https://learn.chatgpt.com/docs/developer-commands?surface=cli",
+  "https://learn.chatgpt.com/docs/code-review",
+  "https://learn.chatgpt.com/docs/environments/git-worktrees",
+  "https://learn.chatgpt.com/docs/environments/local-environment",
+]) {
+  assert.ok(officialUrls.has(expectedUrl), `缺少关键官方来源：${expectedUrl}`);
 }
 assert.ok(
   note.includes("检索于 <strong>2026-07-28</strong>"),
