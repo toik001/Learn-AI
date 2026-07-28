@@ -283,7 +283,7 @@ record ApprovalProposal(
       <p><code>proposalHash</code> 必须由服务器对 canonical proposal（case、版本、金额、对象、证据 ID/版本、规则版本和拟执行动作）计算，模型只能看到计算后的值，不能自己提供可信 hash。</p>
 
       <h2 id="spring-ai实现"><a class="heading-anchor" href="#spring-ai实现" aria-label="链接到本节">#</a>Spring AI：独立角色与工具白名单</h2>
-      <p>Spring AI 的 Tool Calling 中，模型只能提出工具请求，客户端应用负责解析、执行并返回结果，这是生产权限边界。当前 2.0 文档以 <code>ToolCallback</code> 表达工具，并支持由 <code>ChatClient</code> 与 Tool Calling Advisor 管理调用循环；需要条件控制时也可以由应用掌控执行循环。<a href="https://docs.spring.io/spring-ai/reference/api/tools.html" target="_blank" rel="noopener noreferrer">Spring AI Tool Calling</a> · <a href="https://docs.spring.io/spring-ai/reference/api/chatclient.html" target="_blank" rel="noopener noreferrer">Spring AI ChatClient</a></p>
+      <p>Spring AI 的 Tool Calling 中，模型只能提出工具请求，客户端应用负责解析、执行并返回结果，这是生产权限边界。当前 2.0 文档以 <code>ToolCallback</code> 表达工具，并支持由 <code>ChatClient</code> 与 Tool Calling Advisor 管理调用循环；需要条件控制时也可以由应用掌控执行循环。2.0 已推荐使用能接收 <code>ToolCallback</code>、provider 或 <code>@Tool</code> 对象的 <code>defaultTools(...)</code>；旧 <code>defaultToolCallbacks(...)</code> 已弃用。<a href="https://docs.spring.io/spring-ai/reference/api/tools.html" target="_blank" rel="noopener noreferrer">Spring AI Tool Calling</a> · <a href="https://docs.spring.io/spring-ai/reference/api/chatclient.html" target="_blank" rel="noopener noreferrer">Spring AI ChatClient</a> · <a href="https://docs.spring.io/spring-ai/docs/current/api/org/springframework/ai/chat/client/ChatClient.Builder.html" target="_blank" rel="noopener noreferrer">ChatClient.Builder 2.0 API</a></p>
       <pre><code class="language-java">import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.context.annotation.Bean;
@@ -305,7 +305,7 @@ class ApprovalAgentConfiguration {
             GuardedToolCatalog tools) {
         return builder
                 .defaultSystem(systemPolicy)
-                .defaultToolCallbacks(tools.callbacksFor(role))
+                .defaultTools(tools.callbacksFor(role))
                 .build();
     }
 
@@ -528,6 +528,7 @@ final class ApprovedProcurementExecutor {
       <ol>
         <li><a href="https://docs.spring.io/spring-ai/reference/api/tools.html" target="_blank" rel="noopener noreferrer">Spring AI — Tool Calling</a>：模型只请求工具，应用负责执行；<code>ToolCallback</code>、Advisor 控制与应用自控执行循环。</li>
         <li><a href="https://docs.spring.io/spring-ai/reference/api/chatclient.html" target="_blank" rel="noopener noreferrer">Spring AI — ChatClient</a>：Java/Spring 模型交互入口和多配置客户端。</li>
+        <li><a href="https://docs.spring.io/spring-ai/docs/current/api/org/springframework/ai/chat/client/ChatClient.Builder.html" target="_blank" rel="noopener noreferrer">Spring AI — ChatClient.Builder 2.0 API</a>：<code>defaultTools(...)</code> 接收 <code>ToolCallback</code> 等工具表示，旧 <code>defaultToolCallbacks(...)</code> 已弃用。</li>
         <li><a href="https://docs.spring.io/spring-ai/reference/observability/index.html" target="_blank" rel="noopener noreferrer">Spring AI — Observability</a>：模型、ChatClient、Advisor 与工具调用 Observation，以及敏感内容导出边界。</li>
         <li><a href="https://docs.camunda.io/docs/components/modeler/bpmn/user-tasks/" target="_blank" rel="noopener noreferrer">Camunda — User tasks</a>：人工任务、候选人与到期时间，流程等待人完成后继续。</li>
         <li><a href="https://docs.camunda.io/docs/components/modeler/dmn/decision-table/" target="_blank" rel="noopener noreferrer">Camunda — DMN Decision table</a>：用输入、输出和规则表达可版本化的确定性决策。</li>

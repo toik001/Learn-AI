@@ -141,6 +141,7 @@ for (const [, attributes] of externalLinks) {
 for (const expectedUrl of [
   "https://docs.spring.io/spring-ai/reference/api/tools.html",
   "https://docs.spring.io/spring-ai/reference/api/chatclient.html",
+  "https://docs.spring.io/spring-ai/docs/current/api/org/springframework/ai/chat/client/ChatClient.Builder.html",
   "https://docs.spring.io/spring-ai/reference/observability/index.html",
   "https://docs.camunda.io/docs/components/modeler/bpmn/user-tasks/",
   "https://docs.camunda.io/docs/components/modeler/dmn/decision-table/",
