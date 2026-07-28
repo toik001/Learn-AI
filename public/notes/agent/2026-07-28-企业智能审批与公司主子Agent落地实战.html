@@ -192,7 +192,8 @@
   process_instance_id varchar(128) not null unique,
   current_state varchar(32) not null,
   current_version bigint not null,
-  created_at timestamp with time zone not null
+  created_at timestamp with time zone not null,
+  unique (tenant_id, case_id)
 );
 
 -- 每次材料、金额、供应商或拟执行动作变化都追加版本，不覆盖旧快照。
@@ -250,7 +251,7 @@ create table approval_decision (
 create table approval_execution (
   execution_id uuid primary key,
   tenant_id varchar(64) not null,
-  case_id uuid not null references approval_case(case_id),
+  case_id uuid not null,
   proposal_id uuid not null,
   proposal_hash varchar(64) not null,
   idempotency_key varchar(128) not null,
@@ -259,6 +260,8 @@ create table approval_execution (
   claimed_at timestamp with time zone not null,
   completed_at timestamp with time zone,
   unique (tenant_id, idempotency_key),
+  foreign key (tenant_id, case_id)
+    references approval_case(tenant_id, case_id),
   foreign key (proposal_id, proposal_hash)
     references approval_proposal(proposal_id, proposal_hash)
 );
@@ -505,6 +508,12 @@ interface ApprovalVerifier {
 interface ProcurementWriter {
     // 目标系统必须原生接受并兑现 command.idempotencyKey()。
     String createPurchaseOrder(ApprovedExecution command);
+}
+
+interface ProcurementRecoveryReader {
+    // 只供 EXECUTION_UNKNOWN 恢复任务查询，不能用于执行路径的“先查后写”。
+    Optional&lt;String&gt; lookupByIdempotencyKey(
+            String tenantId, String idempotencyKey);
 }
 
 sealed interface ExecutionClaim

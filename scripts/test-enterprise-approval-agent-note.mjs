@@ -148,9 +148,18 @@ for (const storageContract of [
   "mfa_strength",
   "previous_hash",
   "event_hash",
+  "unique (proposal_id, proposal_hash)",
+  "foreign key (proposal_id, proposal_hash)",
+  "unique (tenant_id, case_id)",
+  "foreign key (tenant_id, case_id)",
 ]) {
   assert.ok(note.includes(storageContract), `存储契约缺少：${storageContract}`);
 }
+assert.ok(
+  note.includes("interface ProcurementRecoveryReader")
+    && note.includes("lookupByIdempotencyKey"),
+  "EXECUTION_UNKNOWN 必须有只读幂等恢复查询契约",
+);
 assert.match(
   note,
   /record EvidenceRef\([\s\S]*?long caseVersion,/,
