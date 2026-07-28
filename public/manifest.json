@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-27T08:48:23.155Z",
-  "documentCount": 18,
+  "generatedAt": "2026-07-28T07:15:16.562Z",
+  "documentCount": 19,
   "documents": [
     {
       "output": "notes/agent/2026-07-27-01-Agent基础概念与边界.html",
@@ -120,6 +120,13 @@
       "category": "Codex 与 AI 工程",
       "date": "2026-07-24",
       "sections": 67
+    },
+    {
+      "output": "notes/codex/2026-07-28-Codex官方原生项目开发最佳路径.html",
+      "title": "Codex 官方原生项目开发最佳路径",
+      "category": "Codex 与 AI 工程",
+      "date": "2026-07-28",
+      "sections": 24
     },
     {
       "output": "notes/project/2026-07-24-GitLab-Pages极简部署与项目结构.html",
