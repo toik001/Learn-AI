@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Codex 官方原生项目开发最佳路径设计</title>
+</head>
+<body>
+  <main>
+    <article>
+      <h1>Codex 官方原生项目开发最佳路径设计</h1>
+      <p>日期：2026-07-28</p>
+
+      <h2>目标</h2>
+      <p>为不使用 AIDLC、OpenSpec、Superpowers 或其他附加工作流的开发者，提供一条只依赖 Codex 官方能力、Git 和项目自身构建测试命令的端到端开发路径。</p>
+
+      <h2>方案选择</h2>
+      <p>采用“统一默认闭环 + 表面映射 + Java 项目模板”。统一闭环回答每一步做什么，表面映射说明 CLI、IDE 扩展与桌面 App 如何执行同一步，Java 模板让读者可以直接在 Spring Boot 项目使用。按产品表面分别讲会造成重复；以团队成熟度为主线则不够操作化。</p>
+
+      <h2>范围边界</h2>
+      <ul>
+        <li>包含：Codex CLI、IDE 扩展、ChatGPT 桌面 App 中的 Codex、Codex worktree、Plan mode、<code>AGENTS.md</code>、sandbox/approval、<code>/diff</code>、<code>/review</code>、Git 提交与 PR。</li>
+        <li>包含：项目已有的 Maven、Gradle、npm、测试、lint、构建、浏览器和 CI 命令。</li>
+        <li>不依赖：AIDLC、OpenSpec、Superpowers、第三方工作流、外部 Skill、MCP 或自动化平台。</li>
+        <li>Skills、MCP、hooks、scheduled tasks 只在结尾作为“重复摩擦出现后再考虑”的可选升级，不进入默认路径。</li>
+        <li>所有“官方明确建议”与“本文综合出的推荐顺序”分开标识，避免把综合判断伪装成官方固定流程。</li>
+      </ul>
+
+      <h2>核心路径</h2>
+      <ol>
+        <li>从正确 Git 根目录启动 Codex，检查分支、工作区和项目可运行性。</li>
+        <li>建立最小仓库说明：启动、构建、快速测试、完整测试、禁止事项。</li>
+        <li>使用 <code>/init</code> 生成并精简 <code>AGENTS.md</code>，只保存持久规则。</li>
+        <li>根据风险选择 Local 或 worktree；保持默认 sandbox 和 approval，仅按需扩大权限。</li>
+        <li>每个可独立验收的结果使用一个 chat，不让单个 chat 承载整个项目生命周期。</li>
+        <li>提示词包含 Goal、Context、Constraints、Done when；小任务直接执行，复杂任务先进入 Plan mode。</li>
+        <li>先检查与复现当前行为，再做最小范围实现；让 Codex 读取差异并持续报告进度。</li>
+        <li>按“最小相关检查 → 模块/集成检查 → 全量/真实运行”逐层验证。</li>
+        <li>使用 <code>/diff</code> 检查范围，使用 <code>/review</code> 建立第二视角；修复后重跑检查与 review。</li>
+        <li>人工检查关键业务和高风险动作，再 stage、commit、push、创建 PR。</li>
+        <li>任务结束后只把重复出现的摩擦沉淀进 <code>AGENTS.md</code> 或稳定脚本。</li>
+      </ol>
+
+      <h2>页面结构</h2>
+      <ol>
+        <li>核心结论和“官方原生”边界。</li>
+        <li>十一阶段闭环图与文字替代。</li>
+        <li>任务规模决策表：局部修改、Bug、跨模块需求、UI、迁移与高风险变更。</li>
+        <li>阶段详解：目标、推荐动作、验证证据、停止条件和常见错误。</li>
+        <li>CLI、IDE、桌面 App 能力映射表。</li>
+        <li>Java 21 + Spring Boot 项目 <code>AGENTS.md</code> 最小模板。</li>
+        <li>功能开发、Bug 修复和代码审查三套提示词模板。</li>
+        <li>验证金字塔、权限基线、交付清单和反模式。</li>
+        <li>官方资料和检索日期。</li>
+      </ol>
+
+      <h2>内容质量与验证</h2>
+      <ul>
+        <li>新页面保存为 <code>public/notes/codex/2026-07-28-Codex官方原生项目开发最佳路径.html</code>。</li>
+        <li>从既有“Codex 全栈开发最佳实践”和“AI 开发工作流选型”页面建立交叉入口。</li>
+        <li>至少包含一张闭环图、三张对比/决策表和三套可复制模板。</li>
+        <li>外链只使用最新 Codex 官方手册中标注的 OpenAI 官方页面，并带安全属性。</li>
+        <li>新增内容契约测试，检查边界声明、十一阶段、官方能力、Java 模板、来源日期和交叉入口。</li>
+        <li>运行生成器、导航回归、Node 语法、链接、锚点、重复 ID、外链属性和幂等检查。</li>
+      </ul>
+    </article>
+  </main>
+</body>
+</html>
