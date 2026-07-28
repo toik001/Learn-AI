@@ -93,6 +93,14 @@ for (const phrase of [
 ]) {
   assert.ok(note.includes(phrase), `缺少企业落地关键内容：${phrase}`);
 }
+assert.ok(
+  note.includes(".defaultTools(tools.callbacksFor(role))"),
+  "Spring AI 2.0 示例必须使用当前 defaultTools API",
+);
+assert.ok(
+  !note.includes(".defaultToolCallbacks("),
+  "Spring AI 2.0 示例不得继续使用已弃用的 defaultToolCallbacks API",
+);
 
 for (const diagramClass of ["approval-agent-flow", "company-agent-map"]) {
   assert.match(
