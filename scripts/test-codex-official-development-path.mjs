@@ -7,6 +7,7 @@ import path from "node:path";
 const rootDir = process.cwd();
 const noteFile = "2026-07-28-Codex官方原生项目开发最佳路径.html";
 const notePath = path.join(rootDir, "public", "notes", "codex", noteFile);
+const stylePath = path.join(rootDir, "public", "assets", "style.css");
 const practicesPath = path.join(
   rootDir,
   "public",
@@ -31,6 +32,7 @@ const readRequired = async (file, label) => {
 };
 
 const note = await readRequired(notePath, "Codex 官方原生开发路径页面");
+const style = await readRequired(stylePath, "共享样式");
 const practices = await readRequired(practicesPath, "Codex 全栈开发最佳实践");
 const selection = await readRequired(selectionPath, "AI 开发工作流选型");
 
@@ -118,6 +120,30 @@ assert.deepEqual(
 assert.ok(
   note.includes("不是 OpenAI 发布的固定 SDLC 标准"),
   "必须明确十一站是工程综合，而不是 OpenAI 固定 SDLC",
+);
+assert.match(
+  style,
+  /\.agent-call-flow\.codex-native-flow \.agent-step:nth-child\(8\)::after\s*\{[^}]*content:\s*"↓"/s,
+  "桌面十一站流程必须连接第 7→8 站",
+);
+assert.match(
+  style,
+  /\.agent-call-flow\.codex-native-flow \.agent-step:nth-child\(9\)::after,\s*\.agent-call-flow\.codex-native-flow \.agent-step:nth-child\(10\)::after\s*\{[^}]*content:\s*"→"/s,
+  "桌面十一站流程必须连接第 8→9→10 站",
+);
+assert.match(
+  style,
+  /@media \(max-width: 820px\)[\s\S]*?\.agent-call-flow\.codex-native-flow \.agent-step::after\s*\{[^}]*content:\s*"↓"[\s\S]*?\.agent-call-flow\.codex-native-flow \.agent-step:nth-child\(11\)::after\s*\{\s*content:\s*none;/,
+  "移动端十一站流程必须纵向连续，且最后一站不再绘制箭头",
+);
+assert.equal(
+  (
+    style.match(
+      /\.agent-call-flow\.codex-native-flow \.agent-step:nth-child\(11\)::after\s*\{\s*content:\s*none;/g,
+    ) ?? []
+  ).length,
+  2,
+  "桌面端与移动端都必须在最后一站终止箭头",
 );
 assert.ok((note.match(/<table\b/g) ?? []).length >= 4, "至少需要四张决策或映射表");
 assert.ok(
