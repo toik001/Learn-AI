@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="不使用 AIDLC、OpenSpec、Superpowers 等附加工作流时，仅依赖 Codex 官方原生能力、Git 和项目命令完成从仓库准备到 PR 的推荐开发路径。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="Codex 与 AI 工程">
+  <meta name="study-date" content="2026-07-28">
+  <title>Codex 官方原生项目开发最佳路径｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-home-link" href="../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <div class="sidebar-category-summary">
+      <span class="eyebrow">当前分类</span>
+      <a class="sidebar-category-link" href="../../index.html"><strong>Codex 与 AI 工程</strong><small>分类文档</small></a>
+    </div>
+    <label class="sidebar-search"><span class="sr-only">筛选文档</span><input type="search" placeholder="筛选当前分类…" data-sidebar-search></label>
+    <nav class="doc-nav" aria-label="当前分类文档"></nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta">
+      <a href="../../index.html">知识库首页</a>
+      <span>·</span><span>Codex 与 AI 工程</span><span>·</span>
+      <time datetime="2026-07-28">2026-07-28</time>
+    </div>
+    <article class="markdown-body">
+      <h1 id="codex-官方原生项目开发最佳路径"><a class="heading-anchor" href="#codex-官方原生项目开发最佳路径" aria-label="链接到本节">#</a>Codex 官方原生项目开发最佳路径</h1>
+      <blockquote>
+        <p><strong>适用场景：</strong>项目没有 AIDLC、OpenSpec、Superpowers、Spec Kit 等额外流程，希望直接使用 Codex 官方能力完成可靠开发。</p>
+        <p><strong>资料范围：</strong>Codex 最新官方手册中的 Best practices、Prompting、Projects and chats、AGENTS.md、Approvals &amp; security、CLI commands、Code review、Worktrees 与 Local environments。检索与整理日期：2026-07-28。</p>
+      </blockquote>
+
+      <nav aria-label="本页快速目录">
+        <strong>快速阅读：</strong>
+        <a href="#核心结论">核心结论</a> ·
+        <a href="#官方原生边界">范围边界</a> ·
+        <a href="#默认开发闭环">默认闭环</a> ·
+        <a href="#任务规模决策">任务决策</a> ·
+        <a href="#java项目模板">Java 模板</a> ·
+        <a href="#提示词模板">提示词</a> ·
+        <a href="#交付检查单">检查单</a> ·
+        <a href="#参考资料">参考资料</a>
+      </nav>
+
+      <h2 id="核心结论"><a class="heading-anchor" href="#核心结论" aria-label="链接到本节">#</a>核心结论</h2>
+      <ol>
+        <li><strong>官方没有一条名为“Codex 项目开发工作流”的强制流程。</strong>OpenAI 官方把最佳实践分散在提示、计划、项目与 chat、<code>AGENTS.md</code>、权限、worktree、测试、diff 和 review 等能力中；本文给出的顺序是对这些官方建议的工程化综合。</li>
+        <li><strong>默认最优路径是：准备成功跑道 → 明确一个结果 → 复杂任务先计划 → 小步实现 → 真实验证 → diff/review → 人工确认 → Git/PR。</strong>Codex 不是只负责写代码，而应读取仓库、执行项目命令、根据反馈修正并交付验证证据。</li>
+        <li><strong>一个 chat 对应一个可独立验收的结果。</strong>同一问题继续留在原 chat；真正分叉的目标用新 chat 或 fork。不要用一个 chat 承载整个项目的所有需求。</li>
+        <li><strong><code>AGENTS.md</code> 是最重要的持久项目接口。</strong>写入仓库布局、构建测试命令、工程约定、禁止事项和完成标准；当前任务细节仍放在提示词中。</li>
+        <li><strong>复杂、模糊、跨模块任务先用 Plan mode；小而明确的修改直接执行。</strong>计划的价值是先读代码、发现约束和确定验证方案，而不是生产一份长文档。</li>
+        <li><strong>完成必须有新鲜证据。</strong>至少检查 diff，并运行相关编译、测试、lint 或真实应用流程；再用 <code>/review</code> 或对应 review 界面建立第二视角。</li>
+        <li><strong>权限默认收紧。</strong>从官方默认 sandbox/approval 开始，只为当前明确需要的目录、网络或命令扩大权限；不要把 <code>--yolo</code> 当作日常开发默认值。</li>
+      </ol>
+
+      <h2 id="官方原生边界"><a class="heading-anchor" href="#官方原生边界" aria-label="链接到本节">#</a>什么叫“官方原生路径”</h2>
+      <p>本文的路径<strong>不依赖 AIDLC、OpenSpec、Superpowers</strong> 或其他外部工作流。它只依赖 Codex 官方表面、Git 和你的项目已经拥有的命令。</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>进入默认路径</th><th>不作为前置条件</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td>CLI、IDE 扩展、桌面 App 的 Codex</td><td>AIDLC / BMAD</td><td>产品生命周期治理不是完成一次代码任务的前置条件</td></tr>
+          <tr><td><code>AGENTS.md</code>、Plan mode、sandbox、approval</td><td>OpenSpec / Spec Kit</td><td>规格系统可在需求复杂后升级，但不是原生闭环必需</td></tr>
+          <tr><td>Local / Codex-managed worktree、Handoff</td><td>Superpowers / 第三方 Skill</td><td>worktree 是 Codex App 官方隔离能力；Skill 属于后续复用层</td></tr>
+          <tr><td><code>/diff</code>、<code>/review</code>、Git/PR</td><td>MCP、hooks、scheduled tasks</td><td>外部连接和自动化应在手动路径稳定后再增加</td></tr>
+          <tr><td>Maven、Gradle、npm、测试、浏览器、CI</td><td>新建一套流程引擎</td><td>项目的确定性反馈比额外流程名词更重要</td></tr>
+        </tbody>
+      </table></div>
+      <p>延伸阅读：更宽泛的工程方法见<a href="2026-07-24-Codex全栈开发最佳实践.html">Codex 全栈开发最佳实践</a>；需要比较外部工作流时见<a href="2026-07-24-AI开发工作流选型与小团队沉淀指南.html">AI 开发工作流选型与小团队沉淀指南</a>。</p>
+
+      <h2 id="默认开发闭环"><a class="heading-anchor" href="#默认开发闭环" aria-label="链接到本节">#</a>默认开发闭环：十一站</h2>
+      <div class="agent-call-flow" role="img" aria-label="Codex 官方原生项目开发推荐闭环共十一站：零，选对项目根目录并确认 Git 基线；一，让仓库能够启动、构建和测试；二，用 AGENTS.md 固化持久规则；三，选择 Local 或 worktree 并维持最小权限；四，一个 chat 定义一个结果，用 Goal、Context、Constraints、Done when 提示；五，复杂任务先进入 Plan mode；六，先检查或复现，再小步实现；七，从最小相关检查逐层运行到真实应用验证；八，使用 diff 和 review 检查范围与缺陷；九，修复问题并重新验证；十，人工确认后 commit、push 和创建 Pull Request，任务结束后只沉淀重复规则。">
+        <div class="agent-step">0. Project root<br>项目与 Git 基线</div>
+        <div class="agent-step">1. Runnable repo<br>启动 / 构建 / 测试</div>
+        <div class="agent-step">2. AGENTS.md<br>持久项目规则</div>
+        <div class="agent-step">3. Environment<br>Local / worktree / 权限</div>
+        <div class="agent-step">4. Task contract<br>一 chat 一结果</div>
+        <div class="agent-step">5. Plan<br>复杂任务先规划</div>
+        <div class="agent-step">6. Implement<br>检查、复现、小步修改</div>
+        <div class="agent-step">7. Validate<br>相关 → 模块 → 全量</div>
+        <div class="agent-step">8. Diff / Review<br>第二视角</div>
+        <div class="agent-step">9. Repair<br>修复并重跑证据</div>
+        <div class="agent-step">10. Git / PR<br>人工确认与沉淀</div>
+        <div class="guardrail-band">全程护栏：正确工作目录 · 最小权限 · 不覆盖用户改动 · 可检查进度 · 新鲜验证证据 · 高风险人工确认</div>
+      </div>
+      <p class="diagram-text"><strong>等价文字说明：</strong>先在正确 Git 根目录打开项目，确认仓库能启动、构建和测试；再用简洁的 <code>AGENTS.md</code> 固化未来每次任务都适用的规则。根据并行和风险需要选择 Local 或 Codex-managed worktree，并保持默认 sandbox 与 approval。每个 chat 只追踪一个可独立验收的结果，提示中写清 Goal、Context、Constraints 和 Done when；复杂任务先用 Plan mode 调研。实现前检查现状或复现问题，修改时保持范围小；随后从最小相关测试逐层升级到模块、集成、全量和真实应用验证。用 diff 检查范围，用 review 建立第二视角，修复后重新生成证据。最后由人确认关键业务与高风险动作，再 stage、commit、push 和创建 Pull Request；任务结束只沉淀已重复出现的规则或稳定命令。</p>
+
+      <h2 id="任务规模决策"><a class="heading-anchor" href="#任务规模决策" aria-label="链接到本节">#</a>先判断任务规模</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>任务类型</th><th>起手方式</th><th>隔离建议</th><th>完成证据</th></tr></thead>
+        <tbody>
+          <tr><td>解释代码、改一个局部函数</td><td>直接任务提示，不必先写计划</td><td>工作区干净时可 Local</td><td>相关测试 + diff</td></tr>
+          <tr><td>有明确复现步骤的 Bug</td><td>先复现，再修复并加回归测试</td><td>Local 或短生命周期 worktree</td><td>修复前失败、修复后通过</td></tr>
+          <tr><td>跨模块功能、重构、迁移</td><td>Plan mode，先读代码和约束</td><td>优先独立 worktree / 分支</td><td>计划验收项 + 模块/集成/全量测试</td></tr>
+          <tr><td>UI 或用户流程</td><td>给截图/行为要求，逐轮小改</td><td>需并行时 worktree</td><td>构建 + 浏览器关键状态与交互</td></tr>
+          <tr><td>高风险权限、数据、支付、生产变更</td><td>先只读分析与计划，明确人工门禁</td><td>隔离分支，最小权限</td><td>安全测试、迁移/回退、人工审批</td></tr>
+          <tr><td>互不依赖的多个结果</td><td>每个结果单独 chat</td><td>Codex App 中分别使用 worktree</td><td>每个结果独立 diff、测试与 PR</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="阶段一仓库准备"><a class="heading-anchor" href="#阶段一仓库准备" aria-label="链接到本节">#</a>阶段一：让仓库成为“成功跑道”</h2>
+      <ol>
+        <li>从 Git 根目录启动 Codex；CLI 使用 <code>codex</code> 或 <code>codex -C /path/to/repo</code>，IDE 打开正确 workspace，桌面 App 选择正确 Local project。</li>
+        <li>检查当前分支和未提交修改；已有修改属于用户，除非任务要求，不覆盖、不重置、不混入无关重构。</li>
+        <li>确认项目的启动、快速验证和完整验证命令可运行。失败时先判断是基线问题还是本次改动。</li>
+        <li>密钥和本地配置保持在受控环境变量或忽略文件中，不放入提示、日志或提交。</li>
+      </ol>
+      <pre><code class="language-text"># Java / Spring Boot 项目的最低可发现入口
+./mvnw -q -DskipTests compile
+./mvnw -q -Dtest=OrderServiceTest test
+./mvnw verify
+
+# Gradle 项目则对应
+./gradlew compileJava
+./gradlew test
+./gradlew check</code></pre>
+      <p><strong>退出条件：</strong>Codex 能指出项目根目录、主要模块、快速检查与完整检查命令；如果基线失败，已经记录具体失败而不是假定代码可用。</p>
+
+      <h2 id="阶段二agents规则"><a class="heading-anchor" href="#阶段二agents规则" aria-label="链接到本节">#</a>阶段二：用 AGENTS.md 固化持久规则</h2>
+      <p>CLI 可使用 <code>/init</code> 生成起始 <code>AGENTS.md</code>，随后人工精简。官方建议它包含仓库布局、运行方式、构建测试命令、工程约定、PR 预期、限制和完成定义。规则越靠近当前目录优先级越高；根规则负责全局，子目录只写局部差异。</p>
+      <p><strong>适合写入：</strong>Java/Node 版本、Maven/Gradle 命令、模块边界、迁移规则、测试要求、禁止修改区域、交付报告格式。<strong>不适合写入：</strong>本次需求、临时文件名、一次性验收细节、长篇架构史。</p>
+      <p><strong>官方建议：</strong>保持短、准、可执行；当 Codex 重复犯同一种错误时再做复盘并添加规则，而不是预先写百科全书。</p>
+
+      <h2 id="阶段三环境与隔离"><a class="heading-anchor" href="#阶段三环境与隔离" aria-label="链接到本节">#</a>阶段三：选择环境、隔离和权限</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>选择</th><th>推荐场景</th><th>注意事项</th></tr></thead>
+        <tbody>
+          <tr><td>Local</td><td>当前只有一个任务；需要复用已启动服务、IDE 或本地依赖</td><td>先确认工作区状态，避免和人工同时改同一文件</td></tr>
+          <tr><td>Codex-managed worktree</td><td>Codex 后台执行、多个 chat 并行、希望隔离当前 checkout</td><td>桌面 App 官方能力；Git 仓库才可用，默认 detached HEAD</td></tr>
+          <tr><td>Handoff 到 Local</td><td>需要在惯用 IDE、本地服务或唯一设备环境中验证</td><td>由 App 处理 Git 移交，不要在两个 worktree 同时 checkout 同一分支</td></tr>
+        </tbody>
+      </table></div>
+      <p>权限从默认 Auto / workspace-write + on-request 起步。计划或审查阶段可切换只读；只有当前任务确实需要时才允许网络、额外目录或高风险命令。CLI 的 <code>--dangerously-bypass-approvals-and-sandbox</code>（<code>--yolo</code>）只适合外部已经硬化的隔离环境，不是普通项目默认值。</p>
+
+      <h2 id="阶段四任务提示"><a class="heading-anchor" href="#阶段四任务提示" aria-label="链接到本节">#</a>阶段四：建立任务契约</h2>
+      <p>官方 Best practices 建议提示至少覆盖四件事；本文把官方 Prompting 的 Output / Boundaries 适配为工程任务更常用的 Constraints / Done when：</p>
+      <ul>
+        <li><strong>Goal：</strong>最终要改变什么用户行为或工程结果。</li>
+        <li><strong>Context：</strong>相关模块、文件、错误、截图、接口或复现步骤。</li>
+        <li><strong>Constraints：</strong>兼容性、技术栈、安全边界和不能修改的内容。</li>
+        <li><strong>Done when：</strong>必须通过的测试、真实行为、diff 范围和交付报告。</li>
+      </ul>
+      <p>一个 chat 对应一个可独立验收的结果。继续修同一问题时保留原 chat 的上下文；当目标真正分叉时使用新 chat 或 <code>/fork</code>。CLI 可用 <code>/status</code> 检查当前工作目录、权限、模型和上下文状态。</p>
+
+      <h2 id="阶段五计划与确认"><a class="heading-anchor" href="#阶段五计划与确认" aria-label="链接到本节">#</a>阶段五：复杂任务先 Plan mode</h2>
+      <p>局部、低风险、验收明确的修改可直接执行。出现跨模块、架构选择、需求含糊、数据库迁移或高风险边界时，先使用 Plan mode；CLI 用 <code>/plan</code>，IDE / App 选择计划模式。</p>
+      <p>要求计划回答：</p>
+      <ol>
+        <li>当前实现和问题证据是什么；涉及哪些文件、数据和调用链。</li>
+        <li>准备采取什么方案，为什么没有选择其他方案。</li>
+        <li>哪些契约必须保持，风险和失败回退是什么。</li>
+        <li>怎样验证每个步骤，以及最后用什么证据判断完成。</li>
+      </ol>
+      <p><strong>计划不是完成。</strong>计划确认后才进入写操作；如果调研发现任务范围和原目标明显不同，应先报告差异，不应悄悄扩大范围。</p>
+
+      <h2 id="阶段六实现与反馈"><a class="heading-anchor" href="#阶段六实现与反馈" aria-label="链接到本节">#</a>阶段六：先检查或复现，再小步实现</h2>
+      <ol>
+        <li><strong>Observe：</strong>读取相关实现、测试和 Git 状态；Bug 先运行最小复现。</li>
+        <li><strong>Change：</strong>做能让一个验收条件成立的最小修改，不混入无关依赖升级或全库格式化。</li>
+        <li><strong>Check：</strong>立即运行最小相关检查，失败输出成为下一轮输入。</li>
+        <li><strong>Continue：</strong>在同一 chat 中继续，Codex 应简短报告进度、假设和阻塞。</li>
+      </ol>
+      <p>让 Codex 直接操作仓库并运行命令，比让它只输出一大段“请复制以下代码”更符合编码智能体的价值。但外部写操作、生产变更、数据删除和向他人发送内容仍需要明确授权。</p>
+
+      <h2 id="阶段七分层验证"><a class="heading-anchor" href="#阶段七分层验证" aria-label="链接到本节">#</a>阶段七：从最小相关检查到真实行为</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>层级</th><th>Java 全栈示例</th><th>证明什么</th></tr></thead>
+        <tbody>
+          <tr><td>语法 / 编译</td><td><code>./mvnw -DskipTests compile</code>、TypeScript typecheck</td><td>代码至少能被工具链接受</td></tr>
+          <tr><td>最小相关测试</td><td><code>./mvnw -Dtest=OrderServiceTest test</code></td><td>本次业务规则和回归点成立</td></tr>
+          <tr><td>模块 / 集成测试</td><td>Spring Boot Test、Testcontainers、前端组件测试</td><td>框架、数据库和模块组合没有破坏</td></tr>
+          <tr><td>完整检查</td><td><code>./mvnw verify</code>、前端生产构建、lint</td><td>仓库质量门整体通过</td></tr>
+          <tr><td>真实行为</td><td>启动服务、调用 API、浏览器验证关键流程</td><td>用户可见行为和错误状态符合 Done when</td></tr>
+        </tbody>
+      </table></div>
+      <p>“测试通过”必须说明实际运行了什么、退出码或结果是什么。环境缺失、网络受限或测试过慢时，明确列出未验证项；不要用“应该没问题”替代证据。</p>
+
+      <h2 id="阶段八diff与review"><a class="heading-anchor" href="#阶段八diff与review" aria-label="链接到本节">#</a>阶段八：检查 diff，再建立第二视角</h2>
+      <ol>
+        <li>CLI 使用 <code>/diff</code>，IDE / App 使用 diff pane；检查是否只改了授权范围、是否出现秘密、生成物、无关格式化或兼容性变化。</li>
+        <li>CLI 使用 <code>/review</code> 审查未提交修改、指定 commit 或相对 base branch 的变化；也可以给出自定义关注点。</li>
+        <li>对每个 review 发现先核验再修复，不机械接受；修复后重跑受影响测试，并再次 review。</li>
+        <li>安全、数据迁移、支付、权限和不可逆动作不能只依赖模型 review，保留人类负责人确认。</li>
+      </ol>
+      <pre><code class="language-text">/review Focus on:
+- Java 并发与事务边界
+- 越权访问和跨租户数据
+- 数据库迁移的前向/回退兼容
+- API 与前端类型是否漂移
+- 测试是否真正覆盖失败路径
+
+修复 Important / Critical 问题后：
+1. 重跑相关验证；
+2. 再运行 /review；
+3. 输出仍存在的风险，而不是只说“已完成”。</code></pre>
+
+      <h2 id="阶段九提交与pr"><a class="heading-anchor" href="#阶段九提交与pr" aria-label="链接到本节">#</a>阶段九：人工确认后提交与 PR</h2>
+      <p>桌面 App 提供 stage、revert、commit、push 和创建 Pull Request 的 Git 控件；CLI / IDE 可直接使用仓库惯用的 Git 命令。推荐顺序：</p>
+      <ol>
+        <li>确认最终 diff、测试证据和未验证项。</li>
+        <li>按逻辑边界 stage，避免把用户未授权修改一起提交。</li>
+        <li>使用描述行为结果的 commit message。</li>
+        <li>push 分支并创建 PR；PR 描述写目标、主要变化、验证命令、风险与回退。</li>
+        <li>CI 失败时继续在同一任务上下文修复；新的独立需求开新 chat。</li>
+      </ol>
+      <p>Codex 的 GitHub code review 可以作为 PR 上的额外检查，但它仍是评审工具，不替代项目 CI 和代码所有者审批。</p>
+
+      <h2 id="阶段十复盘沉淀"><a class="heading-anchor" href="#阶段十复盘沉淀" aria-label="链接到本节">#</a>阶段十：只沉淀重复摩擦</h2>
+      <p>任务结束后问三个问题：</p>
+      <ol>
+        <li>Codex 是否因为缺少稳定项目知识而走错路？如果是，把一条简洁规则写进相应层级的 <code>AGENTS.md</code>。</li>
+        <li>是否反复手工输入同一构建或验证命令？如果是，把它变成项目脚本或桌面 App local environment action。</li>
+        <li>这类任务是否已经多次稳定重复？只有此时才考虑 Skill、MCP、hook 或 scheduled task；它们是升级项，不是默认路径。</li>
+      </ol>
+
+      <h2 id="多表面映射"><a class="heading-anchor" href="#多表面映射" aria-label="链接到本节">#</a>CLI、IDE 与桌面 App 映射</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>目的</th><th>CLI</th><th>IDE 扩展</th><th>桌面 App Codex</th></tr></thead>
+        <tbody>
+          <tr><td>选择项目</td><td>在根目录运行 <code>codex</code> 或 <code>-C</code></td><td>打开目标 folder/workspace</td><td>选择 Local project</td></tr>
+          <tr><td>持久规则</td><td><code>/init</code> 后编辑 <code>AGENTS.md</code></td><td colspan="2">共享同一仓库 <code>AGENTS.md</code> 指令链</td></tr>
+          <tr><td>复杂任务规划</td><td><code>/plan</code></td><td>选择 Plan mode</td><td>选择 Plan mode</td></tr>
+          <tr><td>隔离并行任务</td><td>使用独立 Git 分支/worktree</td><td>打开独立 checkout</td><td>新 chat 选择 Worktree；需要时 Handoff</td></tr>
+          <tr><td>查看变化</td><td><code>/diff</code></td><td>编辑器 diff / Codex 变化视图</td><td>diff pane，可按 hunk stage/revert</td></tr>
+          <tr><td>代码审查</td><td><code>/review</code></td><td>请求 Codex review 当前变化</td><td>review + diff inline comments</td></tr>
+          <tr><td>会话管理</td><td><code>/new</code>、<code>/resume</code>、<code>/fork</code>、<code>/compact</code></td><td colspan="2">为不同结果新建 chat，从 Recent chats 恢复</td></tr>
+          <tr><td>Git 交付</td><td>Git 命令</td><td>IDE Git + 终端</td><td>内置 stage、commit、push、PR</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="java项目模板"><a class="heading-anchor" href="#java项目模板" aria-label="链接到本节">#</a>Java 21 + Spring Boot 项目最小 AGENTS.md</h2>
+      <p>下面是起点，不是需要原样复制的百科。命令必须替换为项目真实可运行的版本。</p>
+      <pre><code class="language-markdown"># Project guidance
+
+## Stack and layout
+- Java 21；Spring Boot；使用仓库自带 Maven Wrapper。
+- `backend/` 是服务端，`frontend/` 是 TypeScript 前端。
+- 数据库变更只通过 `backend/src/main/resources/db/migration/`。
+
+## Working rules
+- 修改前检查 `git status`，保留用户已有改动。
+- 先阅读相邻实现和测试，遵循现有架构；不做无关重构。
+- 不新增生产依赖、不改公开 API、不执行数据库破坏操作，除非任务明确授权。
+- 密钥、token、生产数据不得进入代码、提示或日志。
+
+## Verification
+- 后端快速检查：`./mvnw -pl backend -DskipTests compile`
+- 单测：`./mvnw -pl backend test`
+- 完整检查：`./mvnw verify`
+- 前端：`npm --prefix frontend test` 和 `npm --prefix frontend run build`
+- UI 变化需启动应用，验证 loading、empty、error、success 和移动端。
+
+## Done when
+- 行为满足任务验收；相关测试与完整检查通过。
+- 检查完整 diff，无无关文件、秘密或生成垃圾。
+- 交付说明列出：改了什么、运行了什么、结果、未验证项与风险。</code></pre>
+
+      <h2 id="提示词模板"><a class="heading-anchor" href="#提示词模板" aria-label="链接到本节">#</a>三套直接可用的任务提示词</h2>
+      <h3 id="功能开发模板">功能开发</h3>
+      <pre><code class="language-text">Goal
+在订单服务增加“取消待支付订单”，并在前端订单详情提供入口。
+
+Context
+- 后端：backend/order，现有 OrderApplicationService。
+- 前端：frontend/src/features/orders。
+- API 契约：docs/api/openapi.yaml。
+
+Constraints
+- Java 21 + Spring Boot，沿用现有事务和异常模型。
+- 不改变已支付订单行为，不引入新生产依赖。
+- 权限必须由后端强制，前端隐藏按钮不是授权。
+
+Done when
+- 待支付订单可取消；已支付/已取消订单返回稳定业务错误。
+- 单元、API 集成和前端组件测试通过。
+- 更新 OpenAPI 并验证前后端类型。
+- 检查 diff，运行 review，报告命令、结果和未验证项。
+
+这是跨前后端任务：先进入 Plan mode，检查实现后给出方案，再实现。</code></pre>
+
+      <h3 id="bug修复模板">Bug 修复</h3>
+      <pre><code class="language-text">Goal
+修复并发提交时订单可能重复扣减库存的问题。
+
+Context
+- 复现：同时发送两个相同 idempotencyKey 的 POST /orders。
+- 相关模块：OrderApplicationService、InventoryRepository。
+- 当前失败日志：附在本消息后。
+
+Constraints
+- 先复现，不通过删除断言或串行化全部请求掩盖问题。
+- 保持现有 API 兼容；不要修改无关模块。
+
+Done when
+- 新回归测试在修复前稳定失败、修复后稳定通过。
+- 说明根因、并发边界和方案取舍。
+- 运行相关测试及 `./mvnw verify`，检查 diff 和 review。</code></pre>
+
+      <h3 id="审查模板">只读审查</h3>
+      <pre><code class="language-text">只审查当前工作树，不编辑文件。
+
+以 main 为基线，按严重度报告：
+1. 正确性和回归；
+2. 事务、并发和幂等；
+3. 鉴权、租户隔离和敏感数据；
+4. API / 数据库兼容；
+5. 测试是否覆盖真实失败路径。
+
+每个问题给出 file:line、影响、触发条件和建议修复。
+如果没有问题，列出实际检查范围；不要只说 looks good。</code></pre>
+
+      <h2 id="权限与安全"><a class="heading-anchor" href="#权限与安全" aria-label="链接到本节">#</a>权限与安全基线</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>场景</th><th>推荐权限</th><th>原因</th></tr></thead>
+        <tbody>
+          <tr><td>解释、调研、计划、review</td><td>read-only</td><td>没有必要产生文件修改</td></tr>
+          <tr><td>普通仓库开发</td><td>workspace-write + on-request</td><td>可自动编辑和运行仓库命令，越界或联网再审批</td></tr>
+          <tr><td>下载依赖 / 查询远程资料</td><td>按域名和命令临时开放网络</td><td>网络默认关闭能减少供应链和数据外流风险</td></tr>
+          <tr><td>删除、生产写入、发布、外部消息</td><td>精确目标 + 人工批准</td><td>可能不可逆或影响其他人</td></tr>
+          <tr><td>外部硬化容器中的自治任务</td><td>可按环境策略放宽</td><td>风险应由外层隔离承担；不能照搬到开发机</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="交付检查单"><a class="heading-anchor" href="#交付检查单" aria-label="链接到本节">#</a>交付检查单</h2>
+      <ul>
+        <li>任务目标单一、可独立验收；没有把整个项目塞进一个 chat。</li>
+        <li>当前目录、分支和用户已有改动已检查。</li>
+        <li>持久规则来自正确层级的 <code>AGENTS.md</code>，临时约束在当前提示中。</li>
+        <li>复杂任务已计划；小任务没有被不必要流程拖慢。</li>
+        <li>实现范围与授权一致，没有无关重构、依赖升级或格式化。</li>
+        <li>运行了最小相关检查，并按风险升级到模块、集成、全量和真实行为。</li>
+        <li>使用 <code>/diff</code> 或 diff pane 检查完整变化。</li>
+        <li>使用 <code>/review</code> 或等价 Codex review；问题修复后重跑验证。</li>
+        <li>高风险业务、数据和外部动作经过人工确认。</li>
+        <li>最终报告包含修改、命令、结果、未验证项、风险和建议下一步。</li>
+      </ul>
+
+      <h3 id="常见反模式">常见反模式</h3>
+      <ul>
+        <li>只说“帮我把项目做完”，不给范围与 Done when。</li>
+        <li>让 Codex 在错误目录启动，再靠提示描述真正项目。</li>
+        <li>所有任务都先写长计划，或所有复杂任务都直接开写。</li>
+        <li>不给测试命令，却要求 Codex 保证没有回归。</li>
+        <li>只看最终回答，不看 diff、测试输出和真实应用行为。</li>
+        <li>默认开放全磁盘、全网络或 <code>--yolo</code>。</li>
+        <li>让多个 live task 同时编辑同一个 checkout。</li>
+        <li>每次纠正同一个错误，却不更新 <code>AGENTS.md</code>、测试或项目脚本。</li>
+      </ul>
+
+      <h2 id="参考资料"><a class="heading-anchor" href="#参考资料" aria-label="链接到本节">#</a>参考资料</h2>
+      <p>以下均来自 Codex 最新官方手册所列官方页面，检索于 <strong>2026-07-28</strong>。产品命令和界面会演进，升级后应重新核验。本文的“十一站顺序”是对官方建议的工程综合，不是 OpenAI 发布的固定 SDLC 标准。</p>
+      <ol>
+        <li><a href="https://learn.chatgpt.com/guides/best-practices" target="_blank" rel="noopener noreferrer">Codex — Best practices</a>：Goal、Context、Constraints、Done when，复杂任务先计划，<code>AGENTS.md</code>、测试、review 与常见错误。</li>
+        <li><a href="https://learn.chatgpt.com/docs/prompting" target="_blank" rel="noopener noreferrer">Prompting</a>：Goal、Context、Output、Boundaries 与最终检查。</li>
+        <li><a href="https://learn.chatgpt.com/docs/projects" target="_blank" rel="noopener noreferrer">Projects and chats</a>：从正确项目目录工作、每个独立结果使用单独 chat、resume 与 fork。</li>
+        <li><a href="https://learn.chatgpt.com/docs/agent-configuration/agents-md" target="_blank" rel="noopener noreferrer">Custom instructions with AGENTS.md</a>：指令发现、层级覆盖、<code>/init</code> 与验证方式。</li>
+        <li><a href="https://learn.chatgpt.com/docs/agent-approvals-security" target="_blank" rel="noopener noreferrer">Agent approvals &amp; security</a>：sandbox、approval、默认网络关闭与权限扩大边界。</li>
+        <li><a href="https://learn.chatgpt.com/docs/developer-commands?surface=cli" target="_blank" rel="noopener noreferrer">Codex CLI command reference</a>：<code>/plan</code>、<code>/diff</code>、<code>/review</code>、<code>/status</code>、<code>/new</code>、<code>/resume</code> 和 <code>/fork</code>。</li>
+        <li><a href="https://learn.chatgpt.com/docs/code-review" target="_blank" rel="noopener noreferrer">Code review</a>：本地变化审查、diff pane 和 review 工作方式。</li>
+        <li><a href="https://learn.chatgpt.com/docs/environments/git-worktrees" target="_blank" rel="noopener noreferrer">Worktrees</a>：Codex-managed worktree、Handoff、分支限制和清理行为。</li>
+        <li><a href="https://learn.chatgpt.com/docs/environments/local-environment" target="_blank" rel="noopener noreferrer">Local environments</a>：worktree setup scripts、项目 actions 与 App 内置 Git 操作。</li>
+        <li><a href="https://developers.openai.com/cookbook/articles/codex_exec_plans" target="_blank" rel="noopener noreferrer">Codex execution plans</a>：长任务需要更持久计划时的官方进阶材料；不是默认简单任务的前置条件。</li>
+      </ol>
+
+      <nav class="pager course-pager" aria-label="延伸阅读">
+        <a class="pager-link prev" href="2026-07-24-Codex全栈开发最佳实践.html"><small>扩展方法</small><span>Codex 全栈开发最佳实践</span></a>
+        <a class="pager-link next" href="2026-07-24-AI开发工作流选型与小团队沉淀指南.html"><small>工作流选型</small><span>AI 开发工作流选型与小团队沉淀指南</span></a>
+      </nav>
+    </article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/codex/2026-07-28-Codex官方原生项目开发最佳路径.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇"></nav>
+    </footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录"></nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+</body>
+</html>
