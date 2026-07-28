@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>企业智能审批与公司主子 Agent 落地实战实施计划</title>
+</head>
+<body>
+<main>
+<article>
+  <h1>企业智能审批与公司主子 Agent 落地实战实施计划</h1>
+  <p><strong>目标：</strong>新增一篇面向 Java 开发者的企业智能审批实战页，解释公司主/子 Agent 的真实应用边界，并把它接入现有 Agent 学习路线。</p>
+  <p><strong>架构：</strong>以确定性 BPMN/DMN + 受限主 Agent + 专业子 Agent + 人工审批 + 业务系统执行组成闭环。HTML 是唯一内容真相源，生成器负责入口、分类侧栏、目录、pager 与 manifest。</p>
+  <p><strong>技术：</strong>语义化 HTML、共享 CSS/JS、Java 21、Spring AI 2.0.x 概念接口、BPMN/DMN（Camunda 作为示例）、Node.js 内容与导航测试。</p>
+
+  <h2>全局约束</h2>
+  <ul>
+    <li>页面路径固定为 <code>public/notes/agent/2026-07-28-企业智能审批与公司主子Agent落地实战.html</code>。</li>
+    <li>分类固定为“Agent 开发”，日期固定为 2026-07-28。</li>
+    <li>必须明确：模型和 Agent 无最终审批权，工作流/规则/授权人拥有最终决定。</li>
+    <li>所有工具执行前由服务器可信身份重新鉴权；任何写操作都使用提案 hash、审批引用和幂等键。</li>
+    <li>官方资料只使用一手来源并记录检索日期。</li>
+  </ul>
+
+  <h2>任务一：建立内容契约测试</h2>
+  <p><strong>新建：</strong><code>scripts/test-enterprise-approval-agent-note.mjs</code></p>
+  <ol>
+    <li>断言新页面存在；先运行并确认以“页面不存在”失败。</li>
+    <li>断言语义标签、元数据、共享资源、核心章节稳定 ID。</li>
+    <li>断言两张可访问图、主/子 Agent 角色、BPMN/DMN、人审门禁、结构化提案、Spring AI 和 Java 21 关键内容。</li>
+    <li>断言表格、代码块、官方 URL、安全外链和 2026-07-28 检索日期。</li>
+    <li>断言主目录、多 Agent、安全课程与新页面互链。</li>
+  </ol>
+  <p><strong>验证命令：</strong><code>node scripts/test-enterprise-approval-agent-note.mjs</code>，初始预期失败。</p>
+
+  <h2>任务二：建设独立实战页与图形样式</h2>
+  <p><strong>新建：</strong>目标 HTML 页面。<strong>修改：</strong><code>public/assets/style.css</code>。</p>
+  <ol>
+    <li>编写场景、边界、审批八步闭环、公司级主/子 Agent 拓扑及等价文字说明。</li>
+    <li>编写职责矩阵、审批案例、跨部门实际场景、数据与状态模型、失败恢复、指标和上线阶段。</li>
+    <li>提供 Java 21 领域记录、确定性 Coordinator、Spring AI 多角色配置和审批写入门代码。</li>
+    <li>为公司 Agent 拓扑增加桌面与移动端样式，避免依赖固定八节点蛇形图。</li>
+    <li>运行内容契约测试，修复到通过。</li>
+  </ol>
+
+  <h2>任务三：增加课程入口并重建索引</h2>
+  <p><strong>修改：</strong>Agent 主目录、多 Agent 课程、安全治理课程；运行 <code>scripts/build-html-index.mjs</code>。</p>
+  <ol>
+    <li>主目录增加“企业落地实战”入口和实践项目链接。</li>
+    <li>多 Agent 页面增加智能审批案例延伸入口。</li>
+    <li>安全治理页面增加审批提案、人审和不可变审计的案例入口。</li>
+    <li>新页回链三篇课程。</li>
+    <li>运行 <code>node scripts/build-html-index.mjs</code>，确认 Agent 分类文档数增加，侧栏仅显示当前分类。</li>
+  </ol>
+
+  <h2>任务四：验证、评审与交付</h2>
+  <ol>
+    <li>运行新内容测试、Agentic Search 测试、Codex 页面测试和全站导航测试。</li>
+    <li>运行 <code>node --check</code> 检查生成器、共享脚本和测试脚本。</li>
+    <li>检查所有 HTML 本地链接、标题锚点、重复 ID 和外链安全属性。</li>
+    <li>运行 <code>git diff --check</code>，独立评审内容边界、代码一致性和页面结构。</li>
+    <li>修复 Critical/Important 问题并重新运行全套校验。</li>
+    <li>快进合并到 main 后再运行一次完整验证，清理专用 worktree。</li>
+  </ol>
+
+  <h2>计划自审</h2>
+  <p>设计中的业务流程、主/子 Agent 分工、确定性控制、Java/Spring AI 示例、公司场景、风险、上线和验证均有对应任务；没有 TBD/TODO 或未定义的后续实现。用户已授权直接采用最佳执行方式，选择隔离 worktree 内联执行。</p>
+</article>
+</main>
+</body>
+</html>
