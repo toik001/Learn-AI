@@ -16,7 +16,7 @@ if (
 }
 
 const siteRoot = path.resolve(
-  rootIndex === -1 ? path.join(process.cwd(), "public") : args[rootIndex + 1],
+  rootIndex === -1 ? process.cwd() : args[rootIndex + 1],
 );
 const errors = [];
 const files = new Set();
@@ -65,7 +65,7 @@ async function collectFiles(directory) {
   for (const entry of entries) {
     const absolutePath = path.join(directory, entry.name);
     if (entry.isSymbolicLink()) {
-      report(absolutePath, "GitHub Pages artifact 禁止符号链接");
+      report(absolutePath, "GitHub Pages branch 发布目录禁止符号链接");
     } else if (entry.isDirectory()) {
       await collectFiles(absolutePath);
     } else if (entry.isFile()) {
@@ -140,7 +140,7 @@ function collectIds(file, html) {
 }
 
 function validateKnowledgePage(file, html) {
-  if (!relativePath(file).startsWith("notes/")) return;
+  if (!relativePath(file).startsWith("public/notes/")) return;
 
   const requiredTags = ["header", "nav", "main", "article"];
   for (const tagName of requiredTags) {
@@ -227,7 +227,7 @@ function resolveLocalTarget(file, reference) {
     : file;
 
   if (target !== siteRoot && !target.startsWith(`${siteRoot}${path.sep}`)) {
-    report(file, "本地引用越出 public 目录", reference);
+    report(file, "本地引用越出站点根目录", reference);
     return;
   }
   if (!files.has(target) && files.has(path.join(target, "index.html"))) {
@@ -282,11 +282,21 @@ function validateReferences(file, html) {
   }
 }
 
-await collectFiles(siteRoot);
-
 const entryFile = path.join(siteRoot, "index.html");
+try {
+  const entryStat = await fs.lstat(entryFile);
+  if (entryStat.isSymbolicLink()) {
+    report(entryFile, "GitHub Pages branch 部署禁止符号链接入口");
+  } else if (entryStat.isFile()) {
+    files.add(entryFile);
+  }
+} catch {
+  // 统一由下面的入口检查报告。
+}
+await collectFiles(path.join(siteRoot, "public"));
+
 if (!files.has(entryFile)) {
-  errors.push("index.html: GitHub Pages artifact 根目录缺少入口文件");
+  errors.push("index.html: GitHub Pages branch 根目录缺少入口文件");
 }
 
 for (const file of files) {

@@ -6,6 +6,7 @@ import process from "node:process";
 
 const rootDir = process.cwd();
 const publicDir = path.join(rootDir, "public");
+const indexPath = path.join(rootDir, "index.html");
 
 const posixPath = (value) => value.split(path.sep).join("/");
 
@@ -273,7 +274,7 @@ function sidebarChrome(documents, currentDocument) {
   );
   const homeHref = relativeUrl(
     currentDocument.outputPath,
-    path.join(publicDir, "index.html"),
+    indexPath,
   );
   const categoryHref = `${homeHref}#${categoryId(currentDocument.category)}`;
   const mainDocument = categoryMainDocument(categoryDocuments);
@@ -363,6 +364,12 @@ function updateDocumentHtml(document, documents) {
   );
   updated = ensureMeta(updated, "study-category", document.category);
   updated = ensureMeta(updated, "study-date", document.date);
+  const homeHref = relativeUrl(document.outputPath, indexPath);
+  updated = updated.replace(
+    /href=(["'])(?:\.\.\/)+index\.html(#[^"']*)?\1/gi,
+    (_match, quote, fragment = "") =>
+      `href=${quote}${attributeEscape(homeHref)}${fragment}${quote}`,
+  );
   updated = updated.replace(
     /<div class="sidebar-header">[\s\S]*?<\/div>(?:\s*<div class="sidebar-category-summary">[\s\S]*?<\/div>)?/i,
     sidebarChrome(documents, document),
@@ -455,7 +462,7 @@ function renderIndex(documents) {
   <div class="document-grid">
     ${categoryDocuments
       .map((document) => {
-        const href = relativeUrl(path.join(publicDir, "index.html"), document.outputPath);
+        const href = relativeUrl(indexPath, document.outputPath);
         const searchText = [
           document.title,
           document.description,
@@ -492,8 +499,8 @@ function renderIndex(documents) {
   <meta name="description" content="Java 全栈、Codex、AI Agent 与 AI 开发工作流知识库">
   <meta name="color-scheme" content="light dark">
   <title>Java 全栈 AI 学习库</title>
-  <link rel="stylesheet" href="assets/style.css">
-  <script defer src="assets/app.js"></script>
+  <link rel="stylesheet" href="public/assets/style.css">
+  <script defer src="public/assets/app.js"></script>
 </head>
 <body class="library-page">
 <header class="library-header">
@@ -559,7 +566,7 @@ async function main() {
   }
 
   await fs.writeFile(
-    path.join(publicDir, "index.html"),
+    indexPath,
     renderIndex(documents),
     "utf8",
   );
@@ -589,7 +596,7 @@ async function main() {
   );
 
   console.log(`已索引 ${documents.length} 篇 HTML 文档。`);
-  console.log(`入口：${path.join(publicDir, "index.html")}`);
+  console.log(`入口：${indexPath}`);
 }
 
 main().catch((error) => {

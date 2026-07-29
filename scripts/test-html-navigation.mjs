@@ -251,7 +251,7 @@ try {
     assert.ok(homeHref, `${document.output} 缺少知识库首页入口`);
     assert.equal(
       path.resolve(path.dirname(outputPath), homeHref.split("#")[0]),
-      path.join(publicDir, "index.html"),
+      path.join(fixtureRoot, "index.html"),
       `${document.output} 首页入口目标错误`,
     );
 
@@ -332,7 +332,7 @@ try {
     }
   }
 
-  const indexHtml = await fs.readFile(path.join(publicDir, "index.html"), "utf8");
+  const indexHtml = await fs.readFile(path.join(fixtureRoot, "index.html"), "utf8");
   const entryGrid =
     /<nav class="category-entry-grid"[^>]*>([\s\S]*?)<\/nav>/i.exec(
       indexHtml,

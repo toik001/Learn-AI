@@ -55,7 +55,7 @@
       </ol>
 
       <h2>任务四：生成站点结构</h2>
-      <p><strong>更新：</strong><code>public/index.html</code>、<code>public/manifest.json</code>、全部知识页的生成导航区。</p>
+      <p><strong>更新：</strong><code>index.html</code>、<code>public/manifest.json</code>、全部知识页的生成导航区。</p>
       <ol>
         <li>运行 <code>node scripts/build-html-index.mjs</code>。</li>
         <li>确认 Agent 分类文档数增加一，新页面出现在分类侧栏与首页分类列表。</li>
@@ -67,7 +67,7 @@
         <li>运行 <code>node scripts/test-agentic-search-note.mjs</code> 和 <code>node scripts/test-html-navigation.mjs</code>。</li>
         <li>运行 <code>node --check scripts/build-html-index.mjs</code>、<code>node --check scripts/test-agentic-search-note.mjs</code>、<code>node --check public/assets/app.js</code>。</li>
         <li>运行站内链接、标题锚点、重复 ID、外链安全属性检查。</li>
-        <li>运行 <code>test -s public/index.html</code> 与 <code>git diff --check</code>。</li>
+        <li>运行 <code>test -s index.html</code> 与 <code>git diff --check</code>。</li>
         <li>复核来源日期、概念限定语、Java 代码转义、Spring AI 版本和发布入口。</li>
       </ol>
     </article>

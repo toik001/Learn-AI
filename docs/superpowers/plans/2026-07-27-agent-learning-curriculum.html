@@ -260,7 +260,7 @@
       <ol>
         <li>RED：检查 manifest 的 documentCount 仍为 9，确认新专题尚未进入生成索引。</li>
         <li>运行 <code>node scripts/build-html-index.mjs</code>，预期输出“已索引 17 篇 HTML 文档”。</li>
-        <li>运行 <code>test -s public/index.html</code>、两个 <code>node --check</code> 和 <code>git diff --check</code>。</li>
+        <li>运行 <code>test -s index.html</code>、两个 <code>node --check</code> 和 <code>git diff --check</code>。</li>
         <li>
           递归验证 18 个 HTML 文件（17 篇文档加首页）：无重复 ID、相对链接目标存在、
           页内锚点存在、外链安全、无内联 SVG、Java 泛型已转义。

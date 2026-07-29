@@ -3,17 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="说明 Learn-AI 如何通过 GitHub Actions 校验 public 静态站点并部署到 GitHub Pages，包含完整工作流、权限、路径、验证和排错方法。">
+  <meta name="description" content="说明 Learn-AI 如何从 main 分支根目录直接发布 GitHub Pages，并让根入口与 public 知识页正确协作。">
   <meta name="color-scheme" content="light dark">
   <meta name="study-category" content="项目维护">
   <meta name="study-date" content="2026-07-29">
-  <title>GitHub Pages 部署与项目结构｜Java 全栈 AI 学习库</title>
+  <title>GitHub Pages branch 部署与项目结构｜Java 全栈 AI 学习库</title>
   <link rel="stylesheet" href="../../assets/style.css">
   <script defer src="../../assets/app.js"></script>
 </head>
 <body class="document-page">
 <header class="topbar">
-  <a class="brand" href="../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
+  <a class="brand" href="../../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
   <div class="topbar-actions">
     <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
     <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
@@ -22,12 +22,12 @@
 <div class="reader-layout">
   <aside class="doc-sidebar">
     <div class="sidebar-header">
-      <a class="sidebar-home-link" href="../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
+      <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
       <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
     </div>
     <div class="sidebar-category-summary">
       <span class="eyebrow">当前分类</span>
-      <a class="sidebar-category-link" href="../../index.html#category-项目维护-1v91sou">
+      <a class="sidebar-category-link" href="../../../index.html#category-项目维护-1v91sou">
         <strong>项目维护</strong>
         <small>1 篇文档</small>
       </a>
@@ -37,53 +37,52 @@
       <input type="search" placeholder="筛选当前分类…" data-sidebar-search>
     </label>
     <nav class="doc-nav" aria-label="当前分类文档">
-      <a class="doc-nav-item is-active" href="2026-07-29-GitHub-Pages部署与项目结构.html" aria-current="page"><span>GitHub Pages 部署与项目结构</span><small>2026-07-29</small></a>
+      <a class="doc-nav-item is-active" href="2026-07-29-GitHub-Pages部署与项目结构.html" aria-current="page"><span>GitHub Pages branch 部署与项目结构</span><small>2026-07-29</small></a>
     </nav>
   </aside>
   <main class="article-column">
     <div class="article-meta">
-      <a href="../../index.html">知识库首页</a>
+      <a href="../../../index.html">知识库首页</a>
       <span>·</span>
       <span>项目维护</span>
       <span>·</span>
       <time>2026-07-29</time>
     </div>
     <article class="markdown-body">
-      <h1 id="github-pages-部署与项目结构"><a class="heading-anchor" href="#github-pages-部署与项目结构" aria-label="链接到本节">#</a>GitHub Pages 部署与项目结构</h1>
+      <h1 id="github-pages-branch-部署与项目结构">GitHub Pages branch 部署与项目结构</h1>
       <blockquote>
-        <p>整理日期：2026-07-29<br>目标：保持 <code>public/</code> 作为唯一发布根目录，通过 GitHub Actions 在部署前完成确定性校验，再发布到项目级 GitHub Pages。</p>
+        <p>整理日期：2026-07-29<br>目标：不使用自定义部署 workflow，直接从 <code>main</code> 分支根目录发布；入口放在根目录，知识内容继续留在 <code>public/</code>。</p>
       </blockquote>
 
-      <h2 id="核心结论"><a class="heading-anchor" href="#核心结论" aria-label="链接到本节">#</a>核心结论</h2>
-      <p>Learn-AI 不改成 Jekyll，也不维护 <code>gh-pages</code> 生成分支。<code>main</code> 中的 <code>public/</code> 就是完整静态站点；GitHub Actions 负责校验、打包 Pages artifact，并通过受限的部署 job 发布。GitHub 官方把“自定义 Actions workflow”列为不希望维护专用编译分支时的推荐方式。<a href="https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site" target="_blank" rel="noopener noreferrer">GitHub Pages：配置发布来源</a></p>
-      <p>默认线上地址是 <a href="https://toik001.github.io/Learn-AI/" target="_blank" rel="noopener noreferrer">https://toik001.github.io/Learn-AI/</a>。因为这是项目站点，仓库名会成为 URL 子路径；所有站内链接和资源必须保持相对 URL，不能写成以 <code>/</code> 开头的根路径。GitHub 对项目站点与用户站点的地址差异有明确说明。<a href="https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages" target="_blank" rel="noopener noreferrer">GitHub Pages：站点类型</a></p>
+      <h2 id="核心结论">核心结论</h2>
+      <p>Learn-AI 使用 GitHub Pages 的 <strong>Deploy from a branch</strong> 模式，发布源固定为 <code>main</code> 和 <code>/ (root)</code>。GitHub 的分支发布只允许分支根目录或 <code>/docs</code>，因此把原来 <code>public/</code> 中的入口移动为根目录的 <code>index.html</code>，而学习页面、样式和脚本继续保留在 <code>public/notes/</code> 与 <code>public/assets/</code>。<a href="https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site" target="_blank" rel="noopener noreferrer">GitHub Pages：配置发布来源</a></p>
+      <p>默认线上地址是 <a href="https://toik001.github.io/Learn-AI/" target="_blank" rel="noopener noreferrer">https://toik001.github.io/Learn-AI/</a>。这是项目站点，仓库名会成为 URL 子路径；站内链接必须使用相对路径，不能写成以 <code>/</code> 开头的站点根路径。<a href="https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages" target="_blank" rel="noopener noreferrer">GitHub Pages：站点类型</a></p>
 
-      <h2 id="迁移方案对比"><a class="heading-anchor" href="#迁移方案对比" aria-label="链接到本节">#</a>迁移方案对比</h2>
+      <h2 id="结构调整">结构调整</h2>
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>方案</th><th>对当前仓库的影响</th><th>发布前校验</th><th>结论</th></tr>
+            <tr><th>项目</th><th>Actions artifact 方案</th><th>当前 branch 方案</th></tr>
           </thead>
           <tbody>
-            <tr><td>Actions 上传 <code>public/</code></td><td>保留现有内容边界</td><td>可运行全部 Node.js 校验</td><td><strong>采用</strong></td></tr>
-            <tr><td><code>main/docs</code> 分支来源</td><td>必须移动 <code>public/</code>，并处理内部 <code>docs/</code> 冲突</td><td>Pages 发布前缺少自定义门禁</td><td>不采用</td></tr>
-            <tr><td>独立 <code>gh-pages</code> 分支</td><td>维护第二份生成结果</td><td>仍需脚本或 Actions 同步</td><td>不采用</td></tr>
+            <tr><td>发布来源</td><td>自定义 GitHub Actions</td><td><code>main</code> + <code>/ (root)</code></td></tr>
+            <tr><td>站点入口</td><td><code>public/index.html</code></td><td><code>index.html</code></td></tr>
+            <tr><td>知识页面</td><td><code>public/notes/</code></td><td><code>public/notes/</code>，保持不变</td></tr>
+            <tr><td>部署文件</td><td><code>.github/workflows/pages.yml</code></td><td>不需要</td></tr>
+            <tr><td>发布前校验</td><td>由 workflow 强制执行</td><td>提交前在本地执行</td></tr>
           </tbody>
         </table>
       </div>
-      <p>从分支发布并非不可行，但 GitHub Pages 的分支来源只允许分支根目录或 <code>/docs</code>。当前项目的发布目录是 <code>/public</code>，直接上传 artifact 能避免目录迁移和重复状态。<a href="https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site" target="_blank" rel="noopener noreferrer">GitHub Pages：从分支或 Actions 发布</a></p>
 
-      <h2 id="项目结构"><a class="heading-anchor" href="#项目结构" aria-label="链接到本节">#</a>项目结构</h2>
+      <h2 id="项目结构">项目结构</h2>
       <div class="code-block">
         <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
         <pre><code class="language-text">.
-├── .github/
-│   └── workflows/
-│       └── pages.yml             # 校验、上传 artifact、部署
-├── AGENTS.md                     # 项目持久规则
-├── README.md                     # 仓库使用入口
-├── public/                       # 唯一公开网站根目录
-│   ├── index.html
+├── .nojekyll                    # 跳过 Jekyll 转换
+├── index.html                   # Pages 根入口
+├── AGENTS.md
+├── README.md
+├── public/
 │   ├── manifest.json
 │   ├── assets/
 │   │   ├── style.css
@@ -91,197 +90,61 @@
 │   └── notes/&lt;category&gt;/
 │       └── YYYY-MM-DD-主题.html
 └── scripts/
-    ├── build-html-index.mjs      # 生成导航和清单
-    ├── verify-site.mjs           # 校验链接、锚点与结构
-    └── test-*.mjs                # 回归测试</code></pre>
+    ├── build-html-index.mjs
+    ├── verify-site.mjs
+    └── test-*.mjs</code></pre>
       </div>
-      <p><code>actions/upload-pages-artifact</code> 的 <code>path</code> 明确设置为 <code>public</code>，因此工作流、README、规则和测试不会进入站点 artifact。GitHub 要求 Actions 模式下 artifact 根部包含小写 <code>index.html</code>。<a href="https://docs.github.com/en/pages/getting-started-with-github-pages/troubleshooting-404-errors-for-github-pages-sites" target="_blank" rel="noopener noreferrer">GitHub Pages：404 排查</a></p>
+      <p><code>.nojekyll</code> 让 GitHub Pages 原样发布现有 HTML，避免 Jekyll 把页面中的模板符号当作构建语法。由于发布源是仓库根目录，已提交的工程文件也属于公开仓库范围，任何密钥和私有资料都不得提交。</p>
 
-      <h2 id="完整-github-actions-工作流"><a class="heading-anchor" href="#完整-github-actions-工作流" aria-label="链接到本节">#</a>完整 GitHub Actions 工作流</h2>
-      <div class="code-block">
-        <div class="code-toolbar"><span>yaml</span><button class="copy-code" type="button">复制</button></div>
-        <pre><code class="language-yaml">name: Deploy knowledge base to GitHub Pages
+      <h2 id="链接计算">链接计算</h2>
+      <p>根首页引用资源时使用 <code>public/assets/style.css</code> 和 <code>public/assets/app.js</code>，知识卡片链接以 <code>public/notes/</code> 开头。知识页位于 <code>public/notes/&lt;category&gt;/</code>，返回根首页需要三级相对路径 <code>../../../index.html</code>；知识页之间的分类导航仍按各自文件位置计算。</p>
+      <p><code>scripts/build-html-index.mjs</code> 负责统一计算这些路径。新增、移动或删除页面后不要手工维护首页，直接重新运行生成器。</p>
 
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
-
-permissions: {}
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          package-manager-cache: false
-
-      - name: Verify entry files and JavaScript syntax
-        run: |
-          test -s public/index.html
-          node --check scripts/build-html-index.mjs
-          node --check scripts/verify-site.mjs
-          node --check public/assets/app.js
-
-      - name: Run content regression tests
-        run: |
-          set -euo pipefail
-          for test_file in scripts/test-*.mjs; do
-            node "$test_file"
-          done
-
-      - name: Verify static site integrity
-        run: node scripts/verify-site.mjs
-
-      - name: Verify generated navigation is committed
-        run: |
-          node scripts/build-html-index.mjs
-          git diff --exit-code -- public
-
-      - name: Upload GitHub Pages artifact
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: public
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v6
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5</code></pre>
-      </div>
-
-      <h2 id="为什么拆成-build-与-deploy"><a class="heading-anchor" href="#为什么拆成-build-与-deploy" aria-label="链接到本节">#</a>为什么拆成 build 与 deploy</h2>
+      <h2 id="首次启用">首次启用 GitHub Pages</h2>
       <ol>
-        <li><strong>build：</strong>只有 <code>contents: read</code>，负责检出、校验和上传 artifact；内容测试失败时不会进入部署。</li>
-        <li><strong>deploy：</strong>通过 <code>needs: build</code> 等待唯一合格 artifact，仅授予 <code>pages: write</code> 与 <code>id-token: write</code>。</li>
-        <li><strong>environment：</strong><code>github-pages</code> 保存部署状态和页面 URL，也可以设置仅允许 <code>main</code> 部署的保护规则。</li>
-        <li><strong>OIDC：</strong><code>id-token: write</code> 用于证明部署来自允许的 workflow/ref；不是仓库内容写权限，也不需要个人访问令牌。</li>
+        <li>打开仓库的 <strong>Settings → Pages</strong>。</li>
+        <li>在 <strong>Build and deployment → Source</strong> 选择 <strong>Deploy from a branch</strong>。</li>
+        <li>Branch 选择 <code>main</code>，目录选择 <code>/ (root)</code>，然后保存。</li>
+        <li>等待 GitHub 完成第一次构建，再访问项目站点。</li>
       </ol>
-      <p><code>deploy-pages</code> 官方说明部署 job 至少需要 Pages 写权限和 OIDC token，并建议使用 <code>github-pages</code> environment。<a href="https://github.com/actions/deploy-pages" target="_blank" rel="noopener noreferrer">actions/deploy-pages</a></p>
+      <p>Pages Source 是仓库级设置，不能仅通过 Git 提交完成。保存后，每次推送 <code>main</code> 都会触发 Pages 的内置分支发布。<a href="https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site" target="_blank" rel="noopener noreferrer">GitHub Pages：从分支发布</a></p>
 
-      <h2 id="action-版本基线"><a class="heading-anchor" href="#action-版本基线" aria-label="链接到本节">#</a>Action 版本基线</h2>
-      <p>GitHub Docs、starter workflow 和各 action release 的更新节奏可能不同。本项目以 2026-07-29 各官方仓库已经发布的最新主版本为准：</p>
-      <ul>
-        <li><code>actions/checkout@v6</code> 与 <code>actions/setup-node@v6</code>；显式选择 Node.js 24。</li>
-        <li><code>actions/configure-pages@v6</code>：Node.js 24 运行时版本。</li>
-        <li><code>actions/upload-pages-artifact@v5</code>：内部使用新版 artifact 上传能力。</li>
-        <li><code>actions/deploy-pages@v5</code>：Node.js 24 运行时版本。</li>
-      </ul>
-      <p>升级主版本前应重新查看 release notes，尤其关注 Actions Runner 最低版本和 artifact 兼容性。GitHub.com 托管 runner 会由平台维护；自托管 runner 则需要管理员升级。</p>
-
-      <h2 id="发布数据流"><a class="heading-anchor" href="#发布数据流" aria-label="链接到本节">#</a>发布数据流</h2>
+      <h2 id="本地维护与验证">本地维护与验证</h2>
       <div class="code-block">
-        <div class="code-toolbar"><span>text</span><button class="copy-code" type="button">复制</button></div>
-        <pre><code class="language-text">git push main
-   │
-   ▼
-GitHub Actions build
-   ├─ 语法与内容回归
-   ├─ 链接、资源、锚点、元数据校验
-   ├─ 索引可重复生成校验
-   └─ 上传 public/ → github-pages artifact
-   │
-   ▼ needs: build
-GitHub Actions deploy
-   ├─ OIDC 验证 workflow/ref
-   ├─ 创建 Pages deployment
-   └─ 输出 page_url
-   │
-   ▼
-https://toik001.github.io/Learn-AI/</code></pre>
-      </div>
-      <p>artifact 是某次 workflow run 的静态打包结果；Pages deployment 是平台面向访问者的部署记录。部署 job 不重新检出或改写内容，从而保证发布物就是 build job 已校验的同一份 artifact。</p>
-
-      <h2 id="项目子路径与相对链接"><a class="heading-anchor" href="#项目子路径与相对链接" aria-label="链接到本节">#</a>项目子路径与相对链接</h2>
-      <p>仓库名是 <code>Learn-AI</code>，所以项目站点位于 <code>/Learn-AI/</code>。页面中的 <code>../../assets/style.css</code>、<code>../../index.html</code> 等相对地址会从当前页面位置解析，既适合 GitHub Pages 子路径，也能直接从本地文件系统或本地静态服务器阅读。</p>
-      <p>不要把链接写成 <code>/assets/style.css</code> 或 <code>/notes/...</code>：浏览器会把它们解析到 <code>toik001.github.io</code> 域名根部，绕过 <code>/Learn-AI/</code>。<code>scripts/verify-site.mjs</code> 会在提交前拒绝这种根路径引用。</p>
-
-      <h2 id="首次启用-github-pages"><a class="heading-anchor" href="#首次启用-github-pages" aria-label="链接到本节">#</a>首次启用 GitHub Pages</h2>
-      <ol>
-        <li>进入仓库 <strong>Settings → Pages</strong>。</li>
-        <li>在 <strong>Build and deployment</strong> 的 <strong>Source</strong> 中选择 <strong>GitHub Actions</strong>。</li>
-        <li>推送包含 <code>.github/workflows/pages.yml</code> 的 <code>main</code>，或在 Actions 页面手动执行 <strong>Deploy knowledge base to GitHub Pages</strong>。</li>
-        <li>等待 build 和 deploy 均成功，再从 deployment 的 <code>page_url</code> 打开站点。</li>
-      </ol>
-      <p>Pages Source 是仓库级外部设置，无法只靠提交文件保证。GitHub 官方说明已有自定义 workflow 时可以跳过模板创建，但仍需把发布来源选择为 GitHub Actions。<a href="https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site" target="_blank" rel="noopener noreferrer">GitHub Pages：选择 Actions 来源</a></p>
-
-      <h2 id="本地维护与验证"><a class="heading-anchor" href="#本地维护与验证" aria-label="链接到本节">#</a>本地维护与验证</h2>
-      <div class="code-block">
-        <div class="code-toolbar"><span>bash</span><button class="copy-code" type="button">复制</button></div>
-        <pre><code class="language-bash">node scripts/build-html-index.mjs
-test -s public/index.html
+        <div class="code-toolbar"><span>shell</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-shell">node scripts/build-html-index.mjs
+test -s index.html
+test ! -e public/index.html
 node --check scripts/build-html-index.mjs
 node --check scripts/verify-site.mjs
 node --check public/assets/app.js
 for test_file in scripts/test-*.mjs; do node "$test_file"; done
 node scripts/verify-site.mjs
 node scripts/build-html-index.mjs
-git diff --exit-code -- public
+git diff --exit-code -- index.html public
 git diff --check</code></pre>
       </div>
-      <p>CI 会重跑生成器，但不会替开发者提交生成结果。如果重跑后 <code>public/</code> 有差异，build 直接失败；应在本地重建、审查并提交，而不是让流水线静默修改发布物。</p>
-      <p><code>verify-site.mjs</code> 会校验 artifact 根入口、本地链接和资源、片段锚点、重复 ID、标题 ID、知识页元数据、语义标签、外部链接安全属性、路径越界和根路径引用。</p>
+      <p>分支发布没有自定义 workflow 门禁，所以本地校验是提交前的质量控制。完整性校验会检查根入口、本地资源、知识页链接、片段锚点、重复 ID、页面元数据和外链安全属性。</p>
 
-      <h2 id="常见失败与排查"><a class="heading-anchor" href="#常见失败与排查" aria-label="链接到本节">#</a>常见失败与排查</h2>
+      <h2 id="常见问题">常见问题</h2>
       <div class="table-wrap">
         <table>
-          <thead>
-            <tr><th>现象</th><th>原因</th><th>处理</th></tr>
-          </thead>
+          <thead><tr><th>现象</th><th>常见原因</th><th>处理方式</th></tr></thead>
           <tbody>
-            <tr><td><code>git diff --exit-code -- public</code> 失败</td><td>索引、侧栏或 manifest 未提交</td><td>本地运行生成器并审查变化</td></tr>
-            <tr><td>完整性校验失败</td><td>坏链接、未知锚点、重复 ID 或根路径</td><td>按文件级诊断修复源 HTML</td></tr>
-            <tr><td>deploy 未开始</td><td>build 失败或 artifact 未上传</td><td>先修复 build 的第一个失败步骤</td></tr>
-            <tr><td>deploy 报权限错误</td><td>Pages Source、workflow 权限或 environment 保护不匹配</td><td>检查 Settings、job permissions 与 environment 规则</td></tr>
-            <tr><td>首页 404</td><td>Pages 未启用或 artifact 根部缺少 <code>index.html</code></td><td>选择 GitHub Actions Source 并检查上传路径</td></tr>
-            <tr><td>首页正常、资源 404</td><td>使用了域名根路径</td><td>改为相对 URL 并运行完整性校验</td></tr>
+            <tr><td>站点 404</td><td>Source、分支或目录选择错误</td><td>确认 Deploy from a branch、<code>main</code>、<code>/ (root)</code></td></tr>
+            <tr><td>首页有样式但知识页 404</td><td>根首页仍使用旧的 <code>notes/</code> 路径</td><td>运行索引生成器，确认链接以 <code>public/notes/</code> 开头</td></tr>
+            <tr><td>知识页无法返回首页</td><td>仍指向已删除的 <code>public/index.html</code></td><td>重新生成导航，目标应为 <code>../../../index.html</code></td></tr>
+            <tr><td>刚推送仍显示旧内容</td><td>Pages 构建或缓存尚未刷新</td><td>查看仓库 Pages 状态并稍后强制刷新</td></tr>
           </tbody>
         </table>
       </div>
-      <p>GitHub 建议从 workflow run 定位构建和部署错误；Actions 模式下 artifact 根目录和小写 <code>index.html</code> 是 404 排查重点。<a href="https://docs.github.com/en/pages/getting-started-with-github-pages/troubleshooting-404-errors-for-github-pages-sites" target="_blank" rel="noopener noreferrer">GitHub Pages：Troubleshooting 404 errors</a></p>
+      <p>GitHub 的 404 排查重点包括发布源、入口文件名和访问地址。入口文件必须使用小写 <code>index.html</code>。<a href="https://docs.github.com/en/pages/getting-started-with-github-pages/troubleshooting-404-errors-for-github-pages-sites" target="_blank" rel="noopener noreferrer">GitHub Pages：404 排查</a></p>
 
-      <h2 id="安全与边界"><a class="heading-anchor" href="#安全与边界" aria-label="链接到本节">#</a>安全与边界</h2>
+      <h2 id="参考资料">参考资料</h2>
       <ul>
-        <li><code>public/</code> 中的所有文件都应视为公开内容，不得包含密钥、内网地址或私有数据。</li>
-        <li>不使用个人 PAT。部署通过仓库的 <code>GITHUB_TOKEN</code> 与 OIDC 完成。</li>
-        <li>build job 没有 Pages 写权限；deploy job 不检出源码，也没有 contents 写权限。</li>
-        <li>外部链接统一使用 <code>target="_blank"</code>、<code>rel="noopener noreferrer"</code>。</li>
-        <li>GitHub Pages 只提供静态文件，不能运行 Java、数据库或服务端 API；动态能力需要独立后端。</li>
-      </ul>
-
-      <h2 id="参考资料"><a class="heading-anchor" href="#参考资料" aria-label="链接到本节">#</a>参考资料</h2>
-      <ul>
-        <li><a href="https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages" target="_blank" rel="noopener noreferrer">GitHub Docs：Using custom workflows with GitHub Pages</a> — build、artifact、deploy job 与 environment 关系；检索日期：2026-07-29。</li>
-        <li><a href="https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site" target="_blank" rel="noopener noreferrer">GitHub Docs：Configuring a publishing source</a> — 分支来源限制、GitHub Actions Source 和首次启用步骤；检索日期：2026-07-29。</li>
-        <li><a href="https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages" target="_blank" rel="noopener noreferrer">GitHub Docs：What is GitHub Pages?</a> — 项目站点默认 URL 和静态托管边界；检索日期：2026-07-29。</li>
-        <li><a href="https://docs.github.com/en/pages/getting-started-with-github-pages/troubleshooting-404-errors-for-github-pages-sites" target="_blank" rel="noopener noreferrer">GitHub Docs：Troubleshooting 404 errors</a> — Actions artifact 的入口文件和路径排查；检索日期：2026-07-29。</li>
-        <li><a href="https://github.com/actions/configure-pages/releases" target="_blank" rel="noopener noreferrer">actions/configure-pages Releases</a> — <code>v6</code> 与 Node.js 24 运行时；检索日期：2026-07-29。</li>
-        <li><a href="https://github.com/actions/upload-pages-artifact/releases" target="_blank" rel="noopener noreferrer">actions/upload-pages-artifact Releases</a> — <code>v5</code> 与 artifact 上传版本；检索日期：2026-07-29。</li>
-        <li><a href="https://github.com/actions/deploy-pages/releases" target="_blank" rel="noopener noreferrer">actions/deploy-pages Releases</a> — <code>v5</code> 与 Node.js 24 运行时；检索日期：2026-07-29。</li>
+        <li><a href="https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site" target="_blank" rel="noopener noreferrer">GitHub Docs：Configuring a publishing source</a> — 分支来源、根目录与 <code>/docs</code> 限制；检索日期：2026-07-29。</li>
+        <li><a href="https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages" target="_blank" rel="noopener noreferrer">GitHub Docs：What is GitHub Pages?</a> — 用户站点与项目站点地址；检索日期：2026-07-29。</li>
+        <li><a href="https://docs.github.com/en/pages/getting-started-with-github-pages/troubleshooting-404-errors-for-github-pages-sites" target="_blank" rel="noopener noreferrer">GitHub Docs：Troubleshooting 404 errors</a> — 发布来源与入口文件排查；检索日期：2026-07-29。</li>
       </ul>
     </article>
     <footer class="article-footer">
@@ -295,11 +158,11 @@ git diff --check</code></pre>
   <aside class="toc-sidebar">
     <div class="toc-title">本页目录</div>
     <nav aria-label="本页目录">
-      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#迁移方案对比">迁移方案对比</a></li><li class="toc-level-2"><a href="#项目结构">项目结构</a></li><li class="toc-level-2"><a href="#完整-github-actions-工作流">完整 GitHub Actions 工作流</a></li><li class="toc-level-2"><a href="#为什么拆成-build-与-deploy">为什么拆成 build 与 deploy</a></li><li class="toc-level-2"><a href="#action-版本基线">Action 版本基线</a></li><li class="toc-level-2"><a href="#发布数据流">发布数据流</a></li><li class="toc-level-2"><a href="#项目子路径与相对链接">项目子路径与相对链接</a></li><li class="toc-level-2"><a href="#首次启用-github-pages">首次启用 GitHub Pages</a></li><li class="toc-level-2"><a href="#本地维护与验证">本地维护与验证</a></li><li class="toc-level-2"><a href="#常见失败与排查">常见失败与排查</a></li><li class="toc-level-2"><a href="#安全与边界">安全与边界</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#结构调整">结构调整</a></li><li class="toc-level-2"><a href="#项目结构">项目结构</a></li><li class="toc-level-2"><a href="#链接计算">链接计算</a></li><li class="toc-level-2"><a href="#首次启用">首次启用 GitHub Pages</a></li><li class="toc-level-2"><a href="#本地维护与验证">本地维护与验证</a></li><li class="toc-level-2"><a href="#常见问题">常见问题</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
     </nav>
     <a class="back-to-top" href="#">返回顶部 ↑</a>
   </aside>
 </div>
-<div class="sidebar-scrim"></div>
+<div class="mobile-backdrop" hidden></div>
 </body>
 </html>

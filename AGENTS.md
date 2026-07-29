@@ -69,7 +69,7 @@
 - 文件名使用简洁、可读的中文或英文，避免无意义编号。
 - 同一主题已有页面时，优先更新原 HTML；若内容是独立调研或版本差异明显，则创建新页面。
 - 必要时可按主题建立子目录，例如 `public/notes/llm/`、`public/notes/papers/`、`public/notes/tools/`。
-- `public/index.html` 是知识库总入口，也是 GitHub Pages artifact 的根入口。
+- 根目录 `index.html` 是知识库总入口，也是 GitHub Pages branch 发布入口。
 
 ### HTML 页面要求
 
@@ -118,18 +118,16 @@ HTML 页面可参考以下元数据：
 
 ## GitHub Pages 项目结构
 
-本项目采用纯静态 GitHub Pages + GitHub Actions 部署，固定结构如下：
+本项目采用纯静态 GitHub Pages branch 部署，固定结构如下：
 
 ```text
 .
-├── .github/
-│   └── workflows/
-│       └── pages.yml
+├── .nojekyll
 ├── .gitignore
+├── index.html
 ├── AGENTS.md
 ├── README.md
 ├── public/
-│   ├── index.html
 │   ├── manifest.json
 │   ├── assets/
 │   │   ├── style.css
@@ -145,21 +143,21 @@ HTML 页面可参考以下元数据：
 
 约束：
 
-1. `public/` 是可直接部署的网站根目录，只放允许发布的静态文件。
+1. GitHub Pages 在仓库设置中使用 **Deploy from a branch**，固定选择 `main` 与 `/ (root)`；不维护 Pages Actions workflow 或 `gh-pages` 分支。
 2. 所有学习页面直接写入 `public/notes/<category>/`，不建立 `src/`、`dist/` 或 Markdown 中间层。
 3. 页面内资源和站内链接必须使用相对路径，确保 GitHub Pages 部署在 `/Learn-AI/` 项目子路径时仍可访问。
-4. `AGENTS.md`、`README.md`、脚本、Actions 配置和其他内部工程文件不得复制到 `public/`。
-5. `.github/workflows/pages.yml` 只发布已提交且通过校验的 `public/`。CI 会重跑索引生成器检查一致性；若产生 diff 则失败，不会提交或发布这些临时变化。
-6. GitHub Actions 使用 Node.js 24，以及 `actions/checkout@v6`、`actions/setup-node@v6`、`actions/configure-pages@v6`、`actions/upload-pages-artifact@v5` 和 `actions/deploy-pages@v5`。部署 job 只授予 `pages: write` 与 `id-token: write`。
-7. 新建、移动、重命名或删除知识页面后，运行 `node scripts/build-html-index.mjs`。
-8. 提交前至少检查：
-   - `test -s public/index.html`
+4. 根目录只保留 GitHub Pages 必需入口和工程文件；`public/` 继续集中保存知识页、共享资源和 `manifest.json`。branch 根目录发布会使已提交文件处于公开发布范围，不得提交密钥或私有资料。
+5. `.nojekyll` 必须保留，确保现有纯静态 HTML 原样发布，不经过 Jekyll 转换。
+6. 新建、移动、重命名或删除知识页面后，运行 `node scripts/build-html-index.mjs`；生成器必须更新根目录 `index.html`。
+7. 提交前至少检查：
+   - `test -s index.html`
+   - `test ! -e public/index.html`
    - `node --check scripts/build-html-index.mjs`
    - `node --check scripts/verify-site.mjs`
    - `node --check public/assets/app.js`
    - `for test_file in scripts/test-*.mjs; do node "$test_file"; done`
    - `node scripts/verify-site.mjs`
-   - 重跑 `node scripts/build-html-index.mjs` 后，`git diff --exit-code -- public` 无差异。
+   - 重跑 `node scripts/build-html-index.mjs` 后，`git diff --exit-code -- index.html public` 无差异。
 
 ## 每次任务的交付要求
 
@@ -167,7 +165,7 @@ HTML 页面可参考以下元数据：
 
 1. 得到了什么结论或完成了什么学习材料。
 2. 新建或更新了哪些 HTML 页面，并提供可点击的文件路径。
-3. 提供更新后的知识库入口 `public/index.html`。
+3. 提供更新后的知识库入口 `index.html`。
 4. 使用了网上资料时，说明资料截至或检索于哪一天。
 5. 若仍有不确定项、前置条件或推荐的下一步，明确列出。
 

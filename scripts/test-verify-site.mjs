@@ -16,14 +16,14 @@ const indexHtml = `<!doctype html>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Fixture Index</title>
-  <link rel="stylesheet" href="assets/style.css">
+  <link rel="stylesheet" href="public/assets/style.css">
 </head>
 <body>
   <header><h1 id="library">Fixture Index</h1></header>
   <main>
-    <a href="notes/project/guide.html#核心结论">阅读指南</a>
+    <a href="public/notes/project/guide.html#核心结论">阅读指南</a>
   </main>
-  <script src="assets/app.js"></script>
+  <script src="public/assets/app.js"></script>
 </body>
 </html>`;
 
@@ -39,7 +39,7 @@ const noteHtml = `<!doctype html>
   <link rel="stylesheet" href="../../assets/style.css">
 </head>
 <body>
-  <header><a href="../../index.html#library">知识库</a></header>
+  <header><a href="../../../index.html#library">知识库</a></header>
   <nav aria-label="页面导航"><a href="#参考资料">参考资料</a></nav>
   <main>
     <article>
@@ -64,18 +64,19 @@ async function createSite() {
   await fs.mkdir(path.join(publicDir, "notes", "project"), {
     recursive: true,
   });
-  await fs.writeFile(path.join(publicDir, "index.html"), indexHtml);
+  await fs.writeFile(path.join(root, "index.html"), indexHtml);
+  await fs.writeFile(path.join(root, ".nojekyll"), "");
   await fs.writeFile(
     path.join(publicDir, "notes", "project", "guide.html"),
     noteHtml,
   );
   await fs.writeFile(path.join(publicDir, "assets", "style.css"), "body {}\n");
   await fs.writeFile(path.join(publicDir, "assets", "app.js"), "(() => {})();\n");
-  return publicDir;
+  return root;
 }
 
-function verify(publicDir) {
-  return spawnSync(process.execPath, [verifierPath, "--root", publicDir], {
+function verify(siteRoot) {
+  return spawnSync(process.execPath, [verifierPath, "--root", siteRoot], {
     cwd: projectRoot,
     encoding: "utf8",
   });
@@ -86,16 +87,16 @@ function diagnostics(result) {
 }
 
 async function expectFailure({ mutate, message }) {
-  const publicDir = await createSite();
-  await mutate(publicDir);
-  const result = verify(publicDir);
+  const siteRoot = await createSite();
+  await mutate(siteRoot);
+  const result = verify(siteRoot);
   assert.notEqual(result.status, 0, `无效站点不应通过：${message}`);
   assert.match(diagnostics(result), message);
 }
 
 try {
-  const validPublicDir = await createSite();
-  const validResult = verify(validPublicDir);
+  const validSiteRoot = await createSite();
+  const validResult = verify(validSiteRoot);
   assert.equal(
     validResult.status,
     0,
@@ -103,12 +104,12 @@ try {
   );
 
   await expectFailure({
-    mutate: async (publicDir) => {
+    mutate: async (siteRoot) => {
       await fs.writeFile(
-        path.join(publicDir, "index.html"),
+        path.join(siteRoot, "index.html"),
         indexHtml.replace(
           "</main>",
-          '<a href="notes/project/missing.html">缺失页面</a></main>',
+          '<a href="public/notes/project/missing.html">缺失页面</a></main>',
         ),
       );
     },
@@ -116,9 +117,9 @@ try {
   });
 
   await expectFailure({
-    mutate: async (publicDir) => {
+    mutate: async (siteRoot) => {
       await fs.writeFile(
-        path.join(publicDir, "index.html"),
+        path.join(siteRoot, "index.html"),
         indexHtml.replace(
           "guide.html#核心结论",
           "guide.html#不存在的章节",
@@ -129,11 +130,11 @@ try {
   });
 
   await expectFailure({
-    mutate: async (publicDir) => {
+    mutate: async (siteRoot) => {
       await fs.writeFile(
-        path.join(publicDir, "index.html"),
+        path.join(siteRoot, "index.html"),
         indexHtml.replace(
-          "assets/style.css",
+          "public/assets/style.css",
           "/Learn-AI/assets/style.css",
         ),
       );
@@ -142,9 +143,10 @@ try {
   });
 
   await expectFailure({
-    mutate: async (publicDir) => {
+    mutate: async (siteRoot) => {
       const notePath = path.join(
-        publicDir,
+        siteRoot,
+        "public",
         "notes",
         "project",
         "guide.html",
@@ -161,9 +163,10 @@ try {
   });
 
   await expectFailure({
-    mutate: async (publicDir) => {
+    mutate: async (siteRoot) => {
       const notePath = path.join(
-        publicDir,
+        siteRoot,
+        "public",
         "notes",
         "project",
         "guide.html",

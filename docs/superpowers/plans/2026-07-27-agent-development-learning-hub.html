@@ -125,7 +125,7 @@ node -e 'const s=require("fs").readFileSync("public/assets/style.css","utf8"); i
       </ol>
 
       <h2 id="task-3">任务 3：重建知识库导航并完成回归验证</h2>
-      <p><strong>文件：</strong>更新 <code>public/index.html</code>、<code>public/manifest.json</code> 和所有知识页的自动导航区。</p>
+      <p><strong>文件：</strong>更新 <code>index.html</code>、<code>public/manifest.json</code> 和所有知识页的自动导航区。</p>
       <p>
         <strong>输入：</strong>任务 1 的页面和任务 2 的样式。<br>
         <strong>输出：</strong>可从知识库首页进入的新分类及通过结构、链接、锚点和脚本检查的站点。
@@ -133,7 +133,7 @@ node -e 'const s=require("fs").readFileSync("public/assets/style.css","utf8"); i
       <ol>
         <li>
           <p><strong>先确认首页尚未收录：</strong></p>
-          <pre><code>rg -n 'Agent 开发学习主目录' public/index.html</code></pre>
+          <pre><code>rg -n 'Agent 开发学习主目录' index.html</code></pre>
           <p>预期：首次运行退出码非 0。</p>
         </li>
         <li>
@@ -143,7 +143,7 @@ node -e 'const s=require("fs").readFileSync("public/assets/style.css","utf8"); i
         </li>
         <li>
           <p><strong>运行基础检查：</strong></p>
-          <pre><code>test -s public/index.html
+          <pre><code>test -s index.html
 node --check scripts/build-html-index.mjs
 node --check public/assets/app.js
 git diff --check</code></pre>
@@ -187,7 +187,7 @@ NODE</code></pre>
         </li>
         <li>
           <p><strong>确认索引结果：</strong></p>
-          <pre><code>rg -n 'Agent 开发学习主目录|Agent 开发' public/index.html public/manifest.json</code></pre>
+          <pre><code>rg -n 'Agent 开发学习主目录|Agent 开发' index.html public/manifest.json</code></pre>
           <p>预期：首页和 manifest 均包含新页面与分类。</p>
         </li>
       </ol>
