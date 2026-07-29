@@ -93,6 +93,15 @@ try {
     }),
   );
   await fs.writeFile(
+    path.join(fixtureNotes, "missing-heading-ids.html"),
+    readerFixture({
+      title: "Missing Heading IDs",
+      category: "TOC Fixture",
+      heading:
+        '<h2>Repeated</h2><h2>Repeated</h2><h3>API / JVM</h3><h4 id="kept">Kept</h4>',
+    }),
+  );
+  await fs.writeFile(
     path.join(fixtureNotes, "zero-headings.html"),
     readerFixture({
       title: "Zero Headings",
@@ -146,6 +155,19 @@ try {
       (categoryCounts.get(document.category) ?? 0) + 1,
     );
   }
+
+  const headingFixtureHtml = await fs.readFile(
+    path.join(fixtureNotes, "missing-heading-ids.html"),
+    "utf8",
+  );
+  const headingIds = [
+    ...headingFixtureHtml.matchAll(/<h[2-4]\b([^>]*)>/gi),
+  ].map((match) => attribute(match[1], "id"));
+  assert.deepEqual(
+    headingIds,
+    ["repeated", "repeated-2", "api-jvm", "kept"],
+    "生成器必须为 h2～h4 补充稳定唯一 ID，并保留已有 ID",
+  );
 
   for (const document of manifest.documents) {
     const outputPath = path.join(

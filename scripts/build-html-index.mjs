@@ -39,6 +39,52 @@ const stripHtml = (value) =>
       .trim(),
   );
 
+const headingText = (value) =>
+  stripHtml(
+    String(value).replace(
+      /<a\b(?=[^>]*\bclass\s*=\s*["'][^"']*\bheading-anchor\b[^"']*["'])[^>]*>[\s\S]*?<\/a>/gi,
+      "",
+    ),
+  );
+
+const headingSlug = (value) =>
+  headingText(value)
+    .normalize("NFKC")
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{Letter}\p{Number}]+/gu, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+function ensureHeadingIds(html) {
+  const usedIds = new Set(
+    [...html.matchAll(/\bid\s*=\s*(?:"([^"]+)"|'([^']+)')/gi)].map((match) =>
+      decodeEntities(match[1] ?? match[2]),
+    ),
+  );
+  let fallbackIndex = 0;
+
+  return html.replace(
+    /<h([2-4])\b([^>]*)>([\s\S]*?)<\/h\1>/gi,
+    (heading, level, attributes, content) => {
+      if (/(?:^|\s)id\s*=\s*(?:"[^"]+"|'[^']+'|[^\s>]+)/i.test(attributes)) {
+        return heading;
+      }
+
+      fallbackIndex += 1;
+      const base = headingSlug(content) || `section-${fallbackIndex}`;
+      let id = base;
+      let suffix = 2;
+      while (usedIds.has(id)) {
+        id = `${base}-${suffix}`;
+        suffix += 1;
+      }
+      usedIds.add(id);
+      return `<h${level}${attributes} id="${attributeEscape(id)}">${content}</h${level}>`;
+    },
+  );
+}
+
 const relativeUrl = (fromFile, toFile) => {
   const result = posixPath(path.relative(path.dirname(fromFile), toFile));
   return result || path.basename(toFile);
@@ -500,7 +546,7 @@ async function main() {
 
   const documents = [];
   for (const outputPath of outputPaths) {
-    const html = await fs.readFile(outputPath, "utf8");
+    const html = ensureHeadingIds(await fs.readFile(outputPath, "utf8"));
     documents.push(extractDocument(outputPath, html));
   }
 

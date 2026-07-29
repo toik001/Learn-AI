@@ -609,19 +609,19 @@ final class ApprovedProcurementExecutor {
       <h2 id="分阶段落地路线"><a class="heading-anchor" href="#分阶段落地路线" aria-label="链接到本节">#</a>分阶段落地路线</h2>
       <div class="learning-roadmap">
         <section class="roadmap-stage">
-          <h3>阶段 0：流程与数据基线（2～4 周）</h3>
+          <h3 id="阶段-0-流程与数据基线-2-4-周">阶段 0：流程与数据基线（2～4 周）</h3>
           <p>盘点审批类型、规则、系统记录、审批角色和历史样本；先修复身份、状态、幂等和审计。Agent 只做离线影子分析。</p>
         </section>
         <section class="roadmap-stage">
-          <h3>阶段 1：材料与制度助手（4～6 周）</h3>
+          <h3 id="阶段-1-材料与制度助手-4-6-周">阶段 1：材料与制度助手（4～6 周）</h3>
           <p>上线抽取、缺件提醒、制度引用和风险摘要；所有提案由审批人确认，不开放写工具。建立人工修正回流数据集。</p>
         </section>
         <section class="roadmap-stage">
-          <h3>阶段 2：主/子 Agent 辅助审批（6～10 周）</h3>
+          <h3 id="阶段-2-主-子-agent-辅助审批-6-10-周">阶段 2：主/子 Agent 辅助审批（6～10 周）</h3>
           <p>加入 Coordinator、领域子 Agent、结构化 evidence 和 proposalHash；BPMN/DMN 决定补件与会签，运行红队和故障演练。</p>
         </section>
         <section class="roadmap-stage">
-          <h3>阶段 3：低风险自动化</h3>
+          <h3 id="阶段-3-低风险自动化">阶段 3：低风险自动化</h3>
           <p>只对制度明确、数据完整、可逆且由确定性规则允许的场景自动流转；Agent 提供证据但不是自动批准条件。持续抽样复核并支持一键回退到人工。</p>
         </section>
       </div>
@@ -679,7 +679,7 @@ final class ApprovedProcurementExecutor {
   <aside class="toc-sidebar">
     <div class="toc-title">本页目录</div>
     <nav aria-label="本页目录">
-      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#业务场景与目标">业务场景与目标</a></li><li class="toc-level-2"><a href="#智能审批闭环">智能审批八步闭环</a></li><li class="toc-level-3"><a href="#各层所有权">各层所有权</a></li><li class="toc-level-2"><a href="#公司主子agent架构">公司主 Agent 与子 Agent 架构</a></li><li class="toc-level-2"><a href="#角色职责与权限">角色职责与权限</a></li><li class="toc-level-2"><a href="#采购审批实例">采购审批实例：28 万元 SaaS 续费</a></li><li class="toc-level-2"><a href="#公司级应用场景">公司主/子 Agent 的实际应用场景</a></li><li class="toc-level-2"><a href="#领域状态与数据">领域状态与数据设计</a></li><li class="toc-level-2"><a href="#java领域契约">Java 21：领域契约</a></li><li class="toc-level-2"><a href="#spring-ai实现">Spring AI：独立角色与工具白名单</a></li><li class="toc-level-2"><a href="#确定性协调器">确定性 Coordinator 与审批写入门</a></li><li class="toc-level-2"><a href="#权限审计与安全">权限、审计与安全</a></li><li class="toc-level-2"><a href="#失败恢复与降级">失败恢复与降级</a></li><li class="toc-level-2"><a href="#评测与业务指标">评测与业务指标</a></li><li class="toc-level-2"><a href="#分阶段落地路线">分阶段落地路线</a></li><li class="toc-level-2"><a href="#实施检查单">实施检查单</a></li><li class="toc-level-3"><a href="#常见反模式">常见反模式</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#业务场景与目标">业务场景与目标</a></li><li class="toc-level-2"><a href="#智能审批闭环">智能审批八步闭环</a></li><li class="toc-level-3"><a href="#各层所有权">各层所有权</a></li><li class="toc-level-2"><a href="#公司主子agent架构">公司主 Agent 与子 Agent 架构</a></li><li class="toc-level-2"><a href="#角色职责与权限">角色职责与权限</a></li><li class="toc-level-2"><a href="#采购审批实例">采购审批实例：28 万元 SaaS 续费</a></li><li class="toc-level-2"><a href="#公司级应用场景">公司主/子 Agent 的实际应用场景</a></li><li class="toc-level-2"><a href="#领域状态与数据">领域状态与数据设计</a></li><li class="toc-level-2"><a href="#java领域契约">Java 21：领域契约</a></li><li class="toc-level-2"><a href="#spring-ai实现">Spring AI：独立角色与工具白名单</a></li><li class="toc-level-2"><a href="#确定性协调器">确定性 Coordinator 与审批写入门</a></li><li class="toc-level-2"><a href="#权限审计与安全">权限、审计与安全</a></li><li class="toc-level-2"><a href="#失败恢复与降级">失败恢复与降级</a></li><li class="toc-level-2"><a href="#评测与业务指标">评测与业务指标</a></li><li class="toc-level-2"><a href="#分阶段落地路线">分阶段落地路线</a></li><li class="toc-level-3"><a href="#阶段-0-流程与数据基线-2-4-周">阶段 0：流程与数据基线（2～4 周）</a></li><li class="toc-level-3"><a href="#阶段-1-材料与制度助手-4-6-周">阶段 1：材料与制度助手（4～6 周）</a></li><li class="toc-level-3"><a href="#阶段-2-主-子-agent-辅助审批-6-10-周">阶段 2：主/子 Agent 辅助审批（6～10 周）</a></li><li class="toc-level-3"><a href="#阶段-3-低风险自动化">阶段 3：低风险自动化</a></li><li class="toc-level-2"><a href="#实施检查单">实施检查单</a></li><li class="toc-level-3"><a href="#常见反模式">常见反模式</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
     </nav>
     <a class="back-to-top" href="#">返回顶部 ↑</a>
   </aside>

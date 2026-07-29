@@ -117,19 +117,19 @@
       <h2 id="四类信息不要混在一起"><a class="heading-anchor" href="#四类信息不要混在一起" aria-label="链接到本节">#</a>四类信息不要混在一起</h2>
       <div class="learning-roadmap" role="img" aria-label="四层信息模型：运行状态作为可恢复业务事实；提示上下文作为单次模型调用的最小安全投影；Chat Memory 作为模型维持对话连贯性的有限消息窗口；长期业务记忆与完整历史作为有治理和访问控制的持久记录。">
         <section class="roadmap-stage">
-          <h3>1. Run State</h3>
+          <h3 id="1-run-state">1. Run State</h3>
           <p>步骤、审批、预算、工具状态、版本；每一步持久化，可恢复。</p>
         </section>
         <section class="roadmap-stage">
-          <h3>2. Prompt Context</h3>
+          <h3 id="2-prompt-context">2. Prompt Context</h3>
           <p>本次调用所需的脱敏、相关、未过期投影；调用后可丢弃。</p>
         </section>
         <section class="roadmap-stage">
-          <h3>3. Chat Memory</h3>
+          <h3 id="3-chat-memory">3. Chat Memory</h3>
           <p>给模型维持连贯性的有限消息窗口；不是完整历史或审计账本。</p>
         </section>
         <section class="roadmap-stage">
-          <h3>4. Business Memory / History</h3>
+          <h3 id="4-business-memory-history">4. Business Memory / History</h3>
           <p>工单事实、完整对话、事件和审计；按法规、租户与业务策略治理。</p>
         </section>
       </div>
@@ -769,7 +769,7 @@ final class ServiceDeskAssistant {
   <aside class="toc-sidebar">
     <div class="toc-title">本页目录</div>
     <nav aria-label="本页目录">
-      <ol class="toc-list"><li class="toc-level-2"><a href="#课程导航">课程导航</a></li><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#学习目标与本阶段产物">学习目标与本阶段产物</a></li><li class="toc-level-2"><a href="#四类信息不要混在一起">四类信息不要混在一起</a></li><li class="toc-level-2"><a href="#状态生命周期">状态生命周期</a></li><li class="toc-level-2"><a href="#上下文窗口与压缩">上下文窗口与压缩</a></li><li class="toc-level-2"><a href="#java-21-agentstate">Java 21：可序列化状态、检查点与恢复</a></li><li class="toc-level-2"><a href="#spring-ai-chat-memory">Spring AI 2.0.0：显式 Chat Memory</a></li><li class="toc-level-3"><a href="#spring-ai-职责边界">框架能力与业务责任</a></li><li class="toc-level-3"><a href="#maven-bom">版本与依赖管理</a></li><li class="toc-level-3"><a href="#provider-neutral-配置">Provider-neutral 配置与调用</a></li><li class="toc-level-2"><a href="#持久化恢复与并发">持久化、恢复与并发</a></li><li class="toc-level-3"><a href="#检查点与事件日志">检查点与事件日志</a></li><li class="toc-level-3"><a href="#乐观锁冲突">乐观锁冲突如何处理</a></li><li class="toc-level-2"><a href="#安全与隐私">安全与隐私</a></li><li class="toc-level-2"><a href="#企业服务台案例">企业服务台案例</a></li><li class="toc-level-2"><a href="#测试策略">测试策略</a></li><li class="toc-level-2"><a href="#练习与验收">练习与验收</a></li><li class="toc-level-3"><a href="#练习一-字段分层">练习一：给字段分层</a></li><li class="toc-level-3"><a href="#练习二-实现仓储">练习二：实现 StateRepository</a></li><li class="toc-level-3"><a href="#练习三-spring-ai">练习三：接入 Spring AI 2.0.0</a></li><li class="toc-level-3"><a href="#本课验收标准">本课验收标准</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
+      <ol class="toc-list"><li class="toc-level-2"><a href="#课程导航">课程导航</a></li><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#学习目标与本阶段产物">学习目标与本阶段产物</a></li><li class="toc-level-2"><a href="#四类信息不要混在一起">四类信息不要混在一起</a></li><li class="toc-level-3"><a href="#1-run-state">1. Run State</a></li><li class="toc-level-3"><a href="#2-prompt-context">2. Prompt Context</a></li><li class="toc-level-3"><a href="#3-chat-memory">3. Chat Memory</a></li><li class="toc-level-3"><a href="#4-business-memory-history">4. Business Memory / History</a></li><li class="toc-level-2"><a href="#状态生命周期">状态生命周期</a></li><li class="toc-level-2"><a href="#上下文窗口与压缩">上下文窗口与压缩</a></li><li class="toc-level-2"><a href="#java-21-agentstate">Java 21：可序列化状态、检查点与恢复</a></li><li class="toc-level-2"><a href="#spring-ai-chat-memory">Spring AI 2.0.0：显式 Chat Memory</a></li><li class="toc-level-3"><a href="#spring-ai-职责边界">框架能力与业务责任</a></li><li class="toc-level-3"><a href="#maven-bom">版本与依赖管理</a></li><li class="toc-level-3"><a href="#provider-neutral-配置">Provider-neutral 配置与调用</a></li><li class="toc-level-2"><a href="#持久化恢复与并发">持久化、恢复与并发</a></li><li class="toc-level-3"><a href="#检查点与事件日志">检查点与事件日志</a></li><li class="toc-level-3"><a href="#乐观锁冲突">乐观锁冲突如何处理</a></li><li class="toc-level-2"><a href="#安全与隐私">安全与隐私</a></li><li class="toc-level-2"><a href="#企业服务台案例">企业服务台案例</a></li><li class="toc-level-2"><a href="#测试策略">测试策略</a></li><li class="toc-level-2"><a href="#练习与验收">练习与验收</a></li><li class="toc-level-3"><a href="#练习一-字段分层">练习一：给字段分层</a></li><li class="toc-level-3"><a href="#练习二-实现仓储">练习二：实现 StateRepository</a></li><li class="toc-level-3"><a href="#练习三-spring-ai">练习三：接入 Spring AI 2.0.0</a></li><li class="toc-level-3"><a href="#本课验收标准">本课验收标准</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
     </nav>
     <a class="back-to-top" href="#">返回顶部 ↑</a>
   </aside>
