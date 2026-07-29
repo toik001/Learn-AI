@@ -26,7 +26,7 @@
     <li><code>build</code> job 检出仓库，固定 Node.js 24，运行站点语法、内容回归、索引一致性和链接锚点校验。</li>
     <li>校验通过后，<code>actions/upload-pages-artifact</code> 只打包 <code>public/</code>，仓库规则、脚本和工作流不会进入公开站点。</li>
     <li><code>deploy</code> job 依赖 <code>build</code>，使用 <code>pages: write</code> 和 <code>id-token: write</code> 权限，把 artifact 部署到 <code>github-pages</code> environment。</li>
-    <li>工作流通过 concurrency 串行化 Pages 发布；新提交可取消仍在排队或运行的旧部署，避免旧版本最后覆盖新版本。</li>
+    <li>工作流通过 concurrency 串行化 Pages 发布；保留正在进行的生产部署，并由 GitHub 合并中间排队运行，最终继续发布最新提交。</li>
   </ol>
 
   <h2>项目结构调整</h2>
@@ -59,7 +59,7 @@
 
   <h2>参考依据</h2>
   <ul>
-    <li><a href="https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages">GitHub Docs：Using custom workflows with GitHub Pages</a>，确认 <code>configure-pages@v5</code>、<code>upload-pages-artifact@v4</code>、<code>deploy-pages@v4</code> 及 build/deploy 依赖关系。</li>
+    <li><a href="https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages">GitHub Docs：Using custom workflows with GitHub Pages</a>，确认 artifact 与 build/deploy 依赖关系；action 主版本以各官方仓库 2026-07-29 的最新 release 为准，使用 <code>configure-pages@v6</code>、<code>upload-pages-artifact@v5</code> 和 <code>deploy-pages@v5</code>。</li>
     <li><a href="https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site">GitHub Docs：Configuring a publishing source</a>，确认仓库需选择 GitHub Actions 作为 Pages Source。</li>
     <li><a href="https://github.com/actions/deploy-pages">actions/deploy-pages</a>，确认 Pages 部署权限、OIDC 和 <code>github-pages</code> environment 要求。</li>
   </ul>

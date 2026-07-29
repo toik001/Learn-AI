@@ -145,8 +145,30 @@ try {
   );
 
   const publicDir = path.join(fixtureRoot, "public");
+  const manifestPath = path.join(publicDir, "manifest.json");
+  const firstManifest = await fs.readFile(manifestPath, "utf8");
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  const regenerated = spawnSync(
+    process.execPath,
+    ["scripts/build-html-index.mjs"],
+    {
+      cwd: fixtureRoot,
+      encoding: "utf8",
+    },
+  );
+  assert.equal(
+    regenerated.status,
+    0,
+    `生成器第二次执行失败：${regenerated.stderr || regenerated.stdout}`,
+  );
+  assert.equal(
+    await fs.readFile(manifestPath, "utf8"),
+    firstManifest,
+    "内容未变时连续生成必须产生字节一致的 manifest",
+  );
+
   const manifest = JSON.parse(
-    await fs.readFile(path.join(publicDir, "manifest.json"), "utf8"),
+    await fs.readFile(manifestPath, "utf8"),
   );
   const categoryCounts = new Map();
   for (const document of manifest.documents) {

@@ -564,8 +564,15 @@ async function main() {
     "utf8",
   );
 
+  const latestStudyDate = documents
+    .map((document) => document.date)
+    .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date))
+    .sort()
+    .at(-1);
   const manifest = {
-    generatedAt: new Date().toISOString(),
+    generatedAt: latestStudyDate
+      ? `${latestStudyDate}T00:00:00.000Z`
+      : "1970-01-01T00:00:00.000Z",
     documentCount: documents.length,
     documents: documents.map((document) => ({
       output: document.relativePath,

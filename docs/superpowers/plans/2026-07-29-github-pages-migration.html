@@ -19,7 +19,7 @@
     <li>发布目录固定为 <code>public/</code>，默认项目站点地址为 <code>https://toik001.github.io/Learn-AI/</code>。</li>
     <li>所有站内链接和资源必须使用相对 URL，不硬编码仓库子路径。</li>
     <li>工作流只从 <code>main</code> 自动发布，并支持 <code>workflow_dispatch</code>。</li>
-    <li>发布 action 固定为官方当前文档推荐的 <code>actions/checkout@v6</code>、<code>actions/setup-node@v6</code>、<code>actions/configure-pages@v5</code>、<code>actions/upload-pages-artifact@v4</code> 和 <code>actions/deploy-pages@v4</code>。</li>
+    <li>发布 action 固定为 2026-07-29 官方仓库最新主版本：<code>actions/checkout@v6</code>、<code>actions/setup-node@v6</code>、<code>actions/configure-pages@v6</code>、<code>actions/upload-pages-artifact@v5</code> 和 <code>actions/deploy-pages@v5</code>。</li>
     <li>部署 job 只增加 <code>pages: write</code> 和 <code>id-token: write</code>，目标 environment 固定为 <code>github-pages</code>。</li>
     <li>除用户明确要求的根目录 <code>README.md</code> 和控制文件 <code>AGENTS.md</code> 外，不新增 Markdown 内容。</li>
     <li>其他通用 GitLab 教程保持不变；只删除 GitLab CI 并迁移项目专属 Pages 页面。</li>
