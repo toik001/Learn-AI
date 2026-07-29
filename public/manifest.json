@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-28T00:00:00.000Z",
+  "generatedAt": "2026-07-29T00:00:00.000Z",
   "documentCount": 20,
   "documents": [
     {
@@ -136,11 +136,11 @@
       "sections": 24
     },
     {
-      "output": "notes/project/2026-07-24-GitLab-Pages极简部署与项目结构.html",
-      "title": "GitLab Pages 极简部署与项目结构",
+      "output": "notes/project/2026-07-29-GitHub-Pages部署与项目结构.html",
+      "title": "GitHub Pages 部署与项目结构",
       "category": "项目维护",
-      "date": "2026-07-24",
-      "sections": 19
+      "date": "2026-07-29",
+      "sections": 13
     }
   ]
 }

@@ -60,7 +60,7 @@
 
 凡是使用网上检索获得并整理的内容，都必须直接保存为 HTML 页面，不能只在对话中输出，也不再创建 Markdown 笔记。
 
-`AGENTS.md` 是 Codex 加载持久规则所需的控制文件，是唯一允许保留的 Markdown 文件；它不是学习笔记。
+`AGENTS.md` 是 Codex 加载持久规则所需的控制文件；根目录 `README.md` 是仓库使用说明。两者是仅允许保留的 Markdown 文件，都不是学习笔记。
 
 ### 保存位置与命名
 
@@ -69,7 +69,7 @@
 - 文件名使用简洁、可读的中文或英文，避免无意义编号。
 - 同一主题已有页面时，优先更新原 HTML；若内容是独立调研或版本差异明显，则创建新页面。
 - 必要时可按主题建立子目录，例如 `public/notes/llm/`、`public/notes/papers/`、`public/notes/tools/`。
-- `public/index.html` 是知识库总入口，也是 GitLab Pages 发布入口。
+- `public/index.html` 是知识库总入口，也是 GitHub Pages artifact 的根入口。
 
 ### HTML 页面要求
 
@@ -116,15 +116,18 @@ HTML 页面可参考以下元数据：
 - 用户要求制定学习计划时，将计划保存为 HTML，并包含目标、周期、每日或每周任务、练习和验收标准。
 - HTML 页面是学习资料的唯一内容真相源，不再从 Markdown 生成。
 
-## GitLab Pages 项目结构
+## GitHub Pages 项目结构
 
-本项目采用纯静态 GitLab Pages 极简部署，固定结构如下：
+本项目采用纯静态 GitHub Pages + GitHub Actions 部署，固定结构如下：
 
 ```text
 .
-├── .gitlab-ci.yml
+├── .github/
+│   └── workflows/
+│       └── pages.yml
 ├── .gitignore
 ├── AGENTS.md
+├── README.md
 ├── public/
 │   ├── index.html
 │   ├── manifest.json
@@ -135,23 +138,28 @@ HTML 页面可参考以下元数据：
 │       └── <category>/
 │           └── YYYY-MM-DD-主题关键词.html
 └── scripts/
-    └── build-html-index.mjs
+    ├── build-html-index.mjs
+    ├── verify-site.mjs
+    └── test-*.mjs
 ```
 
 约束：
 
 1. `public/` 是可直接部署的网站根目录，只放允许发布的静态文件。
 2. 所有学习页面直接写入 `public/notes/<category>/`，不建立 `src/`、`dist/` 或 Markdown 中间层。
-3. 页面内资源和站内链接必须使用相对路径，确保 GitLab Pages 部署在项目子路径时仍可访问。
-4. `AGENTS.md`、脚本、CI 配置和其他内部工程文件不得复制到 `public/`。
-5. `.gitlab-ci.yml` 只校验并发布已提交的 `public/`，不在 CI 中重新生成内容。
-6. 当前自建 GitLab 使用旧式 Pages 语法：CI job 必须命名为 `pages`，通过 `artifacts.paths: public` 发布；不要添加该实例不支持的 job 级 `pages: true` 或 `pages.publish`。
+3. 页面内资源和站内链接必须使用相对路径，确保 GitHub Pages 部署在 `/Learn-AI/` 项目子路径时仍可访问。
+4. `AGENTS.md`、`README.md`、脚本、Actions 配置和其他内部工程文件不得复制到 `public/`。
+5. `.github/workflows/pages.yml` 只发布已提交且通过校验的 `public/`。CI 会重跑索引生成器检查一致性；若产生 diff 则失败，不会提交或发布这些临时变化。
+6. GitHub Actions 使用 Node.js 24，以及 `actions/checkout@v6`、`actions/setup-node@v6`、`actions/configure-pages@v6`、`actions/upload-pages-artifact@v5` 和 `actions/deploy-pages@v5`。部署 job 只授予 `pages: write` 与 `id-token: write`。
 7. 新建、移动、重命名或删除知识页面后，运行 `node scripts/build-html-index.mjs`。
 8. 提交前至少检查：
    - `test -s public/index.html`
    - `node --check scripts/build-html-index.mjs`
+   - `node --check scripts/verify-site.mjs`
    - `node --check public/assets/app.js`
-   - 本地 HTML 链接和标题锚点有效。
+   - `for test_file in scripts/test-*.mjs; do node "$test_file"; done`
+   - `node scripts/verify-site.mjs`
+   - 重跑 `node scripts/build-html-index.mjs` 后，`git diff --exit-code -- public` 无差异。
 
 ## 每次任务的交付要求
 
