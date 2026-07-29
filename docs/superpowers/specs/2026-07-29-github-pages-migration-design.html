@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GitHub Pages 迁移设计</title>
+</head>
+<body>
+<main>
+<article>
+  <h1>GitHub Pages 迁移设计</h1>
+
+  <h2>目标</h2>
+  <p>把 Learn-AI 知识库从自建 GitLab Pages 完整迁移到 GitHub Pages，同时保留 <code>public/</code> 作为唯一静态网站根目录，确保项目站点可部署在 <code>https://toik001.github.io/Learn-AI/</code> 子路径下，并用自动校验阻止失效链接、错误锚点或未同步索引进入部署。</p>
+
+  <h2>方案选择</h2>
+  <ol>
+    <li><strong>GitHub Actions 上传 <code>public/</code> artifact：采用。</strong>无需移动内容目录，能够在部署前运行确定性校验，并使用 GitHub Pages 官方 OIDC 部署链路。</li>
+    <li>从 <code>main</code> 的仓库根目录或 <code>docs/</code> 直接发布：会破坏现有 <code>public/</code> 内容边界，且难以在发布前执行完整校验，不采用。</li>
+    <li>维护独立 <code>gh-pages</code> 分支：会产生第二份生成物状态和额外同步流程，不采用。</li>
+  </ol>
+
+  <h2>发布架构</h2>
+  <ol>
+    <li>向 <code>main</code> 推送提交，或在 Actions 页面手动触发工作流。</li>
+    <li><code>build</code> job 检出仓库，固定 Node.js 24，运行站点语法、内容回归、索引一致性和链接锚点校验。</li>
+    <li>校验通过后，<code>actions/upload-pages-artifact</code> 只打包 <code>public/</code>，仓库规则、脚本和工作流不会进入公开站点。</li>
+    <li><code>deploy</code> job 依赖 <code>build</code>，使用 <code>pages: write</code> 和 <code>id-token: write</code> 权限，把 artifact 部署到 <code>github-pages</code> environment。</li>
+    <li>工作流通过 concurrency 串行化 Pages 发布；新提交可取消仍在排队或运行的旧部署，避免旧版本最后覆盖新版本。</li>
+  </ol>
+
+  <h2>项目结构调整</h2>
+  <ul>
+    <li>删除 <code>.gitlab-ci.yml</code>。</li>
+    <li>新增 <code>.github/workflows/pages.yml</code>，只从 <code>main</code> 发布，也支持 <code>workflow_dispatch</code>。</li>
+    <li>新增 <code>scripts/verify-site.mjs</code>，验证本地 HTML 链接、资源、片段锚点、重复 ID、根路径引用、知识页元数据和外链安全属性。</li>
+    <li>新增 <code>scripts/test-verify-site.mjs</code>，用临时站点证明校验器能接受有效页面并拒绝失效链接、未知锚点、根路径引用、重复 ID 和不安全外链。</li>
+    <li>更新 <code>AGENTS.md</code>，将结构、发布规则和提交前校验切换为 GitHub Pages。</li>
+    <li>新增根目录 <code>README.md</code>，说明知识库入口、目录结构、本地使用、内容维护、完整校验、GitHub Pages 启用方式和默认线上地址。该文件是用户明确要求的 Markdown 例外。</li>
+    <li>把项目专属的 GitLab Pages 页面重命名并重写为 GitHub Pages 指南；其他讨论 GitLab 的通用学习页面保持不变。</li>
+    <li>运行索引生成器，刷新 <code>public/index.html</code>、各页面分类导航、上一篇/下一篇和 <code>public/manifest.json</code>。</li>
+  </ul>
+
+  <h2>路径与内容边界</h2>
+  <ul>
+    <li>所有站内链接和资源继续使用相对 URL，不硬编码 <code>/Learn-AI/</code>，因此同一份 <code>public/</code> 可本地打开、部署到项目子路径或未来绑定自定义域名。</li>
+    <li>CI 不生成或修复知识内容。它可以在临时副本中运行索引生成器并比较结果，但发布的始终是提交中已经存在且通过一致性检查的 <code>public/</code>。</li>
+    <li>不创建 Jekyll 配置，不维护 <code>gh-pages</code> 分支，不把内部工程文件复制到 <code>public/</code>。</li>
+    <li>仓库外部只需要一次性在 GitHub <strong>Settings → Pages → Source</strong> 选择 <strong>GitHub Actions</strong>；自定义域名不在本次范围内。</li>
+  </ul>
+
+  <h2>错误处理与验证</h2>
+  <ul>
+    <li>任一脚本、内容回归、链接、锚点或索引一致性检查失败时，<code>build</code> job 失败且不产生可部署 artifact。</li>
+    <li><code>deploy</code> job 通过 <code>needs: build</code> 保证不会搜索不存在或未校验的 artifact。</li>
+    <li>工作流显式提供 <code>environment.url</code>，部署完成后在 GitHub 环境记录中展示实际 Pages 地址。</li>
+    <li>本地验收覆盖所有 <code>scripts/test-*.mjs</code>、Node.js 语法、索引幂等、站点完整性、YAML 结构、<code>git diff --check</code> 和干净工作区检查。</li>
+  </ul>
+
+  <h2>参考依据</h2>
+  <ul>
+    <li><a href="https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages">GitHub Docs：Using custom workflows with GitHub Pages</a>，确认 <code>configure-pages@v5</code>、<code>upload-pages-artifact@v4</code>、<code>deploy-pages@v4</code> 及 build/deploy 依赖关系。</li>
+    <li><a href="https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site">GitHub Docs：Configuring a publishing source</a>，确认仓库需选择 GitHub Actions 作为 Pages Source。</li>
+    <li><a href="https://github.com/actions/deploy-pages">actions/deploy-pages</a>，确认 Pages 部署权限、OIDC 和 <code>github-pages</code> environment 要求。</li>
+  </ul>
+  <p>资料检索日期：2026-07-29。</p>
+
+  <h2>自审结果</h2>
+  <p>未发现占位符、互相矛盾或多义要求。设计只迁移项目自身的发布结构和专属部署说明，不改写其他以 GitLab 为主题的通用教程；发布根目录、权限边界、失败行为、外部设置和验收标准均已明确。用户已批准方案并要求直接采用最佳方式实施，因此书面设计完成后直接进入实施计划。</p>
+</article>
+</main>
+</body>
+</html>
