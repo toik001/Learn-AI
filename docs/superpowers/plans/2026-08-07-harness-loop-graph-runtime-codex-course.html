@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Harness、Loop、Graph 双场景课程实施计划</title>
+</head>
+<body>
+<main>
+<article>
+  <h1>Harness、Loop、Graph 双场景课程实施计划</h1>
+  <blockquote>
+    <p><strong>执行要求：</strong>实施时使用 superpowers:executing-plans，逐任务完成并在检查点验证。</p>
+  </blockquote>
+  <p><strong>目标：</strong>新增 Harness、Loop、Graph 三篇概念页和一篇整合页；每篇同时覆盖企业智能审批 Agent 的运行时开发，以及 Codex 中这些概念的软件开发用法。</p>
+  <p><strong>架构：</strong>四篇静态 HTML 复用现有页面框架、共享 CSS 和索引生成器。审批示例采用 Java 25 无框架实现与 Spring AI 实现双轨；Codex 示例依据 OpenAI 官方文档映射 AGENTS.md、工具、权限、计划、循环、子任务、审查和验证。新增一个内容契约测试防止章节或双场景边界缺失。</p>
+  <p><strong>技术栈：</strong>HTML5、共享 CSS、原生 JavaScript/Node.js 测试、Java 25 示例、Spring Boot、Spring AI、GitHub Pages branch 部署。</p>
+
+  <h2>全局约束</h2>
+  <ul>
+    <li>恰好新增四篇学习页，统一位于 <code>public/notes/agent/</code>。</li>
+    <li>每篇明确分成“智能审批 Agent 开发”和“代码开发过程中的使用”两部分；代码开发部分只使用 Codex。</li>
+    <li>审批部分同时给出 Java 25 无 Agent 框架与 Spring AI 实现，不把 Spring AI 当作业务状态机或授权系统。</li>
+    <li>所有当前产品与框架能力使用 2026-08-07 检索的一手资料；外链带 <code>target="_blank"</code> 和 <code>rel="noopener noreferrer"</code>。</li>
+    <li>图表使用语义化 HTML/CSS、可访问名称与等价文字，不依赖远程图片或前端库。</li>
+    <li>保留现有综合页并增加课程入口；运行索引生成器更新根入口、侧栏、上一篇/下一篇和 manifest。</li>
+  </ul>
+
+  <h2>文件结构</h2>
+  <ul>
+    <li><code>scripts/test-harness-loop-graph-course.mjs</code>：验证四篇页面、双场景章节、Java/Spring AI/Codex 边界、图表、来源和互链。</li>
+    <li><code>public/notes/agent/2026-08-07-Harness从运行时Agent到Codex开发环境.html</code>：Harness 概念与两类实践。</li>
+    <li><code>public/notes/agent/2026-08-07-Loop从业务Agent循环到Codex开发闭环.html</code>：Loop 概念与两类实践。</li>
+    <li><code>public/notes/agent/2026-08-07-Graph从审批状态编排到Codex开发流程.html</code>：Graph 概念与两类实践。</li>
+    <li><code>public/notes/agent/2026-08-07-Harness-Loop-Graph双层整合实战.html</code>：审批 Agent 运行时与 Codex 开发时的双层整合。</li>
+    <li><code>public/notes/codex/2026-08-07-Harness-Loop-Graph与Codex-Superpowers开发模式.html</code>：保留原文，只增加四篇课程入口。</li>
+    <li><code>public/assets/style.css</code>：仅在现有 <code>agent-call-flow</code> 不足时增加双泳道、分层卡片和状态图样式。</li>
+    <li><code>index.html</code>、<code>public/manifest.json</code>及知识页侧栏：由生成器统一更新。</li>
+  </ul>
+
+  <h2>任务 1：建立四篇课程内容契约</h2>
+  <p><strong>文件：</strong>创建 <code>scripts/test-harness-loop-graph-course.mjs</code>。</p>
+  <p><strong>接口：</strong>读取四个固定 HTML 路径；输出单行 PASS，任一契约不满足时进程非零退出。</p>
+  <ol>
+    <li>[ ] 写入测试：逐页检查 <code>header/main/article/nav</code>、元数据、共享资源、稳定章节 ID、Java 25、Spring AI、Codex、两个示例部分、至少两张图和两张表。</li>
+    <li>[ ] 测试必须断言任何页面不含其他编码 Agent 示例，并断言整合页包含“运行时 Agent”和“编码 Agent”双层关系。</li>
+    <li>[ ] 测试必须检查所有外链安全属性、检索日期 2026-08-07、四页互链和原综合页入口。</li>
+    <li>[ ] 运行 <code>node scripts/test-harness-loop-graph-course.mjs</code>，预期因首个页面不存在而失败。</li>
+    <li>[ ] 提交 <code>test: define harness loop graph course contract</code>。</li>
+  </ol>
+  <pre><code>const pages = [
+  ["Harness", "2026-08-07-Harness从运行时Agent到Codex开发环境.html"],
+  ["Loop", "2026-08-07-Loop从业务Agent循环到Codex开发闭环.html"],
+  ["Graph", "2026-08-07-Graph从审批状态编排到Codex开发流程.html"],
+  ["整合", "2026-08-07-Harness-Loop-Graph双层整合实战.html"],
+];
+const requiredIds = [
+  "核心结论", "概念模型", "审批-agent-开发", "无框架实现",
+  "spring-ai-实现", "codex开发使用", "线上应用", "失败模式",
+  "练习与验收", "参考资料",
+];</code></pre>
+
+  <h2>任务 2：检索并建立一手资料事实清单</h2>
+  <p><strong>文件：</strong>不新增中间笔记；核验结论直接进入任务 4～7 的页面参考资料与正文。</p>
+  <ol>
+    <li>[ ] 使用 Codex manual helper 定位 AGENTS.md、MCP、Skills、Plugins、Hooks、sandbox/approval、worktree、review 与并行任务的官方说明。</li>
+    <li>[ ] 检索 Spring AI 官方文档的 ChatClient、structured output、tool calling、advisors、observability 与当前系统要求。</li>
+    <li>[ ] 检索 OpenAI Agent 指南/Agents SDK、Anthropic building effective agents、LangGraph Graph API、Microsoft Agent Framework 和 NIST AI RMF/GenAI Profile 的一手资料。</li>
+    <li>[ ] 对 Harness、Loop、Graph 的非标准术语边界做交叉核验；把“本文映射”与官方产品术语分开。</li>
+    <li>[ ] 记录所有最终采用 URL、页面标题、支持的结论和检索日期；不引用搜索结果页。</li>
+  </ol>
+
+  <h2>任务 3：补充共享图表样式</h2>
+  <p><strong>文件：</strong>修改 <code>public/assets/style.css</code>。</p>
+  <ol>
+    <li>[ ] 先在测试中要求 <code>.dual-lane-diagram</code>、<code>.layer-stack</code>、<code>.state-node</code> 三组类存在。</li>
+    <li>[ ] 运行课程测试，预期样式断言失败。</li>
+    <li>[ ] 添加响应式双泳道、分层卡片、状态节点与连接线样式；颜色只使用现有 CSS 变量。</li>
+    <li>[ ] 在 820px 以下切换为单列，不依赖横向滚动理解流程；暗色主题继续复用变量。</li>
+    <li>[ ] 运行课程测试和 <code>node --check public/assets/app.js</code>。</li>
+  </ol>
+
+  <h2>任务 4：编写 Harness 学习页</h2>
+  <p><strong>文件：</strong>创建 Harness 页面。</p>
+  <ol>
+    <li>[ ] 写概念模型：Model 只是推理核心；Harness 包含指令/上下文、工具、权限、状态、反馈、评测、观测和恢复。</li>
+    <li>[ ] 写审批 Agent 部分：Java 25 <code>ModelPort</code>/<code>ApprovalTool</code>/<code>PolicyGate</code>/<code>AuditSink</code> 最小接口；Spring AI 的 ChatClient、结构化输出、ToolCallback/注解工具、Advisor 与 Observation 映射。</li>
+    <li>[ ] 写 Codex 部分：AGENTS.md、项目 config、MCP、Skills、Hooks、sandbox/approval、worktree、测试/浏览器/日志反馈；提供仓库 Harness 清单与任务模板。</li>
+    <li>[ ] 加入两张可访问图、能力矩阵、线上故障和不适用边界；明确 Harness 不是框架名称。</li>
+    <li>[ ] 运行课程测试，确认 Harness 页面相关断言通过。</li>
+  </ol>
+
+  <h2>任务 5：编写 Loop 学习页</h2>
+  <p><strong>文件：</strong>创建 Loop 页面。</p>
+  <ol>
+    <li>[ ] 写 Observe–Decide–Act–Verify 模型以及成功、预算、升级三类停止条件。</li>
+    <li>[ ] 写审批 Agent 部分：Java 25 有界 <code>LoopRunner</code>，展示状态、动作、Observation、幂等键、重试分类和人工升级；Spring AI 只替换决策/工具适配器。</li>
+    <li>[ ] 写 Codex 部分：检查—编辑—测试—审查循环、TDD 红绿重构、fresh evidence、阻塞与权限升级、上下文和成本控制。</li>
+    <li>[ ] 加入业务循环图、编码循环图、停止决策表、线上指标和故障注入练习。</li>
+    <li>[ ] 运行课程测试，确认 Loop 页面相关断言通过。</li>
+  </ol>
+
+  <h2>任务 6：编写 Graph 学习页</h2>
+  <p><strong>文件：</strong>创建 Graph 页面。</p>
+  <ol>
+    <li>[ ] 写 State、Node、Edge、Router、Checkpoint、并发汇聚、循环边和 HITL；区分 DAG、可循环 Graph 与普通代码控制流。</li>
+    <li>[ ] 写审批 Agent 部分：Java 25 <code>ApprovalState</code>/<code>ApprovalNode</code>/<code>ApprovalGraph</code>，覆盖并行核验、补件、会签、恢复与补偿；Spring AI 只用于模型节点。</li>
+    <li>[ ] 写 Codex 部分：规格—计划—任务—实现—审查—验证—交付的工程 Graph、依赖任务、并行条件和人工门禁；明确这是分析模型，不声称 Codex 内置 Graph 引擎。</li>
+    <li>[ ] 加入审批状态图、Codex 开发 Graph、选型表、状态迁移测试和线上恢复指标。</li>
+    <li>[ ] 运行课程测试，确认 Graph 页面相关断言通过。</li>
+  </ol>
+
+  <h2>任务 7：编写双层整合实战</h2>
+  <p><strong>文件：</strong>创建整合页面。</p>
+  <ol>
+    <li>[ ] 第一部分给出审批 Agent 的需求与风险分级、Maven 包结构、领域模型、工具契约、数据库表和 HTTP API。</li>
+    <li>[ ] 第一部分分别展示无框架与 Spring AI 的组合调用链，并覆盖测试金字塔、离线评测、Prompt Injection、权限、幂等、审计、部署、shadow、灰度、SLO、告警与恢复。</li>
+    <li>[ ] 第二部分给出用 Codex 开发同一项目的 AGENTS.md 示例、Goal/Context/Constraints/Done when 提示模板、计划任务图、TDD Loop、审查 Loop 与交付门禁。</li>
+    <li>[ ] 用双层图明确：编码 Agent 的 Harness/Loop/Graph 构建出运行时审批 Agent 的 Harness/Loop/Graph，两层状态与权限不共享。</li>
+    <li>[ ] 加入分阶段开发清单、验收命令和常见错误定位表，运行课程测试至通过。</li>
+  </ol>
+
+  <h2>任务 8：互链、生成索引并完成全量验证</h2>
+  <p><strong>文件：</strong>修改原综合页；生成更新 <code>index.html</code>、<code>public/manifest.json</code>和知识页导航。</p>
+  <ol>
+    <li>[ ] 在原综合页核心结论附近增加四篇课程入口，并在四篇新页中互链主目录、综合页和相邻课程。</li>
+    <li>[ ] 运行 <code>node scripts/build-html-index.mjs</code>。</li>
+    <li>[ ] 运行 <code>test -s index.html</code>、<code>test ! -e public/index.html</code>以及三个 <code>node --check</code> 命令。</li>
+    <li>[ ] 运行 <code>for test_file in scripts/test-*.mjs; do node "$test_file"; done</code>和 <code>node scripts/verify-site.mjs</code>。</li>
+    <li>[ ] 再运行生成器，确认 <code>git diff --exit-code -- index.html public</code> 无新差异。</li>
+    <li>[ ] 检查 <code>git diff --check</code>和 <code>git status --short</code>，提交最终页面、样式、测试和生成文件。</li>
+  </ol>
+
+  <h2>计划自审</h2>
+  <p>规格覆盖检查通过：四页、双场景、Java 25、无框架/Spring AI、Codex-only、图表、项目开发方法、线上应用、资料日期、索引与验证均有对应任务。占位符扫描和文件名一致性检查通过。审批运行时的领域状态与 Codex 开发时的任务状态保持独立，整合页只建立教学映射，不共享授权或持久化语义。</p>
+</article>
+</main>
+</body>
+</html>
