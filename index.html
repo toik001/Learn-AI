@@ -22,9 +22,9 @@
       <p>这里汇集 Codex、Agent 工作流、AI-DLC 与工程实践资料。所有内容直接维护为 HTML，可离线阅读。</p>
     </div>
     <div class="hero-stats" aria-label="知识库统计">
-      <div><strong>21</strong><span>篇文档</span></div>
-      <div><strong>809</strong><span>个章节</span></div>
-      <div><strong>387k</strong><span>约字符</span></div>
+      <div><strong>25</strong><span>篇文档</span></div>
+      <div><strong>872</strong><span>个章节</span></div>
+      <div><strong>413k</strong><span>约字符</span></div>
     </div>
   </section>
   <section class="library-tools" aria-label="文档搜索">
@@ -33,19 +33,19 @@
       <input type="search" placeholder="搜索标题、主题或章节…" data-library-search autofocus>
       <kbd>/</kbd>
     </label>
-    <p class="search-status" aria-live="polite">显示全部 21 篇文档</p>
+    <p class="search-status" aria-live="polite">显示全部 25 篇文档</p>
   </section>
   <nav class="category-entry-grid" aria-label="知识分类">
     <a class="category-entry-card" href="#category-agent-开发-fm6pdx">
       <span class="eyebrow">COLLECTION</span>
       <strong>Agent 开发</strong>
       <p>面向 Java 开发者的 Agent 开发学习主目录：概念、调用循环、最小运行时、学习路线与实践项目。</p>
-      <span>11 篇文档 · 281 个章节</span>
+      <span>15 篇文档 · 343 个章节</span>
     </a><a class="category-entry-card" href="#category-codex-与-ai-工程-1ubbp3w">
       <span class="eyebrow">COLLECTION</span>
       <strong>Codex 与 AI 工程</strong>
       <p>除 AIDLC 与 Superpowers 外，还有哪些较完整的 AI 开发工作流，以及 2 人小团队是否值得沉淀自己的工作流</p>
-      <span>9 篇文档 · 520 个章节</span>
+      <span>9 篇文档 · 521 个章节</span>
     </a><a class="category-entry-card" href="#category-项目维护-1v91sou">
       <span class="eyebrow">COLLECTION</span>
       <strong>项目维护</strong>
@@ -63,7 +63,7 @@
       <span class="eyebrow">COLLECTION</span>
       <h2>Agent 开发</h2>
     </div>
-    <span class="section-count">11 篇</span>
+    <span class="section-count">15 篇</span>
   </div>
   <div class="document-grid">
     <article class="document-card" data-search-text="agent 基础概念与边界 面向 java 开发者辨析 software agent、ai agent、llm agent 与 agentic system，并完成企业服务台 agent 的目标、状态、工具和护栏设计。 notes/agent/2026-07-27-01-agent基础概念与边界.html 课程导航 核心结论 学习目标与本阶段产物 直观理解 agent 五要素 八节点调用闭环 边界辨析 何时不该使用 agent java 21 领域模型 spring ai 职责边界 maven bom（稳定版 2.0.0） 从 chatmodel 构造 chatclient，并加入固定策略 advisor 原生能力与应用责任矩阵 企业服务台案例 1. 目标（goal） 2. 状态 / 环境（state） 3. 工具 / 动作（tools） 4. 护栏 / 验收（guardrails） 常见错误 练习与验收 练习一：分类三个需求 练习二：写自己的四栏设计 本课验收标准 参考资料">
@@ -209,6 +209,58 @@
             <span>约 38 分钟</span>
             <span class="read-more">阅读 →</span>
           </div>
+        </article><article class="document-card" data-search-text="graph：从审批状态编排到 codex 开发流程 理解 agent graph 的状态、节点、边、路由、检查点和人工节点，并映射企业审批与 codex 软件开发流程。 notes/agent/2026-08-07-graph从审批状态编排到codex开发流程.html 核心结论 概念模型 选择 graph、loop 还是普通函数 第一部分：智能审批 agent 开发 从业务流程到可执行 graph 无框架实现：java 25 状态机 spring ai 实现：模型作为受限节点 第二部分：代码开发过程中的使用 怎样把 codex 任务组织成 graph 线上应用、恢复与演进 失败模式与边界 练习与验收 参考资料">
+          <a class="card-link" href="public/notes/agent/2026-08-07-Graph从审批状态编排到Codex开发流程.html" aria-label="阅读 Graph：从审批状态编排到 Codex 开发流程"></a>
+          <div class="card-topline">
+            <span class="category-pill">Agent 开发</span>
+            <time>2026-08-07</time>
+          </div>
+          <h3>Graph：从审批状态编排到 Codex 开发流程</h3>
+          <p>理解 Agent Graph 的状态、节点、边、路由、检查点和人工节点，并映射企业审批与 Codex 软件开发流程。</p>
+          <div class="card-footer">
+            <span>13 个章节</span>
+            <span>约 11 分钟</span>
+            <span class="read-more">阅读 →</span>
+          </div>
+        </article><article class="document-card" data-search-text="harness + loop + graph 双层整合实战 以企业智能审批 agent 为案例，整合 harness、loop、graph，并展示使用 codex 开发、测试和上线该 java 25 项目的完整方法。 notes/agent/2026-08-07-harness-loop-graph双层整合实战.html 核心结论 概念模型：两套三层结构 第一部分：智能审批 agent 开发 1. 先定义责任，不先选框架 2. maven 模块与代码落点 3. 领域状态、提案和批准分离 4. 最小持久化设计 无框架实现：组合 harness、graph 与 loop spring ai 实现：仅替换模型节点 5. http api 与主场景 第二部分：代码开发过程中的使用——用 codex 开发这个项目 1. 先把仓库变成可工作的 harness 2. 开发 graph 与任务依赖 3. 每个节点内部使用 codex loop 4. review 与人工门禁 线上应用、评测、部署与运行手册 测试与评测金字塔 部署与安全 灰度、slo 与告警 故障运行手册 失败模式与分层定位 练习与验收 参考资料">
+          <a class="card-link" href="public/notes/agent/2026-08-07-Harness-Loop-Graph双层整合实战.html" aria-label="阅读 Harness + Loop + Graph 双层整合实战"></a>
+          <div class="card-topline">
+            <span class="category-pill">Agent 开发</span>
+            <time>2026-08-07</time>
+          </div>
+          <h3>Harness + Loop + Graph 双层整合实战</h3>
+          <p>以企业智能审批 Agent 为案例，整合 Harness、Loop、Graph，并展示使用 Codex 开发、测试和上线该 Java 25 项目的完整方法。</p>
+          <div class="card-footer">
+            <span>23 个章节</span>
+            <span>约 19 分钟</span>
+            <span class="read-more">阅读 →</span>
+          </div>
+        </article><article class="document-card" data-search-text="harness：从运行时 agent 到 codex 开发环境 从企业智能审批 agent 与 codex 软件开发两个视角理解 harness，并给出 java 25 无框架和 spring ai 实现方法。 notes/agent/2026-08-07-harness从运行时agent到codex开发环境.html 核心结论 概念模型 何时需要显式建设 harness 第一部分：智能审批 agent 开发 从零开发与接入现有项目 无框架实现：java 25 端口与硬门禁 spring ai 实现：替换 ai 适配器 第二部分：代码开发过程中的使用 codex 仓库 harness 最小模板 线上应用、观测与验收 失败模式与边界 练习与验收 参考资料">
+          <a class="card-link" href="public/notes/agent/2026-08-07-Harness从运行时Agent到Codex开发环境.html" aria-label="阅读 Harness：从运行时 Agent 到 Codex 开发环境"></a>
+          <div class="card-topline">
+            <span class="category-pill">Agent 开发</span>
+            <time>2026-08-07</time>
+          </div>
+          <h3>Harness：从运行时 Agent 到 Codex 开发环境</h3>
+          <p>从企业智能审批 Agent 与 Codex 软件开发两个视角理解 Harness，并给出 Java 25 无框架和 Spring AI 实现方法。</p>
+          <div class="card-footer">
+            <span>13 个章节</span>
+            <span>约 13 分钟</span>
+            <span class="read-more">阅读 →</span>
+          </div>
+        </article><article class="document-card" data-search-text="loop：从业务 agent 循环到 codex 开发闭环 系统解释 agent loop 的观察、决策、行动、验证与停止条件，并展示 java 25、spring ai 和 codex 开发闭环。 notes/agent/2026-08-07-loop从业务agent循环到codex开发闭环.html 核心结论 概念模型 何时使用与何时不用 第一部分：智能审批 agent 开发 从零开发步骤 无框架实现：java 25 有界 loop spring ai 实现：保留应用层控制权 第二部分：代码开发过程中的使用 可直接使用的 codex loop 任务契约 线上应用、指标与故障恢复 失败模式与边界 练习与验收 参考资料">
+          <a class="card-link" href="public/notes/agent/2026-08-07-Loop从业务Agent循环到Codex开发闭环.html" aria-label="阅读 Loop：从业务 Agent 循环到 Codex 开发闭环"></a>
+          <div class="card-topline">
+            <span class="category-pill">Agent 开发</span>
+            <time>2026-08-07</time>
+          </div>
+          <h3>Loop：从业务 Agent 循环到 Codex 开发闭环</h3>
+          <p>系统解释 Agent Loop 的观察、决策、行动、验证与停止条件，并展示 Java 25、Spring AI 和 Codex 开发闭环。</p>
+          <div class="card-footer">
+            <span>13 个章节</span>
+            <span>约 12 分钟</span>
+            <span class="read-more">阅读 →</span>
+          </div>
         </article>
   </div>
 </section><section class="library-section" id="category-codex-与-ai-工程-1ubbp3w">
@@ -324,7 +376,7 @@
             <span>约 18 分钟</span>
             <span class="read-more">阅读 →</span>
           </div>
-        </article><article class="document-card" data-search-text="harness、loop、graph 与 codex + superpowers 开发模式 梳理 harness、loop、graph、spec-driven、multi-agent 与 agent factory 等 ai 开发模式，说明它们在 codex 与 superpowers 6.2.0 中的实现及子智能体启用边界。 notes/codex/2026-08-07-harness-loop-graph与codex-superpowers开发模式.html 核心结论 先把三个词放回正确层级 harness 不只是“选了哪个 agent 框架” loop 至少要有三种停止 graph 分为确定图与模型动态拆图 从以前到近期升温的开发模式 真正变化：优化对象上移 在 codex 中怎样实现 harness、loop、graph harness：把仓库变成 agent 可工作的“成功跑道” loop：codex 主线程本身就是工具反馈循环 graph：轻量用计划和技能，强确定性用外部编排器 codex 原生子智能体配置 codex + superpowers 实际用了哪些模式 superpowers 主状态机 superpowers 6.2.0 子智能体启用审计 一次 sdd 到底会产生多少 agent 什么时候启用，什么时候不要启用 可直接使用的 codex 提示词 java / spring 项目的推荐落地 第一阶段：先让单 agent loop 可靠 第二阶段：再增加 superpowers 门禁 第三阶段：吞吐真正成为瓶颈后才做 agent factory 常见误区 一页选择检查单 参考资料">
+        </article><article class="document-card" data-search-text="harness、loop、graph 与 codex + superpowers 开发模式 梳理 harness、loop、graph、spec-driven、multi-agent 与 agent factory 等 ai 开发模式，说明它们在 codex 与 superpowers 6.2.0 中的实现及子智能体启用边界。 notes/codex/2026-08-07-harness-loop-graph与codex-superpowers开发模式.html 核心结论 专题课程：从概念到双层项目实战 先把三个词放回正确层级 harness 不只是“选了哪个 agent 框架” loop 至少要有三种停止 graph 分为确定图与模型动态拆图 从以前到近期升温的开发模式 真正变化：优化对象上移 在 codex 中怎样实现 harness、loop、graph harness：把仓库变成 agent 可工作的“成功跑道” loop：codex 主线程本身就是工具反馈循环 graph：轻量用计划和技能，强确定性用外部编排器 codex 原生子智能体配置 codex + superpowers 实际用了哪些模式 superpowers 主状态机 superpowers 6.2.0 子智能体启用审计 一次 sdd 到底会产生多少 agent 什么时候启用，什么时候不要启用 可直接使用的 codex 提示词 java / spring 项目的推荐落地 第一阶段：先让单 agent loop 可靠 第二阶段：再增加 superpowers 门禁 第三阶段：吞吐真正成为瓶颈后才做 agent factory 常见误区 一页选择检查单 参考资料">
           <a class="card-link" href="public/notes/codex/2026-08-07-Harness-Loop-Graph与Codex-Superpowers开发模式.html" aria-label="阅读 Harness、Loop、Graph 与 Codex + Superpowers 开发模式"></a>
           <div class="card-topline">
             <span class="category-pill">Codex 与 AI 工程</span>
@@ -333,7 +385,7 @@
           <h3>Harness、Loop、Graph 与 Codex + Superpowers 开发模式</h3>
           <p>梳理 Harness、Loop、Graph、Spec-driven、Multi-agent 与 Agent Factory 等 AI 开发模式，说明它们在 Codex 与 Superpowers 6.2.0 中的实现及子智能体启用边界。</p>
           <div class="card-footer">
-            <span>25 个章节</span>
+            <span>26 个章节</span>
             <span>约 25 分钟</span>
             <span class="read-more">阅读 →</span>
           </div>

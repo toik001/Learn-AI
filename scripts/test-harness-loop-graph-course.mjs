@@ -113,6 +113,16 @@ for (const [label, fileName] of pages) {
 for (const cssClass of ["dual-lane-diagram", "layer-stack", "state-node"]) {
   assert.match(style, new RegExp(`\\.${cssClass}\\b`), `共享样式缺少 .${cssClass}`);
 }
+assert.match(
+  style,
+  /@media \(max-width: 820px\)[\s\S]*?\.dual-lane-diagram\s*\{[^}]*grid-template-columns:\s*1fr/s,
+  "双泳道图在移动端必须收敛为单列",
+);
+assert.match(
+  style,
+  /@media \(max-width: 820px\)[\s\S]*?\.state-graph\s*\{[^}]*flex-direction:\s*column/s,
+  "状态图在移动端必须纵向排列",
+);
 
 const integrated = documents.get("整合");
 for (const phrase of [

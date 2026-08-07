@@ -991,6 +991,109 @@ button {
   text-align: center;
 }
 
+.dual-lane-diagram {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.diagram-lane {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.diagram-lane > strong {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--accent);
+  font-size: 15px;
+}
+
+.diagram-lane .agent-step {
+  min-height: 58px;
+  margin-top: 10px;
+}
+
+.diagram-lane .agent-step::after {
+  content: none;
+}
+
+.layer-stack {
+  display: grid;
+  gap: 10px;
+  margin: 24px 0;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.layer-card {
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-muted);
+}
+
+.layer-card:first-child {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.layer-card strong,
+.layer-card span {
+  display: block;
+}
+
+.layer-card span {
+  margin-top: 4px;
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.state-graph {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin: 24px 0;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.state-node {
+  min-width: 118px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  font-size: 13px;
+  font-weight: 720;
+  text-align: center;
+}
+
+.state-node.is-gate {
+  border-color: var(--gold);
+}
+
+.state-arrow {
+  color: var(--accent);
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.diagram-text {
+  margin: -10px 0 26px;
+  color: var(--text-soft);
+  font-size: 14px;
+}
+
 .learning-roadmap {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1365,6 +1468,24 @@ button {
 
   .learning-roadmap {
     grid-template-columns: 1fr;
+  }
+
+  .dual-lane-diagram {
+    grid-template-columns: 1fr;
+  }
+
+  .state-graph {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .state-node {
+    width: 100%;
+  }
+
+  .state-arrow {
+    align-self: center;
+    transform: rotate(90deg);
   }
 
   .company-agent-map {

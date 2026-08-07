@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="理解 Agent Graph 的状态、节点、边、路由、检查点和人工节点，并映射企业审批与 Codex 软件开发流程。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="Agent 开发">
+  <meta name="study-date" content="2026-08-07">
+  <title>Graph：从审批状态编排到 Codex 开发流程｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar"><a class="brand" href="../../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a><div class="topbar-actions"><button class="icon-button mobile-nav-toggle" type="button">文档</button><button class="icon-button theme-toggle" type="button">主题</button></div></header>
+<div class="reader-layout">
+  <aside class="doc-sidebar"><div class="sidebar-header">
+      <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <div class="sidebar-category-summary">
+      <span class="eyebrow">当前分类</span>
+      <a class="sidebar-category-link" href="../../../index.html#category-agent-开发-fm6pdx">
+        <strong>Agent 开发</strong>
+        <small>15 篇文档</small>
+      </a>
+      <a class="sidebar-featured-link" href="2026-07-27-Agent开发学习主目录.html">分类主目录<span>Agent 开发学习主目录</span></a>
+    </div><nav class="doc-nav" aria-label="当前分类文档">
+      <a class="doc-nav-item" href="2026-07-27-01-Agent基础概念与边界.html"><span>Agent 基础概念与边界</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-02-模型API结构化输出与Tool-Calling.html"><span>模型 API、结构化输出与 Tool Calling</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-03-Agent状态上下文与记忆.html"><span>Agent 状态、上下文与记忆</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-04-Agent知识检索与RAG.html"><span>Agent 知识检索与 RAG</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-05-Agent规划反思与任务分解.html"><span>Agent 规划、反思与任务分解</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-06-多Agent协作与编排.html"><span>多 Agent 协作与编排</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-07-Agent评测安全权限与成本控制.html"><span>Agent 评测、安全、权限与成本控制</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-08-Java-Agent生产部署可观测性与故障恢复.html"><span>Java Agent 生产部署、可观测性与故障恢复</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-Agent开发学习主目录.html"><span>Agent 开发学习主目录</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-Agentic-Search与RAG对比.html"><span>Agentic Search 与 RAG：边界、对比与 Java 实现</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-28-企业智能审批与公司主子Agent落地实战.html"><span>企业智能审批与公司主子 Agent 落地实战</span><small>2026-07-28</small></a><a class="doc-nav-item is-active" href="2026-08-07-Graph从审批状态编排到Codex开发流程.html" aria-current="page"><span>Graph：从审批状态编排到 Codex 开发流程</span><small>2026-08-07</small></a><a class="doc-nav-item" href="2026-08-07-Harness-Loop-Graph双层整合实战.html"><span>Harness + Loop + Graph 双层整合实战</span><small>2026-08-07</small></a><a class="doc-nav-item" href="2026-08-07-Harness从运行时Agent到Codex开发环境.html"><span>Harness：从运行时 Agent 到 Codex 开发环境</span><small>2026-08-07</small></a><a class="doc-nav-item" href="2026-08-07-Loop从业务Agent循环到Codex开发闭环.html"><span>Loop：从业务 Agent 循环到 Codex 开发闭环</span><small>2026-08-07</small></a>
+    </nav></aside>
+  <main class="article-column">
+    <div class="article-meta"><a href="../../../index.html">知识库首页</a><span>·</span><span>Agent 开发</span><span>·</span><time datetime="2026-08-07">2026-08-07</time></div>
+    <article class="markdown-body">
+      <h1>Graph：从审批状态编排到 Codex 开发流程</h1>
+      <blockquote><p><strong>一句话：</strong>Graph 把多个步骤的状态、执行单元和转换关系显式化，适合分支、并发、循环、人工等待和故障恢复；它的价值是可控与可恢复，不是让系统显得高级。</p><p><strong>双场景：</strong>审批 Agent 使用 Java 25 无框架状态机与 Spring AI 模型节点；代码开发部分用 Graph 分析 Codex 的规格—计划—实现—审查—验证流程，不声称 Codex 内置了通用 Graph 引擎。</p></blockquote>
+      <nav aria-label="本页快速目录"><strong>快速阅读：</strong> <a href="#核心结论">核心结论</a> · <a href="#概念模型">概念模型</a> · <a href="#审批-agent-开发">审批 Agent</a> · <a href="#codex开发使用">Codex 开发</a> · <a href="#线上应用">线上应用</a> · <a href="#参考资料">资料</a></nav>
+
+      <h2 id="核心结论">核心结论</h2>
+      <ol>
+        <li><strong>Graph = State + Node + Edge + Router + Checkpoint。</strong>节点完成工作，边决定可达路径，路由根据状态选边，checkpoint 让长流程能恢复。</li>
+        <li><strong>Graph 不等于 DAG。</strong>审批补件和 review—fix 都可能回到前一节点；允许环时必须设计循环上限和状态单调性。</li>
+        <li><strong>模型只是节点实现之一。</strong>规则、数据库事务、人工审批、外部 API 和普通 Java 函数同样可以是节点，且常常更可靠。</li>
+        <li><strong>状态必须可版本化。</strong>只持久化“当前节点”不够；还要保存业务版本、节点输入输出、等待请求、幂等动作与图定义版本。</li>
+        <li><strong>Codex 开发 Graph 是工程抽象。</strong>AGENTS.md、Skills、任务计划、subagent、review 和 CI 能形成阶段与门禁，但官方未把它们统一命名为 Graph。</li>
+      </ol>
+
+      <h2 id="概念模型">概念模型</h2>
+      <div class="state-graph" role="img" aria-label="审批 Graph：提交后进入材料校验，并行执行预算、制度和合规核验，随后汇聚到规则路由；缺件回到补件，高风险进入人工会签，通过后执行并完成。">
+        <div class="state-node">提交</div><span class="state-arrow">→</span><div class="state-node">材料校验</div><span class="state-arrow">→</span><div class="state-node">并行核验</div><span class="state-arrow">→</span><div class="state-node is-gate">规则路由</div><span class="state-arrow">→</span><div class="state-node is-gate">人工会签</div><span class="state-arrow">→</span><div class="state-node">幂等执行</div>
+      </div>
+      <p class="diagram-text">缺件边从规则路由返回补件节点；拒绝边进入终态；人工等待与恢复请求都随 checkpoint 持久化。</p>
+      <div class="table-wrap"><table><thead><tr><th>元素</th><th>职责</th><th>设计问题</th><th>常见错误</th></tr></thead><tbody>
+        <tr><td>State</td><td>流程的可恢复事实</td><td>哪些字段可合并？谁能写？如何版本迁移？</td><td>把完整聊天当 State</td></tr>
+        <tr><td>Node</td><td>纯计算、模型、工具或人工任务</td><td>输入输出和副作用边界是什么？</td><td>一个节点承担全部业务</td></tr>
+        <tr><td>Edge</td><td>合法转换</td><td>是否允许环、并发、取消和补偿？</td><td>任何节点都能跳任何节点</td></tr>
+        <tr><td>Router</td><td>根据状态选下一条边</td><td>模型建议还是确定性规则最终决定？</td><td>用自然语言替代硬规则</td></tr>
+        <tr><td>Checkpoint</td><td>保存状态与待处理请求</td><td>何时保存、怎样恢复、如何防重复？</td><td>只保存节点名</td></tr>
+      </tbody></table></div>
+
+      <h3 id="graph选型">选择 Graph、Loop 还是普通函数</h3>
+      <div class="table-wrap"><table><thead><tr><th>场景</th><th>首选</th><th>理由</th></tr></thead><tbody>
+        <tr><td>一次校验或纯计算</td><td>普通函数</td><td>最简单、可测试、无需持久状态</td></tr>
+        <tr><td>下一步取决于未知工具结果</td><td>有界 Loop</td><td>模型动态选择动作，直到可验证停止</td></tr>
+        <tr><td>固定分支、并行、人工等待、长事务</td><td>Graph / Workflow</td><td>路径显式，状态可持久化与恢复</td></tr>
+        <tr><td>复杂生产 Agent</td><td>三者组合</td><td>Graph 管流程，节点内 Loop 处理局部未知，普通函数实现硬规则</td></tr>
+      </tbody></table></div>
+
+      <h2 id="审批-agent-开发">第一部分：智能审批 Agent 开发</h2>
+      <div class="dual-lane-diagram" role="img" aria-label="审批 Graph 双轨：无框架轨道由 Java 状态、节点函数、边和仓储组成；Spring AI 轨道只在材料抽取和提案节点使用 ChatClient，两者共用工作流、规则、人工审批和执行器。">
+        <div class="diagram-lane"><strong>无 Agent 框架</strong><div class="agent-step">ApprovalState + Node</div><div class="agent-step">Edges + Router</div><div class="agent-step">CheckpointRepository</div></div>
+        <div class="diagram-lane"><strong>Spring AI 模型节点</strong><div class="agent-step">ChatClient 抽取/提案</div><div class="agent-step">确定性 Router</div><div class="agent-step">同一状态与恢复底座</div></div>
+      </div>
+      <p class="diagram-text">Spring AI 负责模型节点，不替代 BPMN/状态机、规则服务、人工任务或数据库事务。</p>
+
+      <h3 id="开发步骤">从业务流程到可执行 Graph</h3>
+      <ol>
+        <li>从业务事实画状态转换表，而不是从“需要几个 Agent”开始；标出终态、等待态和禁止回退的状态。</li>
+        <li>将规则节点、模型节点、人工节点与副作用节点分开；每个节点定义输入、输出、错误和幂等语义。</li>
+        <li>为并行分支定义 merge/reducer，避免多个节点写同一字段产生最后写入获胜。</li>
+        <li>在外部调用前后 checkpoint；恢复时读取图版本和业务版本，重新校验待执行动作。</li>
+        <li>用状态迁移测试覆盖所有边，再做节点契约、并发、恢复和补偿测试。</li>
+      </ol>
+
+      <h3 id="无框架实现">无框架实现：Java 25 状态机</h3>
+      <pre><code>public enum ApprovalStage {
+    SUBMITTED, VALIDATING, ANALYZING, NEEDS_INFO,
+    PENDING_APPROVAL, APPROVED, REJECTED,
+    EXECUTING, COMPLETED, FAILED
+}
+
+public record ApprovalState(
+        java.util.UUID caseId,
+        long caseVersion,
+        ApprovalStage stage,
+        java.util.Map&lt;String, Evidence&gt; evidence,
+        ApprovalProposal proposal,
+        java.util.Set&lt;String&gt; pendingApproverRoles,
+        int revision) {}
+
+@FunctionalInterface
+public interface ApprovalNode {
+    NodeResult apply(ApprovalState state);
+}</code></pre>
+      <pre><code>public final class ApprovalGraph {
+    private final java.util.Map&lt;ApprovalStage, ApprovalNode&gt; nodes;
+    private final TransitionPolicy transitions;
+    private final CheckpointRepository checkpoints;
+
+    public ApprovalState step(ApprovalState current) {
+        var result = nodes.get(current.stage()).apply(current);
+        var next = transitions.reduce(current, result);
+        transitions.requireLegal(current.stage(), next.stage());
+        checkpoints.saveIfVersionMatches(current.revision(), next);
+        return next;
+    }
+
+    public ApprovalState resume(java.util.UUID caseId) {
+        var saved = checkpoints.load(caseId);
+        return transitions.revalidateAgainstCurrentPolicy(saved);
+    }
+}</code></pre>
+      <p>节点不直接跳转；它返回事实，由 <code>TransitionPolicy</code> 统一决定合法状态。乐观锁避免两个恢复任务同时推进同一 case。</p>
+
+      <h3 id="spring-ai-实现">Spring AI 实现：模型作为受限节点</h3>
+      <pre><code>@Component
+final class ProposalNode implements ApprovalNode {
+    private final ChatClient client;
+
+    @Override
+    public NodeResult apply(ApprovalState state) {
+        var proposal = client.prompt()
+                .system("基于给定证据生成提案；不得批准，不得发起写操作。")
+                .user(stateProjection(state))
+                .call()
+                .entity(ApprovalProposal.class, spec -&gt; spec.validateSchema());
+        return NodeResult.fact("proposal.generated", proposal);
+    }
+}
+
+// Router 仍由确定性代码拥有
+ApprovalStage route(ApprovalState state) {
+    if (state.proposal().hasPolicyConflict()) return ApprovalStage.REJECTED;
+    if (!state.proposal().missingFields().isEmpty()) return ApprovalStage.NEEDS_INFO;
+    return ApprovalStage.PENDING_APPROVAL;
+}</code></pre>
+      <p>若采用 LangGraph4j 等库，可以把 StateGraph、条件边、线程、checkpoint 和并行节点映射到上述概念；但业务授权和迁移策略仍需项目自己设计。</p>
+
+      <h2 id="codex开发使用">第二部分：代码开发过程中的使用</h2>
+      <div class="state-graph" role="img" aria-label="Codex 开发 Graph：需求澄清后进入规格确认、实施计划、按依赖执行任务、代码审查、验证和交付；审查发现返回实现，验证失败返回调试，高风险交付进入人工门禁。">
+        <div class="state-node is-gate">规格确认</div><span class="state-arrow">→</span><div class="state-node is-gate">计划确认</div><span class="state-arrow">→</span><div class="state-node">实现任务</div><span class="state-arrow">→</span><div class="state-node">Review</div><span class="state-arrow">→</span><div class="state-node">Verify</div><span class="state-arrow">→</span><div class="state-node is-gate">人工交付</div>
+      </div>
+      <p class="diagram-text">这是本文对工程流程的 Graph 化表达；Codex 提供计划、subagent、review、worktree、Hooks 等能力，但并未把这条图发布为固定 SDLC。</p>
+
+      <h3 id="codex开发图">怎样把 Codex 任务组织成 Graph</h3>
+      <ol>
+        <li><strong>Node：</strong>每个节点产生一个可独立审查的工件，例如规格、测试、一个模块改动或 review 报告。</li>
+        <li><strong>Edge：</strong>只有验证通过才能进入交付；review 发现回到对应实现节点，而不是重做全部工作。</li>
+        <li><strong>Parallel：</strong>只并行互不依赖、写集不重叠的任务，如文档核验与只读代码审计；共享状态修改保持串行。</li>
+        <li><strong>Human gate：</strong>需求取舍、破坏性迁移、权限扩张、外部发布和合并决策由人确认。</li>
+        <li><strong>Checkpoint：</strong>用 Git commit、版本化计划、测试输出和决策记录保存阶段结果，不能只靠聊天上下文。</li>
+      </ol>
+      <pre><code>Task graph: approval-idempotency
+
+T1 复现重复执行并添加失败测试
+  └── T2 实现数据库原子 claim
+        ├── T3 增加恢复任务与结果查询
+        └── T4 更新审计事件与指标
+              └── T5 review（正确性 / 安全 / 测试）
+                    ├── finding → 返回对应 T2/T3/T4
+                    └── clean → T6 full verify
+                                  └── 人工决定提交与发布
+
+并行规则：T3 与 T4 只有在接口冻结且写集不重叠时才能并行。</code></pre>
+      <pre><code>给 Codex 的 Graph 节点契约
+
+Node: T2 数据库原子 claim
+Consumes: 失败的并发回归测试、ExecutionRepository 接口
+Produces: claim(idempotencyKey, proposalHash) 的唯一语义
+Allowed files: approval-app persistence package + migration + scoped tests
+Done when: 并发测试通过；重复 key 返回同一 executionId；无先查后写
+Next: 只在 review 与最小相关验证通过后开放 T3/T4</code></pre>
+      <p>Codex 官方 Subagents 文档建议优先把读多写少、独立的探索/测试/日志分析并行化，并对多个 Agent 同时写代码保持谨慎。子 Agent 继承权限模式；并行不会自动解决共享状态冲突。</p>
+
+      <h2 id="线上应用">线上应用、恢复与演进</h2>
+      <div class="table-wrap"><table><thead><tr><th>监控对象</th><th>关键指标</th><th>故障信号</th><th>恢复动作</th></tr></thead><tbody>
+        <tr><td>节点</td><td>耗时、成功率、重试数</td><td>单节点长尾或错误集中</td><td>隔离节点、熔断、人工处理</td></tr>
+        <tr><td>边/路由</td><td>路径分布、非法转换</td><td>某分支突然归零或激增</td><td>回滚策略版本并重放样本</td></tr>
+        <tr><td>等待态</td><td>积压、等待时间、超时</td><td>人工任务无人处理</td><td>提醒、升级、转派或取消</td></tr>
+        <tr><td>checkpoint</td><td>保存/恢复成功率</td><td>恢复后重复副作用</td><td>查询幂等结果并执行补偿</td></tr>
+        <tr><td>图版本</td><td>运行实例版本分布</td><td>旧实例无法迁移</td><td>双版本运行或显式迁移</td></tr>
+      </tbody></table></div>
+      <p>Microsoft Agent Framework 官方说明 checkpoint 可用于长流程恢复、暂停/继续、审计与迁移，并将待处理人工请求一起保存。无论采用哪个框架，都要测试“在每个节点前后崩溃”的恢复行为。</p>
+
+      <h2 id="失败模式">失败模式与边界</h2>
+      <ul>
+        <li><strong>过度编排：</strong>三步固定逻辑也建图。修复：先用普通函数，出现持久等待、复杂分支或恢复需求再升级。</li>
+        <li><strong>Graph 只在白板：</strong>图与代码真实路径漂移。修复：由同一状态转换定义生成可视化或结构测试。</li>
+        <li><strong>共享 State 无 reducer：</strong>并行节点互相覆盖。修复：字段所有权、幂等 merge 和确定性汇聚。</li>
+        <li><strong>恢复即重跑：</strong>重复扣款或重复创建订单。修复：checkpoint + 幂等结果查询 + 补偿。</li>
+        <li><strong>把 Codex 工作流当官方固定 Graph：</strong>忽略不同任务的必要简化。修复：明确这是项目方法，按风险删减节点。</li>
+      </ul>
+
+      <h2 id="练习与验收">练习与验收</h2>
+      <ol>
+        <li>为审批状态机列出所有合法边，写参数化测试证明非法跳转全部失败。</li>
+        <li>模拟 ANALYZING 节点完成后进程崩溃，验证恢复不会重复调用已成功的预算工具。</li>
+        <li>把一个大型 Codex 任务画成 DAG，标注哪些任务可并行、哪些有共享写集、哪些必须人工确认。</li>
+      </ol>
+      <p><strong>验收标准：</strong>能区分 Graph、DAG、Loop 与普通函数；能解释 checkpoint 不只是当前节点；能把模型限制在适合的节点；能说明 Codex 开发 Graph 是工程映射而不是官方内置执行引擎。</p>
+
+      <h2 id="参考资料">参考资料</h2>
+      <p>资料检索于 <strong>2026-08-07</strong>：</p>
+      <ul>
+        <li><a href="https://langgraph4j.github.io/langgraph4j/" target="_blank" rel="noopener noreferrer">LangGraph4j：Overview</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/agent-framework/workflows/workflows" target="_blank" rel="noopener noreferrer">Microsoft Agent Framework：Workflow Builder</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/agent-framework/workflows/checkpoints" target="_blank" rel="noopener noreferrer">Microsoft Agent Framework：Checkpoints</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/agent-framework/workflows/human-in-the-loop" target="_blank" rel="noopener noreferrer">Microsoft Agent Framework：Human in the loop</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/agent-framework/journey/workflows" target="_blank" rel="noopener noreferrer">Microsoft Agent Framework：When to use workflows</a></li>
+        <li><a href="https://learn.chatgpt.com/docs/agent-configuration/subagents" target="_blank" rel="noopener noreferrer">OpenAI Codex：Subagents</a></li>
+        <li><a href="https://openai.com/index/open-source-codex-orchestration-symphony/" target="_blank" rel="noopener noreferrer">OpenAI：Symphony orchestration</a></li>
+      </ul>
+      <p><strong>课程导航：</strong><a href="2026-08-07-Harness从运行时Agent到Codex开发环境.html">Harness</a> · <a href="2026-08-07-Loop从业务Agent循环到Codex开发闭环.html">Loop</a> · <a href="2026-08-07-Harness-Loop-Graph双层整合实战.html">双层整合实战</a>。</p>
+    </article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/agent/2026-08-07-Graph从审批状态编排到Codex开发流程.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="2026-07-28-企业智能审批与公司主子Agent落地实战.html"><small>上一篇</small><span>企业智能审批与公司主子 Agent 落地实战</span></a>
+        <a class="pager-link next" href="2026-08-07-Harness-Loop-Graph双层整合实战.html"><small>下一篇</small><span>Harness + Loop + Graph 双层整合实战</span></a>
+      </nav>
+    </footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#概念模型">概念模型</a></li><li class="toc-level-3"><a href="#graph选型">选择 Graph、Loop 还是普通函数</a></li><li class="toc-level-2"><a href="#审批-agent-开发">第一部分：智能审批 Agent 开发</a></li><li class="toc-level-3"><a href="#开发步骤">从业务流程到可执行 Graph</a></li><li class="toc-level-3"><a href="#无框架实现">无框架实现：Java 25 状态机</a></li><li class="toc-level-3"><a href="#spring-ai-实现">Spring AI 实现：模型作为受限节点</a></li><li class="toc-level-2"><a href="#codex开发使用">第二部分：代码开发过程中的使用</a></li><li class="toc-level-3"><a href="#codex开发图">怎样把 Codex 任务组织成 Graph</a></li><li class="toc-level-2"><a href="#线上应用">线上应用、恢复与演进</a></li><li class="toc-level-2"><a href="#失败模式">失败模式与边界</a></li><li class="toc-level-2"><a href="#练习与验收">练习与验收</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+<button class="sidebar-scrim" type="button" aria-label="关闭文档列表"></button>
+</body>
+</html>

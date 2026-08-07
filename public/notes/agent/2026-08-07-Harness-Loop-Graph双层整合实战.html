@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="以企业智能审批 Agent 为案例，整合 Harness、Loop、Graph，并展示使用 Codex 开发、测试和上线该 Java 25 项目的完整方法。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="Agent 开发">
+  <meta name="study-date" content="2026-08-07">
+  <title>Harness + Loop + Graph 双层整合实战｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar"><a class="brand" href="../../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a><div class="topbar-actions"><button class="icon-button mobile-nav-toggle" type="button">文档</button><button class="icon-button theme-toggle" type="button">主题</button></div></header>
+<div class="reader-layout">
+  <aside class="doc-sidebar"><div class="sidebar-header">
+      <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <div class="sidebar-category-summary">
+      <span class="eyebrow">当前分类</span>
+      <a class="sidebar-category-link" href="../../../index.html#category-agent-开发-fm6pdx">
+        <strong>Agent 开发</strong>
+        <small>15 篇文档</small>
+      </a>
+      <a class="sidebar-featured-link" href="2026-07-27-Agent开发学习主目录.html">分类主目录<span>Agent 开发学习主目录</span></a>
+    </div><nav class="doc-nav" aria-label="当前分类文档">
+      <a class="doc-nav-item" href="2026-07-27-01-Agent基础概念与边界.html"><span>Agent 基础概念与边界</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-02-模型API结构化输出与Tool-Calling.html"><span>模型 API、结构化输出与 Tool Calling</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-03-Agent状态上下文与记忆.html"><span>Agent 状态、上下文与记忆</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-04-Agent知识检索与RAG.html"><span>Agent 知识检索与 RAG</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-05-Agent规划反思与任务分解.html"><span>Agent 规划、反思与任务分解</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-06-多Agent协作与编排.html"><span>多 Agent 协作与编排</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-07-Agent评测安全权限与成本控制.html"><span>Agent 评测、安全、权限与成本控制</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-08-Java-Agent生产部署可观测性与故障恢复.html"><span>Java Agent 生产部署、可观测性与故障恢复</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-Agent开发学习主目录.html"><span>Agent 开发学习主目录</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-Agentic-Search与RAG对比.html"><span>Agentic Search 与 RAG：边界、对比与 Java 实现</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-28-企业智能审批与公司主子Agent落地实战.html"><span>企业智能审批与公司主子 Agent 落地实战</span><small>2026-07-28</small></a><a class="doc-nav-item" href="2026-08-07-Graph从审批状态编排到Codex开发流程.html"><span>Graph：从审批状态编排到 Codex 开发流程</span><small>2026-08-07</small></a><a class="doc-nav-item is-active" href="2026-08-07-Harness-Loop-Graph双层整合实战.html" aria-current="page"><span>Harness + Loop + Graph 双层整合实战</span><small>2026-08-07</small></a><a class="doc-nav-item" href="2026-08-07-Harness从运行时Agent到Codex开发环境.html"><span>Harness：从运行时 Agent 到 Codex 开发环境</span><small>2026-08-07</small></a><a class="doc-nav-item" href="2026-08-07-Loop从业务Agent循环到Codex开发闭环.html"><span>Loop：从业务 Agent 循环到 Codex 开发闭环</span><small>2026-08-07</small></a>
+    </nav></aside>
+  <main class="article-column">
+    <div class="article-meta"><a href="../../../index.html">知识库首页</a><span>·</span><span>Agent 开发</span><span>·</span><time datetime="2026-08-07">2026-08-07</time></div>
+    <article class="markdown-body">
+      <h1>Harness + Loop + Graph 双层整合实战</h1>
+      <blockquote><p><strong>项目：</strong>构建“28 万元 SaaS 续费”企业智能审批 Agent。它读取申请、合同和制度，核验预算与合规，生成有证据的提案；确定性规则负责硬门禁，授权人负责最终决定，执行器在有效批准后创建采购订单。</p><p><strong>双层：</strong>第一层是线上运行时 Agent 的 Harness/Loop/Graph；第二层是使用 Codex 开发这个 Java 25 + Spring Boot + Spring AI 项目时的 Harness/Loop/Graph。两层目标相连，但身份、状态、权限和恢复机制完全独立。</p></blockquote>
+      <nav aria-label="本页快速目录"><strong>快速阅读：</strong> <a href="#核心结论">结论</a> · <a href="#概念模型">双层模型</a> · <a href="#审批-agent-开发">审批项目</a> · <a href="#codex开发使用">Codex 开发</a> · <a href="#线上应用">上线运行</a> · <a href="#练习与验收">验收</a> · <a href="#参考资料">资料</a></nav>
+
+      <h2 id="核心结论">核心结论</h2>
+      <ol>
+        <li><strong>成熟 Agent 通常三者叠加，不是三选一。</strong>Harness 包住系统，Graph 组织步骤，Loop 在需要动态探索的节点内运行。</li>
+        <li><strong>审批权永远不属于模型。</strong>模型输出 <code>ApprovalProposal</code>；规则和授权人输出 <code>ApprovalDecision</code>；执行器只消费绑定 proposalHash 的有效批准。</li>
+        <li><strong>先做无框架核心，再接 Spring AI。</strong>领域状态、规则、工具权限、幂等和测试先用普通 Java 25 固化，Spring AI 仅作为模型/工具适配器。</li>
+        <li><strong>用 Codex 开发时同样需要三层。</strong>仓库与工具构成 Harness；检查—编辑—测试—审查形成 Loop；规格—计划—任务—验证—交付形成开发 Graph。</li>
+        <li><strong>上线采用渐进授权。</strong>从离线评测到 shadow、辅助决策，再到低风险自动化；任何高风险写动作保留人工门禁和回滚开关。</li>
+      </ol>
+
+      <h2 id="概念模型">概念模型：两套三层结构</h2>
+      <div class="dual-lane-diagram" role="img" aria-label="双层整合：左侧运行时 Agent 的 Harness 包含权限工具观测，Graph 编排审批节点，Loop 处理证据缺口；右侧编码 Agent 的 Harness 是仓库工具沙箱，Graph 是开发阶段，Loop 是检查修改测试审查。">
+        <div class="diagram-lane"><strong>第一层：运行时 Agent</strong><div class="agent-step">Harness：身份、工具、规则、审计</div><div class="agent-step">Graph：收件、核验、会签、执行</div><div class="agent-step">Loop：发现证据缺口并收敛</div></div>
+        <div class="diagram-lane"><strong>第二层：编码 Agent</strong><div class="agent-step">Harness：仓库、AGENTS.md、工具、CI</div><div class="agent-step">Graph：规格、计划、实现、验证</div><div class="agent-step">Loop：检查、编辑、测试、review</div></div>
+      </div>
+      <p class="diagram-text">编码 Agent 可以开发运行时 Agent，但绝不能继承审批用户身份、生产凭据或业务授权；生产写工具不应暴露给开发 Harness。</p>
+
+      <div class="layer-stack" role="img" aria-label="运行时组合架构：API 与身份层之下是审批 Graph，Graph 的模型节点包含受限 Loop，外层 Harness 提供数据库、工具、规则、人审、评测、观测和恢复。">
+        <div class="layer-card"><strong>API / Identity / Tenant</strong><span>认证主体、caseId、caseVersion、请求幂等键</span></div>
+        <div class="layer-card"><strong>Approval Graph</strong><span>SUBMITTED → ANALYZING → NEEDS_INFO / PENDING_APPROVAL → EXECUTING</span></div>
+        <div class="layer-card"><strong>Bounded Agent Loop</strong><span>只在材料理解、证据补全和提案节点内动态调用只读工具</span></div>
+        <div class="layer-card"><strong>Deterministic Controls</strong><span>PolicyGate、人工会签、职责分离、幂等执行器</span></div>
+        <div class="layer-card"><strong>Harness Services</strong><span>PostgreSQL、对象存储、审计、指标、Trace、评测集、恢复任务</span></div>
+      </div>
+      <p class="diagram-text">组合原则：模型节点可以建议下一步，Graph 控制合法路径，Harness 决定哪些工具和数据真正可用。</p>
+
+      <h2 id="审批-agent-开发">第一部分：智能审批 Agent 开发</h2>
+      <h3 id="需求与边界">1. 先定义责任，不先选框架</h3>
+      <div class="table-wrap"><table><thead><tr><th>能力</th><th>模型/Agent</th><th>规则/应用</th><th>人类</th></tr></thead><tbody>
+        <tr><td>材料理解</td><td>抽取字段、指出冲突与缺失</td><td>schema、文件 ACL、来源 hash</td><td>处理低置信或矛盾材料</td></tr>
+        <tr><td>制度适用</td><td>检索并解释相关条款</td><td>版本、生效日、主体过滤</td><td>解释制度歧义</td></tr>
+        <tr><td>预算/重复</td><td>总结工具结果</td><td>精确查询和计算</td><td>批准例外</td></tr>
+        <tr><td>最终决定</td><td>只能生成提案</td><td>硬规则与路由</td><td>授权人批准或拒绝</td></tr>
+        <tr><td>创建订单</td><td>不能直接执行</td><td>有效批准、幂等、最小写权限</td><td>高风险时二次确认</td></tr>
+      </tbody></table></div>
+      <p><strong>教学业务规则：</strong>金额超过 20 万需要经理、财务与法务会签；涉及个人数据必须提供 DPA；报价上涨超过 10% 需要议价说明。这些阈值只是示例，真实规则必须由企业流程 Owner、财务、法务和合规确认并版本化。</p>
+
+      <h3 id="项目结构">2. Maven 模块与代码落点</h3>
+      <pre><code>approval-agent/
+├── pom.xml                         # Java 25、Spring Boot 4.x、Spring AI BOM 2.0.0
+├── approval-domain/                # 无 Spring AI：状态、提案、规则端口、动作契约
+├── approval-usecase/               # Graph、Loop、应用服务、事务边界
+├── approval-adapter-ai/            # ModelPort：fake 与 Spring AI ChatClient
+├── approval-adapter-persistence/   # PostgreSQL、乐观锁、checkpoint、outbox
+├── approval-adapter-tools/         # 预算/制度/合同只读工具与受限执行器
+├── approval-api/                   # HTTP、认证主体、DTO、错误映射
+└── approval-boot/                  # 配置、依赖组装、指标、部署入口
+
+依赖方向：boot/api/adapters → usecase → domain
+禁止：domain 依赖 Spring AI；模型节点直接写数据库或 ERP。</code></pre>
+      <pre><code>&lt;properties&gt;
+  &lt;java.version&gt;25&lt;/java.version&gt;
+  &lt;spring-ai.version&gt;2.0.0&lt;/spring-ai.version&gt;
+&lt;/properties&gt;
+
+&lt;dependencyManagement&gt;
+  &lt;dependencies&gt;
+    &lt;dependency&gt;
+      &lt;groupId&gt;org.springframework.ai&lt;/groupId&gt;
+      &lt;artifactId&gt;spring-ai-bom&lt;/artifactId&gt;
+      &lt;version&gt;${spring-ai.version}&lt;/version&gt;
+      &lt;type&gt;pom&lt;/type&gt;
+      &lt;scope&gt;import&lt;/scope&gt;
+    &lt;/dependency&gt;
+  &lt;/dependencies&gt;
+&lt;/dependencyManagement&gt;</code></pre>
+      <p>Spring AI 2.0.x 官方文档当前支持 Spring Boot 4.0.x 与 4.1.x。项目应使用 Spring Initializr/官方 BOM 锁定实际依赖，并在 CI 中用 Java 25 编译；不要从文章代码猜测某个 provider starter 的最终坐标。</p>
+
+      <h3 id="领域契约">3. 领域状态、提案和批准分离</h3>
+      <pre><code>public record ApprovalProposal(
+        java.util.UUID proposalId,
+        java.util.UUID caseId,
+        long caseVersion,
+        Recommendation recommendation,
+        java.util.List&lt;EvidenceRef&gt; evidence,
+        java.util.List&lt;String&gt; missingFields,
+        String policyVersion,
+        String proposalHash) {}
+
+public record ApprovalDecision(
+        java.util.UUID decisionId,
+        java.util.UUID proposalId,
+        String proposalHash,
+        String approverId,
+        String approverRole,
+        Decision value,
+        java.time.Instant decidedAt) {}
+
+public record ExecutionCommand(
+        java.util.UUID caseId,
+        String proposalHash,
+        String idempotencyKey) {}</code></pre>
+      <p>材料、金额、供应商或拟执行动作变化时 <code>caseVersion</code> 增加并生成新的 proposalHash；旧批准自动失效。执行器校验批准集合、proposalHash、策略版本、职责分离和幂等键。</p>
+
+      <h3 id="数据设计">4. 最小持久化设计</h3>
+      <pre><code>create table approval_case (
+  case_id uuid primary key,
+  tenant_id varchar(64) not null,
+  stage varchar(32) not null,
+  case_version bigint not null,
+  revision bigint not null
+);
+
+create table approval_proposal (
+  proposal_id uuid primary key,
+  case_id uuid not null references approval_case(case_id),
+  case_version bigint not null,
+  proposal_hash varchar(64) not null unique,
+  policy_version varchar(64) not null,
+  payload jsonb not null
+);
+
+create table approval_execution (
+  execution_id uuid primary key,
+  case_id uuid not null,
+  proposal_hash varchar(64) not null,
+  idempotency_key varchar(128) not null unique,
+  status varchar(32) not null,
+  external_ref varchar(256)
+);
+
+-- 另建 append-only evidence、decision、audit_event、checkpoint、outbox 表；
+-- claim 必须依赖唯一键在事务中原子创建，禁止“先查后写”。</code></pre>
+
+      <h3 id="无框架实现">无框架实现：组合 Harness、Graph 与 Loop</h3>
+      <pre><code>public final class ApprovalApplicationService {
+    private final ApprovalGraph graph;
+    private final ApprovalLoopRunner evidenceLoop;
+    private final PolicyGate policy;
+    private final ExecutionPort execution;
+
+    public ApprovalState advance(Principal principal, java.util.UUID caseId) {
+        var state = graph.loadAuthorized(principal, caseId);
+        return switch (state.stage()) {
+            case ANALYZING -&gt; graph.persist(evidenceLoop.run(state, LoopBudget.standard()));
+            case PENDING_APPROVAL -&gt; graph.waitForHuman(state);
+            case APPROVED -&gt; {
+                policy.requireExecutable(principal, state);
+                var receipt = execution.executeOnce(toCommand(state));
+                yield graph.complete(state, receipt);
+            }
+            default -&gt; graph.step(state);
+        };
+    }
+}</code></pre>
+      <p>这段代码展示所有权：Graph 决定合法状态，Loop 只处理 ANALYZING 的局部未知，PolicyGate 在副作用前重新鉴权，ExecutionPort 保证幂等。</p>
+
+      <h3 id="spring-ai-实现">Spring AI 实现：仅替换模型节点</h3>
+      <pre><code>@Configuration
+class ApprovalAiConfiguration {
+    @Bean
+    ModelPort proposalModel(ChatClient.Builder builder, ApprovalReadTools tools) {
+        var client = builder
+                .defaultSystem("只生成带证据引用的审批提案；不得批准或执行。")
+                .defaultTools(tools)
+                .defaultAdvisors(new PolicyContextAdvisor())
+                .build();
+        return (context, evidence) -&gt; client.prompt()
+                .user(ApprovalPrompt.render(context, evidence))
+                .call()
+                .entity(ApprovalProposal.class, spec -&gt; spec.validateSchema());
+    }
+}
+
+final class ApprovalReadTools {
+    @Tool(description = "读取认证主体有权查看的预算快照")
+    BudgetSnapshot budget(String costCenter) {
+        var principal = TrustedPrincipal.current(); // 不使用模型传入的 tenant
+        return budgetService.readAuthorized(principal, costCenter);
+    }
+}</code></pre>
+      <p>如果需要观察每次工具迭代或在调用间插入政策检查，应关闭 per-call 自动工具执行并使用用户控制模式。无论哪种模式，写工具都必须自行鉴权、校验有效批准并记录审计。</p>
+
+      <h3 id="api与场景">5. HTTP API 与主场景</h3>
+      <pre><code>POST /api/approval-cases                 # 创建 case，返回 caseId/version
+POST /api/approval-cases/{id}/documents  # 上传材料，version + 1
+POST /api/approval-cases/{id}/analyze    # 启动/恢复 Graph
+GET  /api/approval-cases/{id}            # 查询状态与脱敏证据
+POST /api/approval-proposals/{id}/decisions # 授权人决定，绑定 proposalHash
+POST /api/approval-cases/{id}/execute    # 校验批准后幂等执行
+
+主路径：提交 → 硬校验 → 并行取证 → 缺 DPA → NEEDS_INFO
+      → 补件/version+1 → 重新取证 → 三方会签 → APPROVED
+      → 原子 claim → ERP 创建一次订单 → COMPLETED</code></pre>
+
+      <h2 id="codex开发使用">第二部分：代码开发过程中的使用——用 Codex 开发这个项目</h2>
+      <h3 id="仓库harness">1. 先把仓库变成可工作的 Harness</h3>
+      <pre><code># AGENTS.md（保持简短，作为地图）
+## Architecture
+- `approval-domain` 不依赖 Spring、模型或外部系统。
+- 模型只能生成 ApprovalProposal；最终决定来自规则或授权人。
+- 所有写操作经过 PolicyGate，并绑定 proposalHash 与 idempotencyKey。
+
+## Commands
+- Domain: `./mvnw -pl approval-domain,approval-usecase test`
+- Integration: `./mvnw -pl approval-adapter-persistence verify`
+- Full: `./mvnw verify`
+
+## Workflow
+- 先读规格与相关测试；先失败测试、后最小实现。
+- 完成声明包含实际运行的命令与输出摘要。
+- 需求冲突、权限扩张、破坏性迁移和外部发布必须停下询问。</code></pre>
+      <p>再补齐一条命令启动本地 PostgreSQL/fake model、种子数据、架构测试、日志/Trace 查询和最小 UI/API 场景。OpenAI 的 Harness Engineering 实践强调让仓库知识成为 system of record，并让应用、日志、指标和 UI 对 Codex 可读。</p>
+
+      <h3 id="codex任务graph">2. 开发 Graph 与任务依赖</h3>
+      <div class="state-graph" role="img" aria-label="Codex 开发审批项目的 Graph：确认规格后先实现领域契约和失败测试，再并行开发持久化与只读工具，随后接入 Spring AI、完成端到端测试、审查、安全验证和人工交付。">
+        <div class="state-node is-gate">规格确认</div><span class="state-arrow">→</span><div class="state-node">领域+失败测试</div><span class="state-arrow">→</span><div class="state-node">持久化/工具</div><span class="state-arrow">→</span><div class="state-node">Spring AI</div><span class="state-arrow">→</span><div class="state-node">E2E + Review</div><span class="state-arrow">→</span><div class="state-node is-gate">人工交付</div>
+      </div>
+      <p class="diagram-text">持久化与只读工具在接口冻结且写集不重叠时可以并行；Spring AI 节点必须等待领域契约稳定，避免框架类型渗入核心。</p>
+      <div class="table-wrap"><table><thead><tr><th>任务</th><th>输入</th><th>产出</th><th>验收</th></tr></thead><tbody>
+        <tr><td>T1 领域模型</td><td>业务规则与状态图</td><td>records、端口、转换表</td><td>非法状态和旧批准测试失败</td></tr>
+        <tr><td>T2 Loop/Graph</td><td>T1 契约</td><td>有界 Loop、状态机、checkpoint</td><td>所有停止与恢复路径通过</td></tr>
+        <tr><td>T3 持久化</td><td>幂等/乐观锁语义</td><td>migration、repository、outbox</td><td>并发与崩溃恢复测试</td></tr>
+        <tr><td>T4 工具</td><td>身份与权限矩阵</td><td>只读工具、执行器</td><td>越权、超时、重复执行测试</td></tr>
+        <tr><td>T5 Spring AI</td><td>ModelPort 与 fake 基线</td><td>ChatClient 适配器</td><td>schema、工具、离线评测</td></tr>
+        <tr><td>T6 交付</td><td>全部工件</td><td>E2E、SLO、runbook</td><td>review、全量 verify、人工批准</td></tr>
+      </tbody></table></div>
+
+      <h3 id="codex任务loop">3. 每个节点内部使用 Codex Loop</h3>
+      <pre><code>Goal:
+实现 approval_execution 的原子幂等 claim，消除并发重复订单。
+
+Context:
+读取 AGENTS.md、ExecutionPort、现有迁移和并发测试；先报告当前语义。
+
+Constraints:
+- Java 25；先添加稳定失败的并发测试。
+- 使用数据库唯一键/事务，不使用 JVM 本地锁，不做先查后写。
+- 不修改 HTTP API、审批规则或无关模块。
+
+Done when:
+- 20 个并发请求只产生一个 executionId，其余返回同一结果。
+- 超时恢复先查询既有执行，不能再次创建订单。
+- scoped test、模块 verify、全量 verify 和 review 全部通过。
+
+Stop:
+需要选择数据库方言、删除数据或修改生产权限时停止并请求决定。</code></pre>
+      <p>Codex 的小 Loop 是：Inspect → 预测失败 → Test red → 最小 Edit → Test green → 扩大验证 → Review → 修复 → 用新鲜证据 Stop。连续两轮失败信号不变时，不应继续随机改动，而应报告假设、证据和阻塞。</p>
+
+      <h3 id="审查门禁">4. Review 与人工门禁</h3>
+      <ul>
+        <li>正确性 reviewer：状态迁移、并发、事务、幂等、版本绑定；</li>
+        <li>安全 reviewer：租户隔离、Prompt Injection、工具权限、日志隐私、密钥；</li>
+        <li>测试 reviewer：正常、补件、拒绝、超时、取消、恢复、重复请求和脏数据；</li>
+        <li>人工决定：业务规则阈值、破坏性迁移、权限扩张、生产发布和最终合并。</li>
+      </ul>
+      <p>Codex Subagents 适合并行只读审计、测试运行或独立模块探索；存在共享文件、数据库迁移顺序或接口未冻结时保持串行。子 Agent 继承 sandbox/permission，不能用并行绕过审批。</p>
+
+      <h2 id="线上应用">线上应用、评测、部署与运行手册</h2>
+      <h3 id="测试评测">测试与评测金字塔</h3>
+      <div class="table-wrap"><table><thead><tr><th>层级</th><th>验证内容</th><th>代表用例</th><th>发布门槛</th></tr></thead><tbody>
+        <tr><td>纯 Java 单元</td><td>规则、状态、停止、hash</td><td>旧 proposalHash 不可执行</td><td>全量确定性通过</td></tr>
+        <tr><td>契约/集成</td><td>工具 ACL、schema、DB、幂等</td><td>并发重复执行、租户越权</td><td>零越权、零重复副作用</td></tr>
+        <tr><td>离线 AI eval</td><td>抽取、证据、建议、拒答</td><td>缺 DPA、条款冲突、注入文本</td><td>按风险分层阈值并与基线比较</td></tr>
+        <tr><td>Graph 恢复</td><td>每节点前后崩溃</td><td>人工等待恢复、工具已成功但响应丢失</td><td>无丢状态、无重复动作</td></tr>
+        <tr><td>shadow / E2E</td><td>真实分布、延迟、成本、人工分歧</td><td>不写业务系统的旁路运行</td><td>满足 SLO 才扩大流量</td></tr>
+      </tbody></table></div>
+
+      <h3 id="部署拓扑">部署与安全</h3>
+      <pre><code>Ingress / SSO
+  → approval-api（无模型密钥）
+  → approval-worker（Graph + bounded Loop）
+      → policy-service（确定性规则）
+      → PostgreSQL（case/checkpoint/audit/outbox）
+      → read-tool gateway（预算/制度/合同，租户 ACL）
+      → model gateway（限额、版本、脱敏、熔断）
+  → approval-executor（独立身份，只接受有效批准）
+      → ERP / SRM
+
+隔离原则：模型 Worker 没有 ERP 写凭据；执行器不接收自由文本 Prompt；
+所有跨边界消息使用结构化 schema、proposalHash 和 idempotencyKey。</code></pre>
+      <p>Prompt Injection 防御不能只写在 system prompt：外部文档一律作为不可信数据；工具白名单和参数校验在服务端；模型不能修改权限、策略或工具定义；敏感写操作要求授权并保留 kill switch。</p>
+
+      <h3 id="灰度与slo">灰度、SLO 与告警</h3>
+      <div class="table-wrap"><table><thead><tr><th>阶段</th><th>权限</th><th>观察指标</th><th>退出条件</th></tr></thead><tbody>
+        <tr><td>离线</td><td>fake/脱敏数据</td><td>准确率、证据覆盖、拒答、安全</td><td>回归集与对抗集达标</td></tr>
+        <tr><td>shadow</td><td>生产只读，不展示建议</td><td>延迟、成本、路径、人工结果差异</td><td>无数据泄露和越权</td></tr>
+        <tr><td>辅助决策</td><td>展示提案，全部人工批准</td><td>采用率、override、升级率</td><td>稳定周期内满足阈值</td></tr>
+        <tr><td>低风险自动化</td><td>仅白名单动作</td><td>重复副作用、恢复、投诉</td><td>任何安全事件立即回退</td></tr>
+      </tbody></table></div>
+      <p>示例 SLO：API P95 &lt; 2s（不含人工等待）；Graph checkpoint 成功率 ≥ 99.99%；工具越权成功数 = 0；重复外部订单数 = 0；每个运行必须有 stop_reason、模型/Prompt/工具/策略版本和 traceId。阈值需由企业按风险重新确认。</p>
+
+      <h3 id="运行手册">故障运行手册</h3>
+      <ol>
+        <li><strong>模型异常：</strong>关闭 AI 节点，保留普通工作流；将 case 升级人工，不猜测结果。</li>
+        <li><strong>工具超时：</strong>按错误类型退避；写动作先查幂等结果；超过预算进入死信/人工队列。</li>
+        <li><strong>策略版本错误：</strong>冻结执行器，回滚策略，按 caseVersion 重放受影响提案。</li>
+        <li><strong>Prompt/数据泄露：</strong>撤销凭据、停止日志导出、保全审计、通知安全团队并修复 Harness。</li>
+        <li><strong>Graph 卡住：</strong>检查等待请求、checkpoint 与图版本；禁止手工直接改最终状态，使用受审计恢复命令。</li>
+      </ol>
+
+      <h2 id="失败模式">失败模式与分层定位</h2>
+      <div class="table-wrap"><table><thead><tr><th>症状</th><th>真正层次</th><th>错误修法</th><th>正确修法</th></tr></thead><tbody>
+        <tr><td>模型读不到制度</td><td>Harness</td><td>反复改 Prompt</td><td>修 ACL、索引、工具返回和可观测性</td></tr>
+        <tr><td>不断重复同一查询</td><td>Loop</td><td>提高模型温度</td><td>动作 fingerprint、no-progress 停止</td></tr>
+        <tr><td>补件后旧批准仍可执行</td><td>Graph/领域</td><td>让模型提醒</td><td>caseVersion + proposalHash 强绑定</td></tr>
+        <tr><td>Codex 多次改错</td><td>开发 Harness/Loop</td><td>追加“认真一点”</td><td>补复现、测试、日志、范围和停止条件</td></tr>
+        <tr><td>并行 Agent 冲突</td><td>开发 Graph</td><td>更多并行</td><td>冻结接口、拆写集、显式依赖或串行</td></tr>
+      </tbody></table></div>
+
+      <h2 id="练习与验收">练习与验收</h2>
+      <ol>
+        <li>只实现 <code>approval-domain</code> 和 fake ModelPort，完成正常、缺件、拒绝、超时、取消和旧批准失效测试。</li>
+        <li>让 Codex 按本页任务契约实现幂等执行，保存 red/green 输出与 review 发现。</li>
+        <li>接入 Spring AI 后重跑同一领域测试，证明框架替换没有改变授权与状态语义。</li>
+        <li>执行故障演练：模型不可用、预算 API 超时、checkpoint 后崩溃、ERP 成功但响应丢失、恶意合同提示注入。</li>
+      </ol>
+      <p><strong>最终验收：</strong>能从代码和日志重建任一提案的证据链；任何模型输出都不能直接成为最终批准；每条写路径都有鉴权、proposalHash、幂等与审计；Graph 可从 checkpoint 恢复；Loop 有三类停止；Codex 开发任务用实际验证输出证明完成。</p>
+
+      <h2 id="参考资料">参考资料</h2>
+      <p>资料检索于 <strong>2026-08-07</strong>：</p>
+      <ul>
+        <li><a href="https://openai.com/index/harness-engineering/" target="_blank" rel="noopener noreferrer">OpenAI：Harness engineering</a></li>
+        <li><a href="https://learn.chatgpt.com/docs/customization/overview" target="_blank" rel="noopener noreferrer">OpenAI Codex：Customization</a></li>
+        <li><a href="https://learn.chatgpt.com/docs/agent-configuration/agents-md" target="_blank" rel="noopener noreferrer">OpenAI Codex：AGENTS.md</a></li>
+        <li><a href="https://learn.chatgpt.com/docs/agent-configuration/subagents" target="_blank" rel="noopener noreferrer">OpenAI Codex：Subagents</a></li>
+        <li><a href="https://learn.chatgpt.com/docs/agent-approvals-security" target="_blank" rel="noopener noreferrer">OpenAI Codex：Approvals &amp; security</a></li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/getting-started.html" target="_blank" rel="noopener noreferrer">Spring AI：Getting Started</a></li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/api/chatclient.html" target="_blank" rel="noopener noreferrer">Spring AI：ChatClient</a></li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/api/tools.html" target="_blank" rel="noopener noreferrer">Spring AI：Tool Calling</a></li>
+        <li><a href="https://learn.microsoft.com/en-us/agent-framework/journey/workflows" target="_blank" rel="noopener noreferrer">Microsoft Agent Framework：Workflows</a></li>
+        <li><a href="https://www.nist.gov/itl/ai-risk-management-framework" target="_blank" rel="noopener noreferrer">NIST：AI RMF</a></li>
+      </ul>
+      <p><strong>课程导航：</strong><a href="2026-08-07-Harness从运行时Agent到Codex开发环境.html">Harness</a> · <a href="2026-08-07-Loop从业务Agent循环到Codex开发闭环.html">Loop</a> · <a href="2026-08-07-Graph从审批状态编排到Codex开发流程.html">Graph</a>。</p>
+    </article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/agent/2026-08-07-Harness-Loop-Graph双层整合实战.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="2026-08-07-Graph从审批状态编排到Codex开发流程.html"><small>上一篇</small><span>Graph：从审批状态编排到 Codex 开发流程</span></a>
+        <a class="pager-link next" href="2026-08-07-Harness从运行时Agent到Codex开发环境.html"><small>下一篇</small><span>Harness：从运行时 Agent 到 Codex 开发环境</span></a>
+      </nav>
+    </footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#概念模型">概念模型：两套三层结构</a></li><li class="toc-level-2"><a href="#审批-agent-开发">第一部分：智能审批 Agent 开发</a></li><li class="toc-level-3"><a href="#需求与边界">1. 先定义责任，不先选框架</a></li><li class="toc-level-3"><a href="#项目结构">2. Maven 模块与代码落点</a></li><li class="toc-level-3"><a href="#领域契约">3. 领域状态、提案和批准分离</a></li><li class="toc-level-3"><a href="#数据设计">4. 最小持久化设计</a></li><li class="toc-level-3"><a href="#无框架实现">无框架实现：组合 Harness、Graph 与 Loop</a></li><li class="toc-level-3"><a href="#spring-ai-实现">Spring AI 实现：仅替换模型节点</a></li><li class="toc-level-3"><a href="#api与场景">5. HTTP API 与主场景</a></li><li class="toc-level-2"><a href="#codex开发使用">第二部分：代码开发过程中的使用——用 Codex 开发这个项目</a></li><li class="toc-level-3"><a href="#仓库harness">1. 先把仓库变成可工作的 Harness</a></li><li class="toc-level-3"><a href="#codex任务graph">2. 开发 Graph 与任务依赖</a></li><li class="toc-level-3"><a href="#codex任务loop">3. 每个节点内部使用 Codex Loop</a></li><li class="toc-level-3"><a href="#审查门禁">4. Review 与人工门禁</a></li><li class="toc-level-2"><a href="#线上应用">线上应用、评测、部署与运行手册</a></li><li class="toc-level-3"><a href="#测试评测">测试与评测金字塔</a></li><li class="toc-level-3"><a href="#部署拓扑">部署与安全</a></li><li class="toc-level-3"><a href="#灰度与slo">灰度、SLO 与告警</a></li><li class="toc-level-3"><a href="#运行手册">故障运行手册</a></li><li class="toc-level-2"><a href="#失败模式">失败模式与分层定位</a></li><li class="toc-level-2"><a href="#练习与验收">练习与验收</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+<button class="sidebar-scrim" type="button" aria-label="关闭文档列表"></button>
+</body>
+</html>

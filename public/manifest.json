@@ -1,6 +1,6 @@
 {
   "generatedAt": "2026-08-07T00:00:00.000Z",
-  "documentCount": 21,
+  "documentCount": 25,
   "documents": [
     {
       "output": "notes/agent/2026-07-27-01-Agent基础概念与边界.html",
@@ -80,6 +80,34 @@
       "sections": 23
     },
     {
+      "output": "notes/agent/2026-08-07-Graph从审批状态编排到Codex开发流程.html",
+      "title": "Graph：从审批状态编排到 Codex 开发流程",
+      "category": "Agent 开发",
+      "date": "2026-08-07",
+      "sections": 13
+    },
+    {
+      "output": "notes/agent/2026-08-07-Harness-Loop-Graph双层整合实战.html",
+      "title": "Harness + Loop + Graph 双层整合实战",
+      "category": "Agent 开发",
+      "date": "2026-08-07",
+      "sections": 23
+    },
+    {
+      "output": "notes/agent/2026-08-07-Harness从运行时Agent到Codex开发环境.html",
+      "title": "Harness：从运行时 Agent 到 Codex 开发环境",
+      "category": "Agent 开发",
+      "date": "2026-08-07",
+      "sections": 13
+    },
+    {
+      "output": "notes/agent/2026-08-07-Loop从业务Agent循环到Codex开发闭环.html",
+      "title": "Loop：从业务 Agent 循环到 Codex 开发闭环",
+      "category": "Agent 开发",
+      "date": "2026-08-07",
+      "sections": 13
+    },
+    {
       "output": "notes/codex/2026-07-24-AI开发工作流选型与小团队沉淀指南.html",
       "title": "AI 开发工作流选型与小团队沉淀指南",
       "category": "Codex 与 AI 工程",
@@ -140,7 +168,7 @@
       "title": "Harness、Loop、Graph 与 Codex + Superpowers 开发模式",
       "category": "Codex 与 AI 工程",
       "date": "2026-08-07",
-      "sections": 25
+      "sections": 26
     },
     {
       "output": "notes/project/2026-07-29-GitHub-Pages部署与项目结构.html",

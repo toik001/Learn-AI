@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="系统解释 Agent Loop 的观察、决策、行动、验证与停止条件，并展示 Java 25、Spring AI 和 Codex 开发闭环。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="Agent 开发">
+  <meta name="study-date" content="2026-08-07">
+  <title>Loop：从业务 Agent 循环到 Codex 开发闭环｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar"><a class="brand" href="../../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a><div class="topbar-actions"><button class="icon-button mobile-nav-toggle" type="button">文档</button><button class="icon-button theme-toggle" type="button">主题</button></div></header>
+<div class="reader-layout">
+  <aside class="doc-sidebar"><div class="sidebar-header">
+      <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <div class="sidebar-category-summary">
+      <span class="eyebrow">当前分类</span>
+      <a class="sidebar-category-link" href="../../../index.html#category-agent-开发-fm6pdx">
+        <strong>Agent 开发</strong>
+        <small>15 篇文档</small>
+      </a>
+      <a class="sidebar-featured-link" href="2026-07-27-Agent开发学习主目录.html">分类主目录<span>Agent 开发学习主目录</span></a>
+    </div><nav class="doc-nav" aria-label="当前分类文档">
+      <a class="doc-nav-item" href="2026-07-27-01-Agent基础概念与边界.html"><span>Agent 基础概念与边界</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-02-模型API结构化输出与Tool-Calling.html"><span>模型 API、结构化输出与 Tool Calling</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-03-Agent状态上下文与记忆.html"><span>Agent 状态、上下文与记忆</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-04-Agent知识检索与RAG.html"><span>Agent 知识检索与 RAG</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-05-Agent规划反思与任务分解.html"><span>Agent 规划、反思与任务分解</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-06-多Agent协作与编排.html"><span>多 Agent 协作与编排</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-07-Agent评测安全权限与成本控制.html"><span>Agent 评测、安全、权限与成本控制</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-08-Java-Agent生产部署可观测性与故障恢复.html"><span>Java Agent 生产部署、可观测性与故障恢复</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-Agent开发学习主目录.html"><span>Agent 开发学习主目录</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-27-Agentic-Search与RAG对比.html"><span>Agentic Search 与 RAG：边界、对比与 Java 实现</span><small>2026-07-27</small></a><a class="doc-nav-item" href="2026-07-28-企业智能审批与公司主子Agent落地实战.html"><span>企业智能审批与公司主子 Agent 落地实战</span><small>2026-07-28</small></a><a class="doc-nav-item" href="2026-08-07-Graph从审批状态编排到Codex开发流程.html"><span>Graph：从审批状态编排到 Codex 开发流程</span><small>2026-08-07</small></a><a class="doc-nav-item" href="2026-08-07-Harness-Loop-Graph双层整合实战.html"><span>Harness + Loop + Graph 双层整合实战</span><small>2026-08-07</small></a><a class="doc-nav-item" href="2026-08-07-Harness从运行时Agent到Codex开发环境.html"><span>Harness：从运行时 Agent 到 Codex 开发环境</span><small>2026-08-07</small></a><a class="doc-nav-item is-active" href="2026-08-07-Loop从业务Agent循环到Codex开发闭环.html" aria-current="page"><span>Loop：从业务 Agent 循环到 Codex 开发闭环</span><small>2026-08-07</small></a>
+    </nav></aside>
+  <main class="article-column">
+    <div class="article-meta"><a href="../../../index.html">知识库首页</a><span>·</span><span>Agent 开发</span><span>·</span><time datetime="2026-08-07">2026-08-07</time></div>
+    <article class="markdown-body">
+      <h1>Loop：从业务 Agent 循环到 Codex 开发闭环</h1>
+      <blockquote><p><strong>一句话：</strong>Loop 是 Agent 反复“观察 → 决策 → 行动 → 验证”的运行机制；生产级 Loop 的核心不是能转，而是有可靠反馈、有限预算、幂等动作和明确停止。</p><p><strong>双场景：</strong>审批 Agent 运行时 Loop 使用 Java 25 无框架与 Spring AI 两条实现；代码开发部分只说明 Codex 的检查—编辑—测试—审查闭环。</p></blockquote>
+      <nav aria-label="本页快速目录"><strong>快速阅读：</strong> <a href="#核心结论">核心结论</a> · <a href="#概念模型">概念模型</a> · <a href="#审批-agent-开发">审批 Agent</a> · <a href="#codex开发使用">Codex 开发</a> · <a href="#线上应用">线上应用</a> · <a href="#参考资料">资料</a></nav>
+
+      <h2 id="核心结论">核心结论</h2>
+      <ol>
+        <li><strong>Loop 解决未知步骤，不替代确定流程。</strong>当下一步要依据最新观察动态选择时使用 Loop；固定审批顺序更适合普通代码或 Graph。</li>
+        <li><strong>每轮必须改变知识或环境。</strong>如果连续两轮既没有新证据、状态变化也没有错误收敛，继续调用模型只是成本放大。</li>
+        <li><strong>停止条件是业务契约。</strong>至少同时设计成功停止、预算停止和升级停止，且成功必须由外部证据证明。</li>
+        <li><strong>重试与重复执行不同。</strong>只对可恢复错误重试；任何写动作需要幂等键、结果查询或补偿，不能“超时就再点一次”。</li>
+        <li><strong>Codex 的高质量开发也来自嵌套 Loop。</strong>外层是任务闭环，内层是 TDD、review—fix 和运行行为验证闭环。</li>
+      </ol>
+
+      <h2 id="概念模型">概念模型</h2>
+      <div class="agent-call-flow" role="img" aria-label="Agent Loop 八步：加载目标与状态，观察环境，决定下一动作，校验动作，执行工具，记录结果，验证成功条件，继续或停止。">
+        <div class="agent-step">1. 目标与状态</div><div class="agent-step">2. Observe</div><div class="agent-step">3. Decide</div><div class="agent-step">4. Validate</div><div class="agent-step">5. Act</div><div class="agent-step">6. Record</div><div class="agent-step">7. Verify</div><div class="agent-step">8. Stop / Continue</div>
+        <div class="guardrail-band">每轮都检查：授权 · 剩余轮数 · 时间 · Token · 成本 · 重复动作 · 人工升级</div>
+      </div>
+      <p class="diagram-text">Loop 不应把隐藏思维过程存入业务库；持久化的是结构化状态、动作、Observation、预算和停止原因。</p>
+
+      <div class="table-wrap"><table><thead><tr><th>停止类型</th><th>判定者</th><th>审批 Agent 示例</th><th>Codex 示例</th></tr></thead><tbody>
+        <tr><td>SUCCESS</td><td>可执行验收器</td><td>证据齐全且提案 schema/政策校验通过</td><td>目标测试与真实行为验证通过</td></tr>
+        <tr><td>BUDGET_EXHAUSTED</td><td>Loop 控制器</td><td>轮数、Token、时间或成本达到上限</td><td>反复修改无收敛，达到尝试上限</td></tr>
+        <tr><td>ESCALATE</td><td>风险/异常策略</td><td>高金额、制度冲突、权限不足、连续失败</td><td>需求冲突、破坏性动作、环境不可用</td></tr>
+        <tr><td>REJECTED</td><td>确定性规则</td><td>硬性合规规则不允许</td><td>Hook、CI 或安全策略拒绝变更</td></tr>
+        <tr><td>CANCELLED</td><td>用户或上游系统</td><td>申请撤回或 case 版本变化</td><td>用户中断、任务被新指令替换</td></tr>
+      </tbody></table></div>
+
+      <h3 id="loop选型">何时使用与何时不用</h3>
+      <ul>
+        <li><strong>适合：</strong>证据需要逐步发现、工具结果会改变下一步、错误可通过反馈修正、完成条件可验证。</li>
+        <li><strong>不适合：</strong>固定表单校验、确定性规则计算、一次数据库事务、严格顺序且无动态决策的工作流。</li>
+        <li><strong>边界：</strong>Loop 可以运行在 Graph 节点内，但不能自行绕过 Graph 的人工门禁或业务状态机。</li>
+      </ul>
+
+      <h2 id="审批-agent-开发">第一部分：智能审批 Agent 开发</h2>
+      <div class="dual-lane-diagram" role="img" aria-label="审批 Loop 与 Codex Loop 对照：审批循环从证据缺口到工具查询再到提案验证；Codex 循环从检查仓库到修改测试再到审查。">
+        <div class="diagram-lane"><strong>运行时审批 Loop</strong><div class="agent-step">读 case 与证据缺口</div><div class="agent-step">选择只读工具</div><div class="agent-step">校验证据与提案</div></div>
+        <div class="diagram-lane"><strong>编码时 Codex Loop</strong><div class="agent-step">检查代码与测试</div><div class="agent-step">最小修改</div><div class="agent-step">测试、审查与修复</div></div>
+      </div>
+      <p class="diagram-text">两种 Loop 的反馈源不同：审批来自业务系统和规则，编码来自仓库、测试、应用行为和 review。</p>
+
+      <h3 id="开发步骤">从零开发步骤</h3>
+      <ol>
+        <li>定义不可变输入和可变 <code>LoopState</code>，包括 caseVersion、证据、已执行动作、剩余预算与停止原因。</li>
+        <li>将模型输出限制为 <code>NextAction</code>，先过 schema、权限、重复动作和风险校验，再执行工具。</li>
+        <li>为错误分类：瞬时错误可退避重试；永久错误立即失败；权限/高风险错误升级人工。</li>
+        <li>每轮追加结构化事件；caseVersion 变化时取消旧循环，禁止把旧批准应用到新材料。</li>
+        <li>先用脚本化 fake 决策器覆盖所有停止路径，再接入模型。</li>
+      </ol>
+
+      <h3 id="无框架实现">无框架实现：Java 25 有界 Loop</h3>
+      <pre><code>public sealed interface NextAction {
+    record QueryEvidence(String tool, java.util.Map&lt;String, Object&gt; args)
+            implements NextAction {}
+    record Propose(ApprovalProposal proposal) implements NextAction {}
+    record Escalate(String reasonCode) implements NextAction {}
+}
+
+public record LoopBudget(int maxRounds, java.time.Duration timeout, long maxTokens) {}
+
+public record LoopState(
+        java.util.UUID caseId,
+        long caseVersion,
+        int round,
+        java.util.List&lt;Evidence&gt; evidence,
+        java.util.Set&lt;String&gt; actionFingerprints,
+        StopReason stopReason) {
+    boolean stopped() { return stopReason != null; }
+}</code></pre>
+      <pre><code>public final class ApprovalLoopRunner {
+    public LoopState run(LoopState initial, LoopBudget budget) {
+        var state = initial;
+        var deadline = clock.instant().plus(budget.timeout());
+        while (!state.stopped()) {
+            if (state.round() &gt;= budget.maxRounds() || clock.instant().isAfter(deadline))
+                return stop(state, StopReason.BUDGET_EXHAUSTED);
+
+            var action = decision.next(project(state));
+            var gate = policy.validate(action, state);
+            if (gate.requiresHuman()) return stop(state, StopReason.ESCALATE);
+            if (!gate.allowed()) return stop(state, StopReason.REJECTED);
+
+            var fingerprint = fingerprint(action);
+            if (state.actionFingerprints().contains(fingerprint))
+                return stop(state, StopReason.NO_PROGRESS);
+
+            var observation = tools.executeIdempotently(action, fingerprint);
+            state = reducer.apply(state, action, observation);
+            state = verifier.success(state)
+                    ? stop(state, StopReason.SUCCESS)
+                    : incrementRound(state);
+        }
+        return state;
+    }
+}</code></pre>
+      <p>真实实现还要在每次工具调用前重新读取取消状态和 caseVersion；写工具应在业务数据库中原子 claim 幂等键，而不是先查后写。</p>
+
+      <h3 id="spring-ai-实现">Spring AI 实现：保留应用层控制权</h3>
+      <p>Spring AI 2.0.0 的 <code>ToolCallingAdvisor</code> 可以管理模型—工具循环；官方也提供关闭自动注册后由用户控制执行的方式。审批系统需要读取中间动作、应用政策门禁并记录每轮事件，因此更适合显式控制。</p>
+      <pre><code>ChatClientResponse response = chatClient.prompt()
+        .system(APPROVAL_LOOP_POLICY)
+        .user(stateProjection.toPrompt())
+        .advisors(AdvisorParams.toolCallingAdvisorAutoRegister(false))
+        .call()
+        .chatClientResponse();
+
+ChatResponse modelResponse = response.chatResponse();
+while (modelResponse.hasToolCalls() &amp;&amp; budget.hasRemaining()) {
+    var requested = toolCallingManager.resolveToolDefinitions(modelResponse);
+    policyGate.checkAll(principal, state.caseVersion(), requested);
+    var execution = toolCallingManager.executeToolCalls(prompt, modelResponse);
+    audit.append(toIterationEvent(state, requested, execution));
+    prompt = execution.conversationHistory();
+    modelResponse = chatModel.call(prompt);
+}
+return proposalValidator.validate(modelResponse, state);</code></pre>
+      <p>代码展示控制点而非可直接复制的完整应用。Spring AI 工具 API 当前区分框架控制、Advisor 控制和用户控制；项目应按风险和可观测需求选用，并用锁定版本的官方 API 编译测试。</p>
+
+      <h2 id="codex开发使用">第二部分：代码开发过程中的使用</h2>
+      <p>Codex 接到目标后，本身会在工具反馈中迭代。但开发者仍需设计外层任务契约和内层验证 Loop，避免“不断改直到看起来差不多”。</p>
+      <div class="table-wrap"><table><thead><tr><th>Loop</th><th>输入</th><th>反馈</th><th>停止</th></tr></thead><tbody>
+        <tr><td>需求收敛</td><td>Goal、Context、Constraints</td><td>仓库现实、用户回答</td><td>范围与 Done when 无歧义</td></tr>
+        <tr><td>TDD</td><td>一个行为</td><td>失败测试与通过测试</td><td>红—绿—重构完成</td></tr>
+        <tr><td>调试</td><td>可复现症状</td><td>最小实验、日志、Trace</td><td>根因被证据支持且回归通过</td></tr>
+        <tr><td>Review—fix</td><td>明确 diff 范围</td><td>优先级发现与复审</td><td>无阻塞发现或升级人工</td></tr>
+        <tr><td>交付</td><td>完成定义</td><td>全量验证、CI、运行行为</td><td>证据齐全并由人决定合并</td></tr>
+      </tbody></table></div>
+
+      <h3 id="codex任务契约">可直接使用的 Codex Loop 任务契约</h3>
+      <pre><code>Goal:
+修复并发提交造成的审批重复执行，不改变现有 HTTP API。
+
+Context:
+- 先读取 AGENTS.md、approval-app 的幂等实现和现有并发测试。
+- 真实完成证据来自测试与数据库唯一约束，不来自代码推断。
+
+Constraints:
+- 先添加能稳定复现的失败测试。
+- 不修改无关模块；不删除现有迁移；不放宽权限。
+- 每次写操作必须携带 idempotencyKey。
+
+Done when:
+- 新测试先失败后通过；相关模块测试和全量 verify 通过。
+- review 无阻塞发现；说明根因、修改、证据和剩余风险。
+
+Stop / escalate:
+- 连续两次修改没有改变失败信号时停止并报告假设。
+- 需要生产凭据、破坏性迁移或业务规则选择时请求人工。</code></pre>
+      <pre><code># 每个实现任务的小循环
+1. Inspect：读取最小相关代码、测试和规则。
+2. Predict：写下预期失败信号。
+3. Test red：运行最小测试并确认失败原因正确。
+4. Edit：做最小修改。
+5. Test green：重跑最小测试，再扩大验证范围。
+6. Review：检查 diff、权限、边界和未覆盖路径。
+7. Stop：用新鲜输出证明 Done when，或明确升级。</code></pre>
+      <p>长任务应在里程碑后压缩上下文并保留版本化计划、决策和测试命令；不要依赖模型“记得之前发生过什么”。Codex 的 <code>/review</code> 可按基线分支、未提交修改或指定 commit 运行独立审查。</p>
+
+      <h2 id="线上应用">线上应用、指标与故障恢复</h2>
+      <div class="table-wrap"><table><thead><tr><th>指标</th><th>意义</th><th>建议告警</th><th>处置</th></tr></thead><tbody>
+        <tr><td>round_count</td><td>循环长度</td><td>P95 突增或触顶</td><td>检查反馈质量、工具错误与任务拆分</td></tr>
+        <tr><td>no_progress_rate</td><td>重复动作/无新证据</td><td>连续两轮无变化</td><td>停止并升级，不盲目重试</td></tr>
+        <tr><td>stop_reason</td><td>为何结束</td><td>预算/升级比例异常</td><td>按原因修复 Harness 或策略</td></tr>
+        <tr><td>tool_retry_count</td><td>外部依赖稳定性</td><td>同工具重试激增</td><td>熔断、退避、查询已有结果</td></tr>
+        <tr><td>human_override_rate</td><td>提案与授权人分歧</td><td>特定政策/模型版本突变</td><td>切回旧版本并重放评测集</td></tr>
+      </tbody></table></div>
+      <p>恢复时读取持久化状态与最新 caseVersion，重新计算剩余预算并查询幂等动作结果；不要从自然语言聊天尾部猜测“上次执行到哪里”。</p>
+
+      <h2 id="失败模式">失败模式与边界</h2>
+      <ul>
+        <li><strong>无限 Loop：</strong>没有轮数、时间或预算上限。修复：控制器外部硬限制。</li>
+        <li><strong>伪完成：</strong>模型说“完成”就停止。修复：独立 verifier 检查规则、测试或真实系统状态。</li>
+        <li><strong>所有错误都重试：</strong>权限拒绝和 schema 不兼容也反复调用。修复：瞬时、永久、高风险错误分类。</li>
+        <li><strong>重复副作用：</strong>超时后再次创建订单。修复：幂等 claim、结果查询、补偿和审计。</li>
+        <li><strong>Codex 大循环：</strong>一次提示要求完成几十项共享修改。修复：按可验收任务拆分，用 Graph 管依赖、用 Loop 做节点内部收敛。</li>
+      </ul>
+
+      <h2 id="练习与验收">练习与验收</h2>
+      <ol>
+        <li>给 <code>ApprovalLoopRunner</code> 写五个测试，分别触发 SUCCESS、BUDGET_EXHAUSTED、ESCALATE、NO_PROGRESS 和 CANCELLED。</li>
+        <li>把一个模糊 Codex 请求重写为 Goal/Context/Constraints/Done when/Stop，并为每个 Done when 指定命令或行为证据。</li>
+        <li>模拟工具超时但实际已成功，验证重试前先通过幂等键查询结果。</li>
+      </ol>
+      <p><strong>验收标准：</strong>能解释为什么停止条件属于业务契约；能把 Loop 状态与聊天历史分开；能说清 Spring AI 自动工具循环和用户控制循环的选型；能用新鲜测试输出而不是模型自述结束 Codex 任务。</p>
+
+      <h2 id="参考资料">参考资料</h2>
+      <p>资料检索于 <strong>2026-08-07</strong>：</p>
+      <ul>
+        <li><a href="https://arxiv.org/abs/2210.03629" target="_blank" rel="noopener noreferrer">ReAct 原论文</a></li>
+        <li><a href="https://openai.com/business/guides-and-resources/a-practical-guide-to-building-ai-agents/" target="_blank" rel="noopener noreferrer">OpenAI：A practical guide to building agents</a></li>
+        <li><a href="https://openai.com/index/harness-engineering/" target="_blank" rel="noopener noreferrer">OpenAI：Harness engineering</a></li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/api/tools.html" target="_blank" rel="noopener noreferrer">Spring AI：Tool Calling</a></li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/api/chatclient.html" target="_blank" rel="noopener noreferrer">Spring AI：ChatClient</a></li>
+        <li><a href="https://docs.spring.io/spring-ai/reference/observability/index.html" target="_blank" rel="noopener noreferrer">Spring AI：Observability</a></li>
+        <li><a href="https://learn.chatgpt.com/docs/code-review" target="_blank" rel="noopener noreferrer">OpenAI Codex：Code review</a></li>
+      </ul>
+      <p><strong>课程导航：</strong><a href="2026-08-07-Harness从运行时Agent到Codex开发环境.html">Harness</a> · <a href="2026-08-07-Graph从审批状态编排到Codex开发流程.html">Graph</a> · <a href="2026-08-07-Harness-Loop-Graph双层整合实战.html">双层整合实战</a>。</p>
+    </article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/agent/2026-08-07-Loop从业务Agent循环到Codex开发闭环.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="2026-08-07-Harness从运行时Agent到Codex开发环境.html"><small>上一篇</small><span>Harness：从运行时 Agent 到 Codex 开发环境</span></a>
+        <span class="pager-spacer"></span>
+      </nav>
+    </footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#概念模型">概念模型</a></li><li class="toc-level-3"><a href="#loop选型">何时使用与何时不用</a></li><li class="toc-level-2"><a href="#审批-agent-开发">第一部分：智能审批 Agent 开发</a></li><li class="toc-level-3"><a href="#开发步骤">从零开发步骤</a></li><li class="toc-level-3"><a href="#无框架实现">无框架实现：Java 25 有界 Loop</a></li><li class="toc-level-3"><a href="#spring-ai-实现">Spring AI 实现：保留应用层控制权</a></li><li class="toc-level-2"><a href="#codex开发使用">第二部分：代码开发过程中的使用</a></li><li class="toc-level-3"><a href="#codex任务契约">可直接使用的 Codex Loop 任务契约</a></li><li class="toc-level-2"><a href="#线上应用">线上应用、指标与故障恢复</a></li><li class="toc-level-2"><a href="#失败模式">失败模式与边界</a></li><li class="toc-level-2"><a href="#练习与验收">练习与验收</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+<button class="sidebar-scrim" type="button" aria-label="关闭文档列表"></button>
+</body>
+</html>
