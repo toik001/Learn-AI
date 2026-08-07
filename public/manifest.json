@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-29T00:00:00.000Z",
-  "documentCount": 20,
+  "generatedAt": "2026-08-07T00:00:00.000Z",
+  "documentCount": 21,
   "documents": [
     {
       "output": "notes/agent/2026-07-27-01-Agent基础概念与边界.html",
@@ -134,6 +134,13 @@
       "category": "Codex 与 AI 工程",
       "date": "2026-07-28",
       "sections": 24
+    },
+    {
+      "output": "notes/codex/2026-08-07-Harness-Loop-Graph与Codex-Superpowers开发模式.html",
+      "title": "Harness、Loop、Graph 与 Codex + Superpowers 开发模式",
+      "category": "Codex 与 AI 工程",
+      "date": "2026-08-07",
+      "sections": 25
     },
     {
       "output": "notes/project/2026-07-29-GitHub-Pages部署与项目结构.html",

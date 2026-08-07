@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="梳理 Harness、Loop、Graph、Spec-driven、Multi-agent 与 Agent Factory 等 AI 开发模式，说明它们在 Codex 与 Superpowers 6.2.0 中的实现及子智能体启用边界。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="Codex 与 AI 工程">
+  <meta name="study-date" content="2026-08-07">
+  <title>Harness、Loop、Graph 与 Codex + Superpowers 开发模式｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <div class="sidebar-category-summary">
+      <span class="eyebrow">当前分类</span>
+      <a class="sidebar-category-link" href="../../../index.html#category-codex-与-ai-工程-1ubbp3w">
+        <strong>Codex 与 AI 工程</strong>
+        <small>9 篇文档</small>
+      </a>
+    </div>
+    <label class="sidebar-search"><span class="sr-only">筛选文档</span><input type="search" placeholder="筛选当前分类…" data-sidebar-search></label>
+    <nav class="doc-nav" aria-label="当前分类文档">
+      <a class="doc-nav-item" href="2026-07-24-AI开发工作流选型与小团队沉淀指南.html"><span>AI 开发工作流选型与小团队沉淀指南</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC详细介绍.html"><span>AIDLC 详细介绍：从 AI 辅助编码到可审计的软件交付生命周期</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC与Superpowers差异分析.html"><span>AIDLC 与 Superpowers 差异分析：生命周期治理与工程 Inner Loop</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-Codex全栈开发最佳实践.html"><span>Codex 全栈开发最佳实践：Vibe Coding、Harness 与 Loop</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-OpenSpec-Superpowers-CI-Codex-CLI实战教程.html"><span>OpenSpec + Superpowers + CI：Codex CLI 全栈实战教程</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-Superpowers大型Java微服务Monorepo使用指南.html"><span>Superpowers 大型 Java 微服务 Monorepo 使用指南</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-Superpowers详细介绍.html"><span>Superpowers 详细介绍：Codex 的技能化软件开发方法</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-28-Codex官方原生项目开发最佳路径.html"><span>Codex 官方原生项目开发最佳路径</span><small>2026-07-28</small></a><a class="doc-nav-item is-active" href="2026-08-07-Harness-Loop-Graph与Codex-Superpowers开发模式.html" aria-current="page"><span>Harness、Loop、Graph 与 Codex + Superpowers 开发模式</span><small>2026-08-07</small></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta">
+      <a href="../../../index.html">知识库首页</a><span>·</span><span>Codex 与 AI 工程</span><span>·</span>
+      <time datetime="2026-08-07">2026-08-07</time>
+    </div>
+    <article class="markdown-body">
+      <h1 id="harness-loop-graph与codex-superpowers开发模式"><a class="heading-anchor" href="#harness-loop-graph与codex-superpowers开发模式" aria-label="链接到本节">#</a>Harness、Loop、Graph 与 Codex + Superpowers 开发模式</h1>
+      <blockquote>
+        <p><strong>本文解决的问题：</strong>Harness、Loop、Graph 到底是不是互斥的开发流派？过去常见和 2026 年升温的 AI 开发模式是什么？在 Codex 中怎样落地？使用 Codex + Superpowers 开发项目时，哪些技能真的会创建子智能体？</p>
+        <p><strong>核验范围：</strong>OpenAI、Anthropic、LangGraph、Microsoft Agent Framework、GitHub Spec Kit、ReAct 原论文、Superpowers 官方仓库，以及本机已安装的 <strong>Superpowers 6.2.0</strong> 技能正文。在线资料检索于 2026-08-07。</p>
+      </blockquote>
+
+      <nav aria-label="本页快速目录">
+        <strong>快速阅读：</strong>
+        <a href="#核心结论">核心结论</a> ·
+        <a href="#三层模型">三层模型</a> ·
+        <a href="#模式演进">模式演进</a> ·
+        <a href="#codex实现">Codex 实现</a> ·
+        <a href="#superpowers组合">Superpowers 组合</a> ·
+        <a href="#子智能体审计">子智能体审计</a> ·
+        <a href="#java项目建议">Java 项目建议</a> ·
+        <a href="#参考资料">参考资料</a>
+      </nav>
+
+      <h2 id="核心结论"><a class="heading-anchor" href="#核心结论" aria-label="链接到本节">#</a>核心结论</h2>
+      <ol>
+        <li><strong>Harness、Loop、Graph 不在同一抽象层，不能三选一。</strong>Harness 是让智能体能可靠工作的环境、上下文、工具和护栏；Loop 是一次任务内部反复观察、行动和验证的运行机制；Graph 是多个步骤、角色或分支之间的显式编排结构。成熟系统通常三者叠加。</li>
+        <li><strong>“Agent 就是一个 Loop”仍然成立，但只写循环不等于可生产。</strong>ReAct 在 2022 年把推理与行动交错起来；生产系统还必须补上终止条件、权限、状态、重试、评测、可观测性和人工升级点，这些大多属于 Harness。</li>
+        <li><strong>Graph 的价值是可控，不是让系统看起来复杂。</strong>固定步骤、合规门禁、人工审批、可恢复长流程适合 Graph；开放式编码任务更适合模型驱动 Loop。能用普通函数或单智能体完成时，不应为了“多 Agent”增加图编排。</li>
+        <li><strong>2025—2026 的主线从“提示模型写代码”转向“设计智能体工作的系统”。</strong>Spec-driven 把意图变成可执行工件，Ralph 把验收反馈写进长循环，Harness Engineering 把仓库、工具和质量信号做成智能体可读基础设施，Symphony 一类控制平面再把任务看板变成持续运行的 Agent Factory。</li>
+        <li><strong>按本文的三层分析模型，Codex + Superpowers 是一个组合架构：</strong>Codex 提供执行 Harness 和原生 Agent Loop；Superpowers 的技能前置条件可映射为带门禁的开发 Graph；TDD、验证和审查形成嵌套 Loop；只有特定技能或明确指令才启用子智能体。这里的“Graph”是本文的结构化解释，不是 Superpowers 官方宣称的执行引擎。</li>
+        <li><strong>Superpowers 6.2.0 的普通项目主路径中，直接创建子智能体的核心技能有三个：</strong><code>subagent-driven-development</code>、<code>dispatching-parallel-agents</code>、<code>requesting-code-review</code>。<code>writing-skills</code> 也会为压力测试创建子智能体，但它是编写 Skill 的元工作流，不是普通功能开发阶段。</li>
+        <li><strong>Brainstorming、Writing Plans、TDD、Systematic Debugging、Verification、Worktree 和 Finishing 本身不会创建子智能体。</strong>尤其是当前版本的规格与计划审查已经改为主智能体的 inline self-review；不要把“技能切换”“工具调用”或“自检”误算成子智能体。</li>
+      </ol>
+
+      <h2 id="三层模型"><a class="heading-anchor" href="#三层模型" aria-label="链接到本节">#</a>先把三个词放回正确层级</h2>
+      <div class="agent-call-flow" role="img" aria-label="三层组合模型：最外层 Harness 提供上下文、工具、权限、测试、可观测性和恢复；中间 Graph 编排规格、计划、实现、审查和交付节点；每个节点内部由 Loop 反复观察、行动、获取反馈并决定继续或停止。">
+        <div class="agent-step">Harness<br>环境 · 上下文 · 工具 · 护栏</div>
+        <div class="agent-step">Graph<br>步骤 · 分支 · 角色 · 门禁</div>
+        <div class="agent-step">Loop<br>观察 · 行动 · 反馈 · 终止</div>
+        <div class="guardrail-band">组合关系：Harness 包住整个系统；Graph 组织多个工作节点；每个 Agent/节点内部仍可能运行自己的 Loop。</div>
+      </div>
+
+      <div class="table-wrap"><table>
+        <thead><tr><th>概念</th><th>主要回答</th><th>最小组成</th><th>优势</th><th>主要风险</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Harness</strong></td><td>Agent 在什么环境里工作，怎样知道规则并取得真实反馈？</td><td>指令、仓库知识、工具、权限、沙箱、测试、日志、状态、恢复</td><td>让能力可重复、可验证、可治理</td><td>文档腐化、工具不可读、护栏只有文字没有机械执行</td></tr>
+          <tr><td><strong>Loop</strong></td><td>Agent 下一步做什么，何时继续或停止？</td><td>目标、观察、决策、动作、反馈、终止条件</td><td>适应未知步骤，能根据环境修正</td><td>无限循环、错误累积、成本失控、伪完成</td></tr>
+          <tr><td><strong>Graph</strong></td><td>多个步骤和角色怎样连接、分支、并发与恢复？</td><td>State、Node、Edge、Router、Checkpoint</td><td>路径可视、状态可持久化、容易加入 HITL 和合规门禁</td><td>过度编排、共享状态冲突、图定义与实际行为漂移</td></tr>
+        </tbody>
+      </table></div>
+      <p>LangGraph 的官方定义很直观：<code>State</code> 保存当前快照，<code>Node</code> 做工作，<code>Edge</code> 决定下一步；普通边、条件边和并行 super-step 共同组成可循环的工作流。Microsoft Agent Framework 也把 <em>Agents / Harness / Workflows</em> 分成三类能力，并明确建议：开放任务用 Agent，需要确定顺序和多组件协调时用 Workflow。</p>
+
+      <h3 id="harness不只是框架">Harness 不只是“选了哪个 Agent 框架”</h3>
+      <p>在测试领域，test harness 是驱动被测对象、提供夹具并收集结果的系统。Agent harness 延续同一思想：模型只是执行核心，Harness 负责把文件、工具、权限、状态、知识和质量信号变成模型可理解且可操作的接口。OpenAI 2026 年的 Harness Engineering 实践进一步把重点放在：</p>
+      <ul>
+        <li>仓库知识是版本化的 system of record，短 <code>AGENTS.md</code> 只做地图；</li>
+        <li>应用、DOM、截图、日志、指标和 Trace 对 Codex 可见；</li>
+        <li>架构边界、命名和质量要求由 lint、结构测试、CI 机械执行；</li>
+        <li>失败不靠“再试一次”，而是把缺失能力补回工具、文档或护栏；</li>
+        <li>人从逐行“in the loop”上移到设计和改进循环的“on the loop”。</li>
+      </ul>
+
+      <h3 id="loop需要三种停止">Loop 至少要有三种停止</h3>
+      <ul>
+        <li><strong>成功停止：</strong>明确验收条件成立，并有新鲜测试或真实行为证据。</li>
+        <li><strong>预算停止：</strong>达到最大轮数、时间、Token、成本或重试上限。</li>
+        <li><strong>升级停止：</strong>权限不足、需求冲突、高风险判断或连续失败时交还人类。</li>
+      </ul>
+      <p>Ralph Loop 的重点也不应被简化成“死循环调用 CLI”。其作者强调单进程、单仓库、每轮一个任务，通过观察失败域来改进循环；OpenAI 的 Harness Engineering 则把 PR 自审、Agent review、反馈修复和再验证视作一个持续到审查通过的循环。</p>
+
+      <h3 id="graph分为确定与动态">Graph 分为确定图与模型动态拆图</h3>
+      <ul>
+        <li><strong>确定性 Workflow Graph：</strong>节点和边由代码预先定义，适合发布、审批、迁移和有严格审计要求的流程。</li>
+        <li><strong>Orchestrator–Workers：</strong>中央模型根据当前输入动态拆任务，再聚合 Worker 结果；子任务数量和内容事先未知。</li>
+        <li><strong>Manager / Handoff：</strong>Manager 保持控制并把专家当工具，或把对话控制权移交给另一 Agent。</li>
+        <li><strong>Task DAG / Control Plane：</strong>任务、依赖、状态和重试存在看板或数据库中，多个工作区只领取未阻塞任务。</li>
+      </ul>
+
+      <h2 id="模式演进"><a class="heading-anchor" href="#模式演进" aria-label="链接到本节">#</a>从以前到近期升温的开发模式</h2>
+      <p><strong>趋势说明：</strong>下表中的“2026 升温”是本文根据 2026 年一手资料发布时间、官方工程实践和工具演进做出的趋势判断，不是行业标准分类或热度排行榜。</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>阶段 / 模式</th><th>控制权</th><th>典型结构</th><th>今天怎样看</th></tr></thead>
+        <tbody>
+          <tr><td>补全与单次生成</td><td>人主导</td><td>输入 → 模型 → 代码片段</td><td>仍适合局部、低风险、上下文明确的工作；不是 Agent 系统</td></tr>
+          <tr><td>Chat / Pair Programming</td><td>人逐轮主导</td><td>人问 → AI 答 → 人复制/运行 → 再问</td><td>交互直接，但人承担上下文搬运、运行和验证</td></tr>
+          <tr><td>Prompt Chaining / Routing</td><td>代码主导</td><td>固定链或分类后走专门路径</td><td>最便宜、可预测；Anthropic 建议先从简单工作流开始</td></tr>
+          <tr><td>ReAct / Tool-use Loop（2022 起）</td><td>模型决定下一动作</td><td>Reason → Act → Observation → …</td><td>现代编码 Agent 的基础运行形态；必须有环境反馈和停止条件</td></tr>
+          <tr><td>Graph Workflow</td><td>代码与模型混合</td><td>State + Nodes + Edges + Checkpoints</td><td>适合持久状态、分支、并行、HITL 和确定性治理</td></tr>
+          <tr><td>Parallel / Orchestrator–Workers / Evaluator–Optimizer</td><td>编排器主导</td><td>并行分片、动态拆分、生成—评审循环</td><td>提高覆盖和吞吐，但 Token、协调与共享写冲突明显增加</td></tr>
+          <tr><td>Spec-Driven / Intent-Driven</td><td>规格约束实现</td><td>Spec → Plan → Tasks → Implement</td><td>把自然语言意图、验收和技术决策变成版本化中间工件</td></tr>
+          <tr><td>Ralph / Long-running Feedback Loop（本文判断：2026 升温）</td><td>循环目标与反馈主导</td><td>实现 → 测试/评审 → 修复 → 再验收</td><td>适合验收可机器判断的长任务；必须限制轮数并可中断</td></tr>
+          <tr><td>Harness Engineering（本文判断：2026 升温）</td><td>人设计环境，Agent 执行</td><td>Agent-readable repo + tools + guardrails + evals</td><td>优化对象从“一次 Prompt”转为整个成功系统，是当前最值得投入的一层</td></tr>
+          <tr><td>Agent Factory / Control Plane（本文判断：2026 升温）</td><td>任务系统调度</td><td>Issue board → DAG → isolated agents/workspaces → PR</td><td>Symphony 类模式解决多会话管理；适合规模化团队，不是个人小改动起点</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="真正变化">真正变化：优化对象上移</h3>
+      <p>早期优化的是提示词和单次输出；随后优化 Agent 的工具循环；再后来优化 Graph 中的状态、分支和角色。Harness Engineering 把优化对象进一步上移到整个工程系统：仓库是否可导航、命令是否可运行、错误信息是否带修复上下文、测试能否证明完成、日志和 UI 是否可由 Agent 直接读取。</p>
+      <p>2026 年 OpenAI 发布的 Symphony 参考把这一思路再外扩一层：任务看板成为状态机和控制平面，每个开放任务对应独立 Agent workspace，依赖形成 DAG，只启动未阻塞任务，Codex App Server 提供可编程线程与事件接口。它代表的是<strong>管理 Agent 工作</strong>，不是一个更复杂的代码生成 Prompt。</p>
+
+      <h2 id="codex实现"><a class="heading-anchor" href="#codex实现" aria-label="链接到本节">#</a>在 Codex 中怎样实现 Harness、Loop、Graph</h2>
+      <h3 id="codex-harness">Harness：把仓库变成 Agent 可工作的“成功跑道”</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Harness 能力</th><th>Codex 实现面</th><th>项目内最佳落点</th></tr></thead>
+        <tbody>
+          <tr><td>持久规则与导航</td><td><code>AGENTS.md</code>，就近目录覆盖</td><td>短入口 + 指向架构、测试、领域和运行手册</td></tr>
+          <tr><td>可复用过程</td><td>Skills / Plugins</td><td>把发布、审查、迁移、文档等重复流程封装为 Skill</td></tr>
+          <tr><td>外部上下文与动作</td><td>MCP / Apps / Connector</td><td>Issue、GitHub、文档、日志、设计系统和内部平台</td></tr>
+          <tr><td>执行环境</td><td>Shell、文件工具、浏览器、Codex App Server / SDK</td><td>一条命令启动、测试和观测；输出对 Agent 友好</td></tr>
+          <tr><td>隔离与权限</td><td>Sandbox、approval、permission profile、worktree</td><td>默认最小权限；每项任务独立 Git/workspace 边界</td></tr>
+          <tr><td>机械护栏</td><td>Hooks + 项目脚本 + CI</td><td>lint、架构测试、类型检查、安全检查和提交前验证</td></tr>
+          <tr><td>状态与恢复</td><td>Plan/Goal、线程历史、compaction、任务 ledger</td><td>长任务把状态写入版本化计划或专用进度文件</td></tr>
+          <tr><td>真实反馈</td><td>运行测试、浏览器验证、日志/指标/Trace 查询</td><td>Done when 必须映射到可执行命令或可观测信号</td></tr>
+        </tbody>
+      </table></div>
+      <p>相关基础可继续阅读<a href="2026-07-28-Codex官方原生项目开发最佳路径.html">Codex 官方原生项目开发最佳路径</a>和<a href="2026-07-24-Codex全栈开发最佳实践.html">Codex 全栈开发最佳实践</a>。</p>
+
+      <h3 id="codex-loop">Loop：Codex 主线程本身就是工具反馈循环</h3>
+      <p>用户给出目标后，Codex 会检查仓库、选择工具、执行命令、读取结果、更新判断并继续，直到满足任务、遇到权限/信息阻塞或达到停止条件。这是模型驱动的动态 Loop。工程上应再叠加三个较小的可验证循环：</p>
+      <ol>
+        <li><strong>实现循环：</strong>写失败测试 → 观察失败 → 最小实现 → 观察通过 → 重构。</li>
+        <li><strong>审查循环：</strong>生成 diff → reviewer 找问题 → implementer 修复 → scoped re-review。</li>
+        <li><strong>交付循环：</strong>本地验证 → CI/真实应用反馈 → 修复 → 再验证 → 人工决定合并。</li>
+      </ol>
+      <pre><code class="language-text">给 Codex 的 Loop 型任务契约
+
+目标：修复订单重复扣库存，并保留现有 API。
+反馈：先用并发回归测试稳定复现；每次改动后运行该测试。
+成功停止：回归测试修复前失败、修复后连续通过，模块测试和 verify 通过。
+预算停止：同一根因连续 3 轮未收敛时停止并报告证据。
+升级停止：需要改变幂等语义、数据库约束或生产数据时先请求人工判断。</code></pre>
+
+      <h3 id="codex-graph">Graph：轻量用计划和技能，强确定性用外部编排器</h3>
+      <p>Codex 原生适合模型动态决定下一步，并不是通用的持久化 Graph DSL。可以按确定性需求选择三档实现：</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>需求</th><th>推荐实现</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td>一次开发任务的阶段门禁</td><td>Plan/Goal + Skill 前置条件 + checklist</td><td>Superpowers 就属于这一层；用说明文件表达状态机</td></tr>
+          <tr><td>一次会话内动态拆分</td><td>Codex 原生 Subagents</td><td>主 Agent spawn / steer / wait / synthesize；适合有限并行</td></tr>
+          <tr><td>固定 DAG、持久状态、跨天恢复、审批</td><td>外部 Workflow Engine / LangGraph / Agent Framework / 自建 Java 状态机</td><td>把 Codex CLI、SDK、MCP Server 或 App Server 当节点执行器</td></tr>
+          <tr><td>Issue 驱动的规模化 Agent Factory</td><td>Symphony 思路：看板状态机 + 独立 workspace + Codex App Server</td><td>任务系统拥有事实状态，Agent session 只是可替换执行实例</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="codex原生子智能体配置">Codex 原生子智能体配置</h3>
+      <p><a href="https://learn.chatgpt.com/docs/agent-configuration/subagents" target="_blank" rel="noopener noreferrer">当前 Codex Subagents 官方文档</a>说明，本地 Codex 的 subagent workflow 默认启用；可以通过 <code>[agents]</code> 限制并发、默认模型和推理强度。只有当用户直接要求，或适用的 <code>AGENTS.md</code>/Skill 明确要求委派时，本地 Codex 才会创建子智能体。下面是一个保守的项目示例：</p>
+      <pre><code class="language-toml"># .codex/config.toml
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 4
+default_subagent_model = "gpt-5.6-terra"
+default_subagent_reasoning_effort = "medium"
+
+# .codex/agents/reviewer.toml
+name = "reviewer"
+description = "只读审查正确性、安全、并发和缺失测试。"
+model = "gpt-5.6-terra"
+model_reasoning_effort = "high"
+sandbox_mode = "read-only"
+developer_instructions = """
+先给可复现的具体问题，引用文件和符号。
+忽略纯风格偏好，优先正确性、安全、兼容性和测试缺口。
+不要修改文件。
+"""</code></pre>
+      <p><strong>版本提醒：</strong>本机 Superpowers 6.2.0 的 <code>references/codex-tools.md</code> 提示在 <code>[features]</code> 下设置 <code>multi_agent = true</code>。这不是失效配置：<a href="https://learn.chatgpt.com/docs/config-file/config-reference#configtoml" target="_blank" rel="noopener noreferrer">当前 Codex 配置参考</a>仍把 <code>features.multi_agent</code> 列为稳定且默认开启的功能开关；同时，<a href="https://learn.chatgpt.com/docs/agent-configuration/subagents#custom-agents" target="_blank" rel="noopener noreferrer">Subagents 配置</a>在 <code>[agents]</code> 中提供 <code>agents.enabled</code>、并发上限、默认模型和推理强度等新一层控制。对当前版本而言，Superpowers 的开关通常是兼容且冗余的显式启用，而不是应删除的旧键。先检查当前会话是否已经暴露 subagent 工具，再按当前官方参考配置。</p>
+
+      <h2 id="superpowers组合"><a class="heading-anchor" href="#superpowers组合" aria-label="链接到本节">#</a>Codex + Superpowers 实际用了哪些模式</h2>
+      <p><strong>分析口径：</strong>下面把 Superpowers 的条件式 Skill 工作流映射成 Harness、Graph 和 Loop，目的是解释控制关系；Superpowers 6.2.0 本身不是带持久状态、节点运行时和 checkpoint 的 Graph Engine。</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>层</th><th>Codex + Superpowers 中的具体实现</th><th>属于哪种模式</th></tr></thead>
+        <tbody>
+          <tr><td>宿主执行层</td><td>Codex 的文件、Shell、Git、浏览器、MCP、sandbox、approval、worktree</td><td>Harness</td></tr>
+          <tr><td>项目知识层</td><td><code>AGENTS.md</code>、仓库文档、测试命令、验证规则</td><td>Harness</td></tr>
+          <tr><td>方法注入层</td><td>Superpowers 的 <code>SKILL.md</code>、脚本、prompt template 和触发规则</td><td>Harness + Policy</td></tr>
+          <tr><td>开发主流程</td><td>Brainstorm → Spec → Plan → Implement → Review → Verify → Finish</td><td>Gated Graph / State Machine</td></tr>
+          <tr><td>任务内部</td><td>TDD 的 Red–Green–Refactor，Debug 的证据—假设—验证</td><td>Loop</td></tr>
+          <tr><td>审查修复</td><td>Task review → Fix round → Scoped re-review，最多 5 轮</td><td>Evaluator–Optimizer Loop</td></tr>
+          <tr><td>计划执行</td><td>每个 Task 由新 implementer 完成，随后 reviewer 门禁，最后全分支 review</td><td>Sequential Multi-agent Graph</td></tr>
+          <tr><td>独立问题</td><td>每个问题域一个 Agent，同时调查，主线程综合</td><td>Parallel / Orchestrator–Workers</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="superpowers主状态机">Superpowers 主状态机</h3>
+      <ol>
+        <li><code>using-superpowers</code> 先按任务语义路由到适用 Skill。</li>
+        <li>创意或行为变更先走 <code>brainstorming</code>，通过用户门禁后形成规格。</li>
+        <li><code>writing-plans</code> 把规格拆成带文件、接口、测试和提交步骤的任务。</li>
+        <li>用户选择 <code>subagent-driven-development</code> 或 inline <code>executing-plans</code>。</li>
+        <li>实现阶段按需嵌套 TDD、Systematic Debugging、Code Review 和 Verification。</li>
+        <li><code>finishing-a-development-branch</code> 在全量验证后让人决定合并、PR 或保留。</li>
+      </ol>
+      <p>因此，把 Superpowers 只叫“Prompt 模板集合”会低估它。它更接近运行在 Codex Harness 之上的<strong>声明式流程策略</strong>：Skill 的前置条件和硬门禁构成 Graph，主智能体读取规则后负责推进状态。</p>
+
+      <h2 id="子智能体审计"><a class="heading-anchor" href="#子智能体审计" aria-label="链接到本节">#</a>Superpowers 6.2.0 子智能体启用审计</h2>
+      <p>以下结论来自本机已安装 <code>superpowers/6.2.0/skills/*/SKILL.md</code> 的逐项核对；它比只看旧博客或旧 README 更能回答“现在实际会不会 spawn”。</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Skill</th><th>会创建子智能体？</th><th>创建什么</th><th>关键边界</th></tr></thead>
+        <tbody>
+          <tr><td><code>subagent-driven-development</code></td><td><strong>会，核心路径</strong></td><td>每 Task 一个新 implementer；每 Task 一个 reviewer；最终 whole-branch reviewer；必要时 fix agent / re-reviewer</td><td>实现 Agent 明确禁止并行，逐 Task 串行推进，避免共享工作区冲突</td></tr>
+          <tr><td><code>dispatching-parallel-agents</code></td><td><strong>会，并行</strong></td><td>每个独立问题域一个 Agent</td><td>只用于无共享状态、无顺序依赖的任务；返回后主 Agent 还要检查冲突和跑全量验证</td></tr>
+          <tr><td><code>requesting-code-review</code></td><td><strong>会，Reviewer</strong></td><td>一个通用 code reviewer，读取精确需求和 diff package</td><td>审查结果仍需主 Agent 技术核验，不能盲信</td></tr>
+          <tr><td><code>writing-skills</code></td><td><strong>会，元工作流</strong></td><td>用 fresh-context subagent 运行压力场景，做 RED–GREEN–REFACTOR 式 Skill 测试</td><td>仅在创建/修改 Skill 时出现，不属于普通项目功能开发</td></tr>
+          <tr><td><code>writing-plans</code></td><td>本身不会</td><td>无；只在交接时推荐 SDD</td><td>计划 self-review 明确由当前 Agent inline 执行</td></tr>
+          <tr><td><code>executing-plans</code></td><td>不会</td><td>当前 Agent 按计划 inline 执行</td><td>若 Harness 有 subagents，Skill 反而建议改用 SDD</td></tr>
+          <tr><td><code>brainstorming</code></td><td>不会</td><td>当前 Agent 与用户逐段确认并 inline self-review</td><td>用户批准是门禁，不是子智能体评审</td></tr>
+          <tr><td>TDD / Debugging / Verification / Git Worktrees / Finishing</td><td>不会自动创建</td><td>当前 Agent 执行检查、命令和决策</td><td>它们可能被子智能体使用，但 Skill 自身不等于 spawn</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="sdd到底会产生多少agent">一次 SDD 到底会产生多少 Agent</h3>
+      <p>设计划有 <code>N</code> 个 Task，且所有审查一次通过。Superpowers 6.2.0 的最低子智能体调用量大致是：</p>
+      <pre><code class="language-text">N 个 implementer
++ N 个 task reviewer（同时给 spec compliance 与 task quality 两个 verdict）
++ 1 个 final whole-branch reviewer
+= 2N + 1 次基础子智能体任务
+
+若审查失败，还会增加：
+- rounds 1–3：恢复原 implementer 修复 + scoped re-review
+- rounds 4–5：换更强的新 implementer + scoped re-review
+- final review 有问题：一个统一 fix agent + 一次 scoped re-review</code></pre>
+      <p>这里有两个重要判断：</p>
+      <ol>
+        <li><strong>SDD 是顺序多 Agent，不是并行写代码。</strong>“一个 Task 一个新上下文”是为了减少 context pollution；Task 之间仍按计划依赖顺序执行。</li>
+        <li><strong>子智能体不是免费增强。</strong>Codex 官方明确提醒每个子智能体都会独立做模型和工具工作，Token 消耗高于单 Agent。小改动用主 Agent + 测试 + review 往往更合适。</li>
+      </ol>
+
+      <h3 id="什么时候启用子智能体">什么时候启用，什么时候不要启用</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>情况</th><th>建议</th><th>原因</th></tr></thead>
+        <tbody>
+          <tr><td>多个目录的只读探索、不同资料源调研、不同维度审查</td><td>并行 subagents</td><td>独立、噪声大、结果可摘要，最符合官方建议</td></tr>
+          <tr><td>已有详细计划，Task 之间可按顺序独立验收</td><td>Superpowers SDD</td><td>新 implementer 上下文 + 每 Task reviewer 门禁</td></tr>
+          <tr><td>同一文件、同一数据库迁移、同一集成环境的并行写入</td><td>不要并行</td><td>共享可变状态、冲突和集成成本会抵消收益</td></tr>
+          <tr><td>一步可完成的小修、确定性命令、单一慢外部调用</td><td>单 Agent / 普通代码</td><td>子智能体不能缩短单链关键路径，只会增加成本</td></tr>
+          <tr><td>步骤必须固定、需要审计和跨天恢复</td><td>外部 Graph / Workflow</td><td>Codex subagents 是模型驱动编排，不保证固定确定图</td></tr>
+          <tr><td>需求仍不清楚</td><td>先 Brainstorm/Plan，不急着 spawn</td><td>把含糊目标并行复制，只会更快地产生多份偏差</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3 id="可直接使用的提示词">可直接使用的 Codex 提示词</h3>
+      <pre><code class="language-text"># 只读并行探索
+请用 3 个并行子智能体：
+1. explorer 追踪订单取消调用链；
+2. reviewer 检查事务、幂等和并发风险；
+3. docs_researcher 核验 Spring 事务 API。
+全部只读。等待三者完成后，由主智能体交叉核验并给出一份带文件证据的方案。
+
+# Superpowers 顺序开发
+使用 Superpowers 完成这个项目任务。先按 brainstorming 明确规格并让我确认，
+再用 writing-plans 生成实施计划。计划批准后使用 subagent-driven-development：
+每个 Task 一个 implementer，Task review 通过后再进入下一个 Task，最后做全分支 review。
+不要并行编辑共享文件。
+
+# 明确不启用子智能体
+这是一个局部、单文件修复。由主智能体直接执行，不创建子智能体；
+先写失败测试，做最小修复，运行相关测试并检查 diff。</code></pre>
+
+      <h2 id="java项目建议"><a class="heading-anchor" href="#java项目建议" aria-label="链接到本节">#</a>Java / Spring 项目的推荐落地</h2>
+      <h3 id="从单agent开始">第一阶段：先让单 Agent Loop 可靠</h3>
+      <ul>
+        <li>固定 Java LTS、Maven/Gradle Wrapper、模块构建和最小相关测试命令。</li>
+        <li>把 Spring Boot 启动、Testcontainers、数据库迁移和前端开发服务做成可重复脚本。</li>
+        <li>在 <code>AGENTS.md</code> 记录模块边界、事务、异常、鉴权和完成标准，但保持它是地图。</li>
+        <li>让 API、日志、Actuator、OpenTelemetry、浏览器关键路径成为 Codex 可读取的反馈。</li>
+        <li>为每个任务写 Goal、Constraints、Done when 和停止/升级条件。</li>
+      </ul>
+
+      <h3 id="再增加superpowers门禁">第二阶段：再增加 Superpowers 门禁</h3>
+      <ul>
+        <li>新功能先 Brainstorm → Spec → Plan；Bug 先 Systematic Debugging；所有改动走 TDD。</li>
+        <li>Task 粒度按可独立测试的领域行为拆，不按 Controller/Service/Repository 技术层机械拆。</li>
+        <li>跨模块计划使用 SDD，但 implementer 串行；只读探索、测试分析和审查可并行。</li>
+        <li>审查重点放在事务边界、幂等、并发、租户隔离、数据库/API 兼容和真实集成测试。</li>
+      </ul>
+
+      <h3 id="最后才做agent-factory">第三阶段：吞吐真正成为瓶颈后才做 Agent Factory</h3>
+      <p>只有当团队已经有稳定测试、清晰任务、独立环境、可恢复 CI 和可靠 review packet，却仍被人工切换多个 Codex session 拖慢时，才值得引入看板状态机、任务 DAG、独立 workspace 和 App Server。否则，Agent Factory 只会把不稳定 Loop 放大。</p>
+
+      <div class="table-wrap"><table>
+        <thead><tr><th>项目规模</th><th>推荐组合</th><th>暂时不要</th></tr></thead>
+        <tbody>
+          <tr><td>个人学习 / 小服务</td><td>Codex 单 Agent Loop + AGENTS + 测试</td><td>Graph 框架、常驻多 Agent</td></tr>
+          <tr><td>中型 Spring Boot 项目</td><td>Codex Harness + Superpowers gated graph + 按需 SDD</td><td>并行 Agent 改同一模块</td></tr>
+          <tr><td>大型 Monorepo</td><td>领域化 Harness、worktree、只读并行探索、顺序 SDD、CI 门禁</td><td>共享未隔离数据库和端口</td></tr>
+          <tr><td>受监管 / 固定业务流程</td><td>Java Workflow/State Machine 负责确定图，Codex 作为受限节点</td><td>让 LLM 自己决定审批和生产写入路径</td></tr>
+          <tr><td>高吞吐 Agent-first 团队</td><td>Issue control plane + DAG + isolated workspace + App Server + observability</td><td>在 Harness 未成熟前追求无人值守</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="常见误区"><a class="heading-anchor" href="#常见误区" aria-label="链接到本节">#</a>常见误区</h2>
+      <ul>
+        <li><strong>“Harness、Loop、Graph 哪个更先进？”</strong>错误问题；它们解决不同层的问题。</li>
+        <li><strong>“多 Agent 一定比单 Agent 强。”</strong>只有可独立分解且协调成本低时才成立。</li>
+        <li><strong>“Graph 就是多 Agent。”</strong>Node 可以是普通函数；单 Agent 也能在 Graph 中运行。</li>
+        <li><strong>“用了 Superpowers 就一定 spawn。”</strong>多数 Skill 只约束主 Agent；只有明确的委派 Skill 才会创建。</li>
+        <li><strong>“Ralph 就是无限 while true。”</strong>没有验收、预算、升级和可恢复状态的循环只是失控重试。</li>
+        <li><strong>“AGENTS.md 越长，Harness 越强。”</strong>OpenAI 的实践恰恰是短地图 + 结构化深层事实源 + 机械校验。</li>
+        <li><strong>“文档写了规则就算护栏。”</strong>高价值规则最终应进入测试、lint、类型、schema、权限或 CI。</li>
+        <li><strong>“Agent Factory 是下一步。”</strong>先把单任务成功率做高，再扩大并发；否则只是并行制造返工。</li>
+      </ul>
+
+      <h2 id="选择检查单"><a class="heading-anchor" href="#选择检查单" aria-label="链接到本节">#</a>一页选择检查单</h2>
+      <ol>
+        <li>任务能否由普通函数、一次模型调用或单 Agent 完成？能则停在最简单层。</li>
+        <li>步骤是否未知、需要根据工具反馈动态决定？需要则使用 Agent Loop。</li>
+        <li>是否有固定顺序、分支、审批、并行、持久状态？有则增加 Graph。</li>
+        <li>Agent 是否能直接读取知识、运行项目、看到日志并验证结果？不能则先建设 Harness。</li>
+        <li>子任务是否真正独立、没有共享写状态？是才启用并行 subagents。</li>
+        <li>是否已有详细计划并希望隔离每个 Task 上下文？是则使用 Superpowers SDD。</li>
+        <li>成功、预算和人工升级三类停止条件是否都已定义？没有就不要启动长循环。</li>
+        <li>失败经验能否沉淀为规则、脚本、测试或可观测信号？能则回补 Harness，形成复利。</li>
+      </ol>
+
+      <h2 id="参考资料"><a class="heading-anchor" href="#参考资料" aria-label="链接到本节">#</a>参考资料</h2>
+      <p>在线资料检索于 <strong>2026-08-07</strong>。Codex、Superpowers、Spec Kit 和各 Agent 框架仍在快速演进；配置键、默认模型、技能内部审查结构应以使用时的当前版本为准。</p>
+      <ol>
+        <li><a href="https://openai.com/index/harness-engineering/" target="_blank" rel="noopener noreferrer">OpenAI — Harness engineering: leveraging Codex in an agent-first world</a>：Agent-readable 仓库、反馈循环、架构护栏、可观测性和长运行 Codex 实践。</li>
+        <li><a href="https://openai.com/index/open-source-codex-orchestration-symphony/" target="_blank" rel="noopener noreferrer">OpenAI — An open-source spec for Codex orchestration: Symphony</a>：Issue control plane、任务 DAG、独立 workspace 与 Codex App Server。</li>
+        <li><a href="https://learn.chatgpt.com/docs/agent-configuration/subagents" target="_blank" rel="noopener noreferrer">Codex 官方文档 — Subagents</a>：触发条件、内置角色、配置、权限继承、成本和适用边界。</li>
+        <li><a href="https://learn.chatgpt.com/docs/customization/overview" target="_blank" rel="noopener noreferrer">Codex 官方文档 — Customization</a>：AGENTS、Skills、MCP 和 Subagents 的职责分层。</li>
+        <li><a href="https://www.anthropic.com/engineering/building-effective-agents" target="_blank" rel="noopener noreferrer">Anthropic — Building Effective Agents</a>：Prompt chaining、routing、parallelization、orchestrator–workers、evaluator–optimizer 和 autonomous agent。</li>
+        <li><a href="https://arxiv.org/abs/2210.03629" target="_blank" rel="noopener noreferrer">ReAct: Synergizing Reasoning and Acting in Language Models</a>：推理、行动和环境观察交错的 Agent Loop 基础。</li>
+        <li><a href="https://docs.langchain.com/oss/python/langgraph/graph-api" target="_blank" rel="noopener noreferrer">LangGraph — Graph API overview</a>：State、Nodes、Edges、conditional routing、parallel super-step 和 checkpoint。</li>
+        <li><a href="https://learn.microsoft.com/en-us/agent-framework/overview/" target="_blank" rel="noopener noreferrer">Microsoft Agent Framework Overview</a>：Agents、Harness、Graph-based Workflows 的显式区分。</li>
+        <li><a href="https://github.com/github/spec-kit/blob/main/docs/index.md" target="_blank" rel="noopener noreferrer">GitHub Spec Kit</a>：Intent-driven Harness 与 Spec → Plan → Tasks → Implement。</li>
+        <li><a href="https://ghuntley.com/loop/" target="_blank" rel="noopener noreferrer">Geoffrey Huntley — everything is a ralph loop</a>：单进程、单仓库、目标循环和通过失败域改进系统。</li>
+        <li><a href="https://www.martinfowler.com/articles/exploring-gen-ai/humans-and-agents.html" target="_blank" rel="noopener noreferrer">Martin Fowler — Humans and Agents in Software Engineering Loops</a>：human in/on the loop 与 harness flywheel。</li>
+        <li><a href="https://github.com/obra/superpowers" target="_blank" rel="noopener noreferrer">obra/superpowers</a>：官方技能仓库；本文对子智能体的精确判断同时核对了本机安装的 6.2.0 Skill 正文。</li>
+      </ol>
+
+      <nav class="pager course-pager" aria-label="延伸阅读">
+        <a class="pager-link prev" href="2026-07-24-Superpowers详细介绍.html"><small>方法细节</small><span>Superpowers 详细介绍</span></a>
+        <a class="pager-link next" href="2026-07-24-Superpowers大型Java微服务Monorepo使用指南.html"><small>Java 实战</small><span>Superpowers 大型 Java 微服务 Monorepo 使用指南</span></a>
+      </nav>
+    </article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/codex/2026-08-07-Harness-Loop-Graph与Codex-Superpowers开发模式.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="2026-07-28-Codex官方原生项目开发最佳路径.html"><small>上一篇</small><span>Codex 官方原生项目开发最佳路径</span></a>
+        <span class="pager-spacer"></span>
+      </nav>
+    </footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#三层模型">先把三个词放回正确层级</a></li><li class="toc-level-3"><a href="#harness不只是框架">Harness 不只是“选了哪个 Agent 框架”</a></li><li class="toc-level-3"><a href="#loop需要三种停止">Loop 至少要有三种停止</a></li><li class="toc-level-3"><a href="#graph分为确定与动态">Graph 分为确定图与模型动态拆图</a></li><li class="toc-level-2"><a href="#模式演进">从以前到近期升温的开发模式</a></li><li class="toc-level-3"><a href="#真正变化">真正变化：优化对象上移</a></li><li class="toc-level-2"><a href="#codex实现">在 Codex 中怎样实现 Harness、Loop、Graph</a></li><li class="toc-level-3"><a href="#codex-harness">Harness：把仓库变成 Agent 可工作的“成功跑道”</a></li><li class="toc-level-3"><a href="#codex-loop">Loop：Codex 主线程本身就是工具反馈循环</a></li><li class="toc-level-3"><a href="#codex-graph">Graph：轻量用计划和技能，强确定性用外部编排器</a></li><li class="toc-level-3"><a href="#codex原生子智能体配置">Codex 原生子智能体配置</a></li><li class="toc-level-2"><a href="#superpowers组合">Codex + Superpowers 实际用了哪些模式</a></li><li class="toc-level-3"><a href="#superpowers主状态机">Superpowers 主状态机</a></li><li class="toc-level-2"><a href="#子智能体审计">Superpowers 6.2.0 子智能体启用审计</a></li><li class="toc-level-3"><a href="#sdd到底会产生多少agent">一次 SDD 到底会产生多少 Agent</a></li><li class="toc-level-3"><a href="#什么时候启用子智能体">什么时候启用，什么时候不要启用</a></li><li class="toc-level-3"><a href="#可直接使用的提示词">可直接使用的 Codex 提示词</a></li><li class="toc-level-2"><a href="#java项目建议">Java / Spring 项目的推荐落地</a></li><li class="toc-level-3"><a href="#从单agent开始">第一阶段：先让单 Agent Loop 可靠</a></li><li class="toc-level-3"><a href="#再增加superpowers门禁">第二阶段：再增加 Superpowers 门禁</a></li><li class="toc-level-3"><a href="#最后才做agent-factory">第三阶段：吞吐真正成为瓶颈后才做 Agent Factory</a></li><li class="toc-level-2"><a href="#常见误区">常见误区</a></li><li class="toc-level-2"><a href="#选择检查单">一页选择检查单</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+</body>
+</html>

@@ -22,9 +22,9 @@
       <p>这里汇集 Codex、Agent 工作流、AI-DLC 与工程实践资料。所有内容直接维护为 HTML，可离线阅读。</p>
     </div>
     <div class="hero-stats" aria-label="知识库统计">
-      <div><strong>20</strong><span>篇文档</span></div>
-      <div><strong>784</strong><span>个章节</span></div>
-      <div><strong>375k</strong><span>约字符</span></div>
+      <div><strong>21</strong><span>篇文档</span></div>
+      <div><strong>809</strong><span>个章节</span></div>
+      <div><strong>387k</strong><span>约字符</span></div>
     </div>
   </section>
   <section class="library-tools" aria-label="文档搜索">
@@ -33,7 +33,7 @@
       <input type="search" placeholder="搜索标题、主题或章节…" data-library-search autofocus>
       <kbd>/</kbd>
     </label>
-    <p class="search-status" aria-live="polite">显示全部 20 篇文档</p>
+    <p class="search-status" aria-live="polite">显示全部 21 篇文档</p>
   </section>
   <nav class="category-entry-grid" aria-label="知识分类">
     <a class="category-entry-card" href="#category-agent-开发-fm6pdx">
@@ -45,7 +45,7 @@
       <span class="eyebrow">COLLECTION</span>
       <strong>Codex 与 AI 工程</strong>
       <p>除 AIDLC 与 Superpowers 外，还有哪些较完整的 AI 开发工作流，以及 2 人小团队是否值得沉淀自己的工作流</p>
-      <span>8 篇文档 · 495 个章节</span>
+      <span>9 篇文档 · 520 个章节</span>
     </a><a class="category-entry-card" href="#category-项目维护-1v91sou">
       <span class="eyebrow">COLLECTION</span>
       <strong>项目维护</strong>
@@ -217,7 +217,7 @@
       <span class="eyebrow">COLLECTION</span>
       <h2>Codex 与 AI 工程</h2>
     </div>
-    <span class="section-count">8 篇</span>
+    <span class="section-count">9 篇</span>
   </div>
   <div class="document-grid">
     <article class="document-card" data-search-text="ai 开发工作流选型与小团队沉淀指南 除 aidlc 与 superpowers 外，还有哪些较完整的 ai 开发工作流，以及 2 人小团队是否值得沉淀自己的工作流 notes/codex/2026-07-24-ai开发工作流选型与小团队沉淀指南.html 核心结论 直接回答 一、先区分四类“工作流” 1. 生命周期外循环 2. 规格与变更管理层 3. 实现内循环 4. 自治执行循环 四层关系 二、候选工作流总览 “覆盖”不等于“质量” 三、bmad method：最像 aidlc 的替代方案 优点 缺点 适合当前团队的使用方式 四、gsd：更适合“一人负责一个长期项目” 优点 缺点 适合当前团队的使用方式 五、github spec kit：较强的规格驱动 harness 优点 缺点 适合当前团队的使用方式 六、openspec：当前 2 人团队最值得试用的规格层 优点 缺点 为什么它适合当前团队 七、kiro specs：产品内体验完整，但不宜为流程而换平台 优点 缺点 当前团队建议 八、ralph loop：是一种执行模式，不是完整工作流 优点 缺点 当前团队建议 九、当前团队到底要不要“自己沉淀工作流” 要，但要先明确“沉淀”的含义 推荐的沉淀阶梯 level 1：团队交付协议 level 2：模板与确定性脚本 level 3：仓库级 codex skill level 4：plugin、复杂编排或组织平台 十、最推荐的 2 人团队工作流 总体结构 模式 a：快速变更 模式 b：标准变更 模式 c：高风险变更 十一、两个人如何分工，而不制造评审瓶颈 每个项目两个角色 建议的三个人类检查点 检查点 1：规格或设计 检查点 2：walking skeleton 检查点 3：发布 不要求所有 pr 都同步评审 十二、java 全栈 harness 的最低标准 java 后端重点 前端重点 ai 功能重点 十三、避免框架互相打架 单一指挥者原则 推荐组合 多框架共存时的真相源 十四、30 天落地计划 第 1 周：建立基线 第 2 周：在真实变更中试用 第 3 周：提炼团队协议 第 4 周：复盘并决定是否封装 skill 十五、用什么指标判断工作流有效 建议的复盘问题 十六、何时升级到更重的工作流 十七、最终选型建议 当前团队的首选 备选 不推荐 十八、下一步学习与实践建议 参考资料 codex 官方资料 工作流官方资料">
@@ -322,6 +322,19 @@
           <div class="card-footer">
             <span>24 个章节</span>
             <span>约 18 分钟</span>
+            <span class="read-more">阅读 →</span>
+          </div>
+        </article><article class="document-card" data-search-text="harness、loop、graph 与 codex + superpowers 开发模式 梳理 harness、loop、graph、spec-driven、multi-agent 与 agent factory 等 ai 开发模式，说明它们在 codex 与 superpowers 6.2.0 中的实现及子智能体启用边界。 notes/codex/2026-08-07-harness-loop-graph与codex-superpowers开发模式.html 核心结论 先把三个词放回正确层级 harness 不只是“选了哪个 agent 框架” loop 至少要有三种停止 graph 分为确定图与模型动态拆图 从以前到近期升温的开发模式 真正变化：优化对象上移 在 codex 中怎样实现 harness、loop、graph harness：把仓库变成 agent 可工作的“成功跑道” loop：codex 主线程本身就是工具反馈循环 graph：轻量用计划和技能，强确定性用外部编排器 codex 原生子智能体配置 codex + superpowers 实际用了哪些模式 superpowers 主状态机 superpowers 6.2.0 子智能体启用审计 一次 sdd 到底会产生多少 agent 什么时候启用，什么时候不要启用 可直接使用的 codex 提示词 java / spring 项目的推荐落地 第一阶段：先让单 agent loop 可靠 第二阶段：再增加 superpowers 门禁 第三阶段：吞吐真正成为瓶颈后才做 agent factory 常见误区 一页选择检查单 参考资料">
+          <a class="card-link" href="public/notes/codex/2026-08-07-Harness-Loop-Graph与Codex-Superpowers开发模式.html" aria-label="阅读 Harness、Loop、Graph 与 Codex + Superpowers 开发模式"></a>
+          <div class="card-topline">
+            <span class="category-pill">Codex 与 AI 工程</span>
+            <time>2026-08-07</time>
+          </div>
+          <h3>Harness、Loop、Graph 与 Codex + Superpowers 开发模式</h3>
+          <p>梳理 Harness、Loop、Graph、Spec-driven、Multi-agent 与 Agent Factory 等 AI 开发模式，说明它们在 Codex 与 Superpowers 6.2.0 中的实现及子智能体启用边界。</p>
+          <div class="card-footer">
+            <span>25 个章节</span>
+            <span>约 25 分钟</span>
             <span class="read-more">阅读 →</span>
           </div>
         </article>
