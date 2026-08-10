@@ -12,13 +12,14 @@
   <blockquote>
     <p><strong>Agent 执行要求：</strong>实施时使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans，逐任务执行并使用复选项跟踪；当前仓库禁止新增 Markdown 学习笔记，因此本计划使用 HTML。</p>
   </blockquote>
-  <p><strong>目标：</strong>创建七篇互链的 pi-mono 中文专题，让开发者能理解设计理念与源码架构、完成安装使用与扩展开发，并与五个主流编码 Agent 做基于一手资料的选型比较。</p>
+  <p><strong>目标：</strong>创建七篇互链的 Pi 中文专题，以当前 <code>earendil-works/pi</code> 为事实基线并解释其 <code>badlogic/pi-mono</code> 历史，让开发者能理解设计理念与源码架构、完成安装使用与扩展开发，并与五个主流编码 Agent 做基于一手资料的选型比较。</p>
   <p><strong>架构：</strong>七篇静态 HTML 位于同一 <code>coding-agent</code> 分类，共用现有 CSS、JavaScript、根索引生成器和站点验证器。每篇承担单一主题，通过显式专题导航连接；一个 Node.js 契约测试支持按页面执行，以便每个写作任务都能独立验证，最后再运行全专题互链与全站检查。</p>
   <p><strong>技术栈：</strong>HTML5、共享 CSS、原生 JavaScript/Node.js 测试、TypeScript/Node.js 示例、GitHub Pages branch 部署。</p>
 
   <h2>全局约束</h2>
   <ul>
     <li>恰好新增七篇学习页，统一位于 <code>public/notes/coding-agent/</code>，日期固定为 2026-08-10。</li>
+    <li>当前安装、包名和源码链接使用 <code>earendil-works/pi</code> 与 <code>@earendil-works/*</code>；<code>badlogic/pi-mono</code> 与 <code>@mariozechner/*</code> 仅用于说明 2026-05-07 迁移和旧版本兼容。</li>
     <li>源码与扩展示例保持 Pi 原生的 TypeScript、JavaScript 和 Node.js 技术语境，不增加 Java、Spring Boot 或其他特定后端语言视角。</li>
     <li>每篇包含 <code>header</code>、<code>nav</code>、<code>main</code>、<code>article</code>、完整元数据、“核心结论”和“参考资料”；所有 h2～h4 使用唯一稳定 ID。</li>
     <li>外部资料检索日期为 2026-08-10；关键版本、许可证、功能与扩展边界必须来自官方仓库、官方文档或发布说明。</li>
@@ -58,7 +59,7 @@
 };</code></pre>
   <ol start="2">
     <li>[ ] 公共断言检查语义标签、三项 meta、共享资源、“核心结论”“参考资料”、检索日期、至少四个一手外链及其安全属性、至少一个表格和一个带 <code>role="img"</code> 或等价文字的图示。</li>
-    <li>[ ] 专属断言检查架构页含 <code>pi-ai</code>、<code>pi-agent-core</code>、<code>pi-coding-agent</code>、<code>pi-tui</code>、<code>pi-web-ui</code>；扩展页含 Extension、SDK、RPC、TypeScript；对比页含六个项目名；全专题不得出现 Java 25、Spring Boot 或 Spring AI。</li>
+    <li>[ ] 专属断言检查总览页含 Earendil 迁移说明；架构页含 <code>pi-telemetry</code>、<code>pi-ai</code>、<code>pi-agent-core</code>、<code>pi-coding-agent</code>、<code>pi-tui</code>；扩展页含 Extension、SDK、RPC、TypeScript 与当前 scope；对比页含六个项目名；全专题不得出现 Java 25、Spring Boot 或 Spring AI。</li>
     <li>[ ] 无参数模式检查每篇都显式链接其余六篇，且七篇使用 <code>study-category="编码 Agent"</code>。</li>
     <li>[ ] 运行 <code>node scripts/test-pi-mono-series.mjs</code>，预期因总览页面不存在而失败。</li>
     <li>[ ] 运行 <code>git diff --check</code>，提交 <code>test: define pi-mono series contract</code>。</li>
@@ -66,11 +67,11 @@
 
   <h2>任务 2：编写专题总览与设计理念</h2>
   <p><strong>文件：</strong>创建总览页和设计理念页。</p>
-  <p><strong>资料输入：</strong><code>badlogic/pi-mono</code> 根 README、<code>packages/coding-agent/README.md</code>、作者公开的项目说明与仓库许可证；使用官方仓库的当前默认分支和提交记录核验易变描述。</p>
+  <p><strong>资料输入：</strong><code>earendil-works/pi</code> 根 README、<code>packages/coding-agent/README.md</code>、pi.dev 项目首页、2026-05-07 迁移公告、官方 release 与仓库许可证；使用官方仓库的当前默认分支和提交记录核验易变描述。</p>
   <p><strong>产出接口：</strong>两页建立六个固定专题互链 URL，供后续页面复用；总览页定义统一术语，理念页沿用相同定义。</p>
   <ol>
-    <li>[ ] 打开并核验官方根 README、coding-agent README、package 清单、许可证和最近发布/提交时间；在正文附近记录对应官方 URL 与检索日期。</li>
-    <li>[ ] 编写总览页：项目定位与“不是什么”、能力地图、七篇学习路线、五分钟适用性判断、术语表、已确认事实与待验证边界。</li>
+    <li>[ ] 打开并核验官方根 README、coding-agent README、pi.dev 迁移公告、package 清单、许可证和最近发布/提交时间；在正文附近记录对应官方 URL 与检索日期。</li>
+    <li>[ ] 编写总览页：项目定位与“不是什么”、2026-05-07 仓库/scope 迁移、能力地图、七篇学习路线、五分钟适用性判断、术语表、已确认事实与待验证边界。</li>
     <li>[ ] 编写理念页：极简核心、组合优于内置、终端优先、模型中立、透明可控、扩展优先；每项使用“依据—机制—收益—代价—适用场景”结构。</li>
     <li>[ ] 在两页加入统一专题导航、相邻篇导航、核心结论、可访问图示、表格与不少于四个一手来源，不用作者未明确表达的动机冒充官方立场。</li>
     <li>[ ] 运行 <code>node scripts/test-pi-mono-series.mjs --page overview</code> 和 <code>node scripts/test-pi-mono-series.mjs --page philosophy</code>，预期均 PASS。</li>
@@ -79,7 +80,7 @@
 
   <h2>任务 3：编写源码架构与运行机制</h2>
   <p><strong>文件：</strong>创建架构页。</p>
-  <p><strong>资料输入：</strong>根 <code>package.json</code>、各 package README 与入口源码，重点核验 <code>pi-ai</code>、<code>pi-agent-core</code>、<code>pi-coding-agent</code>、<code>pi-tui</code>、<code>pi-web-ui</code> 的真实职责与依赖。</p>
+  <p><strong>资料输入：</strong>当前根 <code>package.json</code>、根 README、各 package README 与入口源码，重点核验 <code>pi-telemetry</code>、<code>pi-ai</code>、<code>pi-agent-core</code>、<code>pi-coding-agent</code>、<code>pi-tui</code> 的真实职责与依赖；旧 package 清单仅用于迁移说明。</p>
   <p><strong>产出接口：</strong>页面定义一条从用户输入到会话持久化的请求/事件路径，扩展页引用该路径解释工具和 Extension 注入位置。</p>
   <ol>
     <li>[ ] 检查 workspace/package 配置和每个核心 package 的公开入口，记录 package 名、职责、依赖方向与无法从公开接口确认的实现细节。</li>
@@ -92,7 +93,7 @@
 
   <h2>任务 4：编写安装配置与使用教程</h2>
   <p><strong>文件：</strong>创建使用教程页。</p>
-  <p><strong>资料输入：</strong>coding-agent 官方 README、安装与认证说明、Provider/模型配置、命令与会话文档；命令需与当前 package 名和 CLI 帮助一致。</p>
+  <p><strong>资料输入：</strong>coding-agent 官方 README、安装与认证说明、Provider/模型配置、命令与会话文档；命令需使用当前 <code>@earendil-works/pi-coding-agent</code> 包名并与当前 CLI 帮助一致，另列旧 scope 升级方法。</p>
   <p><strong>产出接口：</strong>提供一条可复制的“安装 → 首次启动 → 选择模型 → 打开项目 → 执行只读任务 → 保存/恢复会话”最小路径，以及独立的日常工作流和排错表。</p>
   <ol>
     <li>[ ] 核验 Node.js/package manager 要求、全局/临时/源码运行方式、认证方式、Provider 与模型配置位置、高频命令和 session 行为。</li>
@@ -105,7 +106,7 @@
 
   <h2>任务 5：编写扩展开发与系统集成</h2>
   <p><strong>文件：</strong>创建扩展页。</p>
-  <p><strong>资料输入：</strong>官方 Extension、custom tools、prompt templates、skills、SDK 与 RPC 文档和示例目录；所有 API 名称、文件位置和事件名从当前源码核验。</p>
+  <p><strong>资料输入：</strong>官方 Extension、custom tools、prompt templates、skills、SDK 与 RPC 文档和示例目录；所有 import 使用当前 <code>@earendil-works/*</code> scope，API 名称、文件位置和事件名从当前源码核验。</p>
   <p><strong>产出接口：</strong>页面给出扩展选择表和三个最小 TypeScript 示例：一个 Extension 生命周期、一个只读自定义工具、一个 SDK 或 RPC 调用；架构页的请求路径用于标注插入点。</p>
   <ol>
     <li>[ ] 核验六种扩展面的职责、发现/加载位置、生命周期、权限边界、稳定性和组合方式。</li>
@@ -156,7 +157,7 @@
   </ol>
 
   <h2>计划自审</h2>
-  <p>规格覆盖检查通过：七篇边界、Pi 设计理念、package 架构、完整使用方法、六类扩展面、五个竞品、一般开发者选型、TypeScript/Node.js 原生语境、事实标签、资料日期、互链、索引和全站验证都有对应任务。占位符扫描通过。七个页面键、文件名和单页测试命令在所有任务中保持一致；对比页产出的事实矩阵是选型页唯一的产品事实输入，不会出现评价维度漂移。</p>
+  <p>规格覆盖检查通过：七篇边界、Earendil 迁移背景、Pi 设计理念、当前 package 架构、完整使用方法、六类扩展面、五个竞品、一般开发者选型、TypeScript/Node.js 原生语境、事实标签、资料日期、互链、索引和全站验证都有对应任务。占位符扫描通过。七个页面键、文件名和单页测试命令在所有任务中保持一致；对比页产出的事实矩阵是选型页唯一的产品事实输入，不会出现评价维度漂移。</p>
 </article>
 </main>
 </body>

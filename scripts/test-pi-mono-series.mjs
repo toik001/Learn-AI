@@ -11,7 +11,7 @@ const pages = {
   overview: {
     file: "2026-08-10-Pi项目总览与学习路线.html",
     sections: ["项目定位", "学习路线", "能力地图", "术语表"],
-    phrases: ["pi-mono", "Pi Coding Agent", "七篇"],
+    phrases: ["pi-mono", "earendil-works/pi", "Pi Coding Agent", "七篇", "0.74.0"],
   },
   philosophy: {
     file: "2026-08-10-Pi设计理念与边界.html",
@@ -21,7 +21,7 @@ const pages = {
   architecture: {
     file: "2026-08-10-Pi源码架构与运行机制.html",
     sections: ["package地图", "请求路径", "agent-loop", "事件系统", "会话模型"],
-    phrases: ["pi-ai", "pi-agent-core", "pi-coding-agent", "pi-tui", "pi-web-ui"],
+    phrases: ["pi-telemetry", "pi-ai", "pi-agent-core", "pi-coding-agent", "pi-tui"],
   },
   usage: {
     file: "2026-08-10-Pi安装配置与使用教程.html",
@@ -31,7 +31,7 @@ const pages = {
   extension: {
     file: "2026-08-10-Pi扩展开发与系统集成.html",
     sections: ["扩展点选择", "extension", "自定义工具", "prompt与skill", "sdk", "rpc"],
-    phrases: ["Extension", "TypeScript", "SDK", "RPC"],
+    phrases: ["Extension", "TypeScript", "SDK", "RPC", "@earendil-works/"],
   },
   comparison: {
     file: "2026-08-10-Pi与主流编码Agent对比.html",
