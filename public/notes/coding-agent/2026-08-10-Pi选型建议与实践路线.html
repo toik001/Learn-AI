@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="把 Pi 的设计、架构、使用与竞品差异转化为决策树、场景建议、两周 PoC、验收标准、风险控制和退出策略。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="编码 Agent">
+  <meta name="study-date" content="2026-08-10">
+  <title>Pi 选型建议与实践路线｜AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../../index.html"><span class="brand-mark">π</span><span>AI 学习库</span></a>
+  <div class="topbar-actions"><button class="icon-button mobile-nav-toggle" type="button">文档</button><button class="icon-button theme-toggle" type="button">主题</button></div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar"><div class="sidebar-header"><a class="sidebar-home-link" href="../../../index.html">← 知识库首页</a><button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button></div><nav class="doc-nav" aria-label="当前分类文档"></nav></aside>
+  <main class="article-column">
+    <div class="article-meta"><a href="../../../index.html">知识库首页</a><span>·</span><span>编码 Agent</span><span>·</span><time datetime="2026-08-10">2026-08-10</time></div>
+    <article class="markdown-body">
+      <h1>Pi 选型建议与实践路线</h1>
+      <blockquote>
+        <p><strong>推荐原则：</strong>如果你重视模型中立、运行时可塑性、透明 Session 与 TypeScript 嵌入，并愿意自行承担安全边界和工程治理，<strong>优先试 Pi</strong>；如果你想直接获得成熟的 MCP、多 Agent、企业策略或内置 Sandbox，应先试更匹配的成品。</p>
+        <p><strong>决策方式：</strong>先做可逆、低风险的<strong>短期 PoC</strong>，用真实任务和硬指标验证；不要从“功能列表喜欢”直接跳到全团队标准化。</p>
+      </blockquote>
+      <nav aria-label="本页快速目录"><strong>快速阅读：</strong> <a href="#核心结论">结论</a> · <a href="#决策树">决策树</a> · <a href="#场景建议">场景</a> · <a href="#采用风险">风险</a> · <a href="#实践路线">PoC</a> · <a href="#验收标准">验收</a> · <a href="#参考资料">资料</a></nav>
+
+      <h2 id="核心结论">核心结论</h2>
+      <ol>
+        <li><strong>Pi 是“自建 Agent 产品”的良好底座，不一定是“零配置团队工具”的首选。</strong>它把 Provider、Agent Loop、TUI、Session、Extension、SDK 暴露得清楚，同时故意不内置大量上层工作流。</li>
+        <li><strong>最大选型风险不是模型质量，而是安全与长期维护。</strong>Pi 无内置权限系统；自定义 Extension 与 Package 又拥有完整进程权限。没有容器/账号隔离、版本固定、代码审查和维护人时，不应扩大使用。</li>
+        <li><strong>个人采用和平台采用要分开决策。</strong>个人 TUI 试用只需验证工作效率与可恢复性；嵌入产品还要验证并发、Session 隔离、取消、协议兼容、观测、成本和故障恢复。</li>
+        <li><strong>竞品不是替代名单，而是需求探针。</strong>需要 Claude 原厂工作流看 Claude Code；需要内置 Sandbox 看 Codex CLI；需要 HTTP client/server 看 OpenCode；需要 Git 精细编辑看 Aider；需要 MCP 通用自动化看 Goose。</li>
+        <li><strong>选型必须预留退出。</strong>提示、Skills、评测任务、业务工具 schema 和结果数据应保持 Harness 无关；不要让关键流程只存在于某个 Session 或私有 Extension API。</li>
+      </ol>
+
+      <h2 id="决策树">决策树</h2>
+      <div class="agent-call-flow" role="img" aria-label="Pi 选型决策树：先判断是否需要强内置安全或现成 MCP 多 Agent，若需要则优先竞品；否则判断是否需要多模型与深度定制，若需要则做 Pi PoC；只需 Git 结对编辑则比较 Aider；最后用验收标准决定采用或退出。">
+        <div class="agent-step"><strong>强内置治理？</strong><span>是 → Codex / Claude / OpenCode</span></div>
+        <div class="agent-step"><strong>多模型 + 深定制？</strong><span>是 → Pi PoC</span></div>
+        <div class="agent-step"><strong>只要 Git 结对？</strong><span>是 → 对照 Aider</span></div>
+        <div class="agent-step"><strong>量化验收</strong><span>通过采用；不通过退出</span></div>
+      </div>
+      <p class="diagram-text">每个分支都应带同一组真实任务验证。决策树负责缩小候选，不替代 PoC。</p>
+
+      <h3 id="第一问安全边界">第一问：安全边界必须由工具内置吗？</h3>
+      <ul>
+        <li><strong>必须内置 workspace Sandbox、审批与集中策略：</strong>先验证 Codex CLI；若组织已深度使用 Claude，再评估 Claude Code managed permission。</li>
+        <li><strong>已有容器、短命工作区、最小权限账号与网络策略：</strong>Pi 的“宿主负责隔离”可能更简单，继续下一问。</li>
+        <li><strong>目前没有任何隔离，也不准备建设：</strong>不要让 Pi 处理生产凭据、公司主仓库或可发布环境。</li>
+      </ul>
+
+      <h3 id="第二问扩展方式">第二问：你真正需要哪种扩展？</h3>
+      <div class="table-wrap"><table><thead><tr><th>需求</th><th>优先候选</th><th>判断依据</th></tr></thead><tbody>
+        <tr><td>TypeScript 进程内注册工具、拦截事件、定制 TUI</td><td>Pi</td><td>ExtensionAPI 与 SDK 直接，开发反馈快</td></tr>
+        <tr><td>大量现成 MCP、Skills、Subagent、团队插件</td><td>Claude Code / OpenCode / Goose / Codex</td><td>这些能力是一等产品面，不必自建桥接</td></tr>
+        <tr><td>稳定 HTTP API，多客户端共享后端</td><td>OpenCode</td><td>Server + OpenAPI + generated SDK 是核心架构</td></tr>
+        <tr><td>跨语言但只需本地子进程</td><td>Pi RPC / Codex exec / Goose run</td><td>比较 framing、事件、Session、取消和稳定性</td></tr>
+        <tr><td>文件级 Git 编辑与自动 lint/test</td><td>Aider</td><td>repo map、编辑格式、commit/undo 是主线设计</td></tr>
+      </tbody></table></div>
+
+      <h3 id="第三问控制与成品">第三问：你要控制力还是成品能力？</h3>
+      <p>如果团队愿意维护 Prompt、Skill、Extension、安全容器和评测，Pi 的留白是优势。如果团队只想安装后立即获得 plan、权限、MCP、Subagent、IDE 与企业策略，留白就是成本。不能把“未来可以用 Extension 实现”算作“今天已经具备”。</p>
+
+      <h2 id="场景建议">场景建议</h2>
+      <div class="table-wrap"><table><thead><tr><th>场景</th><th>建议</th><th>起步方式</th><th>主要警戒线</th></tr></thead><tbody>
+        <tr><td>个人学习 Agent 原理</td><td><strong>优先试 Pi</strong></td><td>读五核心包；做一个只读 Tool；观察 JSONL tree</td><td>不要把 demo Extension 当生产安全机制</td></tr>
+        <tr><td>个人日常编码</td><td>Pi、Aider、Codex CLI 三选一对照</td><td>固定模型跑 10 个真实小任务</td><td>误改率、恢复成本和每任务费用</td></tr>
+        <tr><td>多 Provider 成本路由</td><td>Pi 或 OpenCode</td><td>固定 2～3 个已验证模型；做 fallback 演练</td><td>工具语义和推理块跨 Provider 不一致</td></tr>
+        <tr><td>团队共享编码规范</td><td>先用 AGENTS.md + Skill；谨慎加 Extension</td><td>规范版本化、PR 审查、自动测试</td><td>项目信任后会执行任意代码</td></tr>
+        <tr><td>CI 自动修复/评审</td><td>可用 Pi print/JSON，但先比较 Codex exec/Goose run</td><td>只读或最小工具；短命容器；输出 schema</td><td>无交互 trust、无限 turn、凭据和网络</td></tr>
+        <tr><td>嵌入内部 TypeScript 工具</td><td>Pi SDK 值得 PoC</td><td>adapter 隔离 API；一请求一 Session/工作区</td><td>共享进程权限、取消、内存、版本漂移</td></tr>
+        <tr><td>跨语言桌面/IDE 集成</td><td>Pi RPC 可试；OpenCode Server 通常更自然</td><td>先做进程监督与 JSONL contract test</td><td>半帧、背压、进程崩溃、重连</td></tr>
+        <tr><td>高合规企业统一部署</td><td>默认不从 Pi 起步</td><td>先列 SSO、审计、策略、数据留存、Sandbox 硬要求</td><td>自建治理成本可能远高于许可证</td></tr>
+        <tr><td>面向外部客户的多租户 Agent SaaS</td><td>不要直接暴露 Pi RPC</td><td>独立身份、工作区、队列、配额、审计和密钥代理</td><td>跨租户泄漏与远程命令执行</td></tr>
+      </tbody></table></div>
+
+      <h3 id="优先试pi">何时优先试 Pi</h3>
+      <ul>
+        <li>要同时支持多家模型，并愿意为每个模型维护能力测试。</li>
+        <li>需要 TypeScript SDK 或进程内 Extension，而不是只调用一个黑盒 CLI。</li>
+        <li>希望 Session 使用可读 JSONL、能够研究 tree/compaction/context transformation。</li>
+        <li>已有外部 Sandbox/容器平台，或任务本来就在一次性受限环境中运行。</li>
+        <li>团队有明确维护人，能跟踪 Earendil 包的快速演进与迁移。</li>
+      </ul>
+
+      <h3 id="不要选择pi">何时不要选择 Pi</h3>
+      <ul>
+        <li><strong>不要选择 Pi</strong>，如果“内置审批 + 强 Sandbox + 企业集中策略”是不可妥协的上线门槛，而你不准备自建外部控制。</li>
+        <li>不要选择 Pi，如果业务依赖大量现成 MCP、复杂 Subagent/Agent Teams、后台任务，却不愿维护对应 Extension。</li>
+        <li>不要选择 Pi，如果团队需要一个有 SLA、商业支持、统一身份与合规合同的完整成品。</li>
+        <li>不要选择 Pi，如果唯一需求是小步修改 Git 文件；Aider 可能更简单，成熟产品也可能更省运维。</li>
+        <li>不要选择 Pi，如果无法固定版本、测试 Extension 或为快速 API 演进预留升级预算。</li>
+        <li>不要选择 Pi，如果计划把 RPC 直接暴露公网，或让不同租户共享进程、cwd、Session 与凭据。</li>
+      </ul>
+
+      <h2 id="采用风险">采用风险</h2>
+      <div class="table-wrap"><table><thead><tr><th>风险</th><th>早期信号</th><th>缓解措施</th><th>停止条件</th></tr></thead><tbody>
+        <tr><td>宿主权限过大</td><td>Agent 可读主目录、SSH、云凭据或仓库外文件</td><td>短命容器、只挂工作区、最小环境变量、网络 allowlist</td><td>无法证明租户/凭据隔离</td></tr>
+        <tr><td>Extension 供应链</td><td>安装 latest、隐式依赖、项目一信任即执行</td><td>固定 commit/version、源码审查、lockfile、禁 lifecycle script、内部镜像</td><td>扩展来源不可追溯</td></tr>
+        <tr><td>API/协议漂移</td><td>升级后类型、事件或 RPC 字段改变</td><td>adapter、contract test、canary、双版本回退</td><td>关键流程无兼容窗口</td></tr>
+        <tr><td>模型差异</td><td>换 Provider 后工具参数错误、结果质量骤降</td><td>模型 allowlist、每模型 eval、fallback 降级规则</td><td>核心任务成功率低于基线</td></tr>
+        <tr><td>上下文有损</td><td>Compaction 后忘记约束、重复操作</td><td>短 Session、外部事实文件、摘要验收、保留原 JSONL</td><td>关键决策无法审计复原</td></tr>
+        <tr><td>成本失控</td><td>工具循环、上下文增长、重试放大</td><td>turn/token/时间/费用预算，终止工具，Provider 限额</td><td>单位任务成本超过人工或替代方案阈值</td></tr>
+        <tr><td>自动化不可取消</td><td>abort 后子进程/请求仍在运行</td><td>全链路 AbortSignal、进程组清理、超时分级</td><td>取消不能在 SLA 内收敛</td></tr>
+        <tr><td>维护人缺失</td><td>没人负责升级、安全公告和失败复盘</td><td>明确 owner、月度升级窗、运行手册</td><td>连续两个升级周期无人维护</td></tr>
+      </tbody></table></div>
+
+      <h3 id="安全基线">最低安全基线</h3>
+      <ol>
+        <li>Pi 进程使用专用非管理员账号；容器只挂载目标工作区，不挂主目录和宿主 Docker socket。</li>
+        <li>凭据按任务注入，只给所需 Provider/服务；不把通用云凭据、SSH Agent、浏览器 profile 暴露给进程。</li>
+        <li>第一次运行只启用 read/grep/find/ls；写入和 Bash 按任务逐步开放。</li>
+        <li>项目 Extension、Package、Skill 脚本必须经过代码审查；Project Trust 记录不等于安全审计。</li>
+        <li>禁用自动 push/deploy/merge；发布动作由独立、有审批的流水线执行。</li>
+        <li>Session、日志和 Telemetry 先做数据分类、留存与脱敏；分享前人工审查。</li>
+      </ol>
+
+      <h2 id="实践路线">两周短期 PoC 实践路线</h2>
+      <p>目标不是“学会所有命令”，而是回答三个问题：Pi 是否提高真实任务完成率？安全与维护成本是否可接受？相对第二候选是否有足够优势？建议同时选一个对照工具，避免单臂试验。</p>
+
+      <h3 id="第零天准备">第 0 天：冻结实验条件</h3>
+      <ul>
+        <li>挑选 12 个历史真实任务：4 个只读定位、4 个小修复、4 个跨模块任务；移除敏感数据。</li>
+        <li>记录初始 commit、测试命令和人工完成基线；定义成功、部分成功和失败。</li>
+        <li>固定 Pi 版本、Provider/model、thinking level、工具集合、系统提示和最大预算。</li>
+        <li>建立一次性容器或受限账号；确认工作区外文件、网络和凭据不可访问。</li>
+      </ul>
+
+      <h3 id="第一阶段只读">第 1～2 天：只读理解</h3>
+      <pre><code>pi --tools read,grep,find,ls \
+  "只读分析仓库：定位入口、测试命令和指定故障路径；引用文件证据。"
+
+git status --short</code></pre>
+      <p>记录定位准确率、读文件数量、Token、耗时和错误假设。若只读阶段就频繁幻觉文件或无法使用目标模型，不要急着开放写权限。</p>
+
+      <h3 id="第二阶段交互编辑">第 3～5 天：交互式小修改</h3>
+      <ol>
+        <li>每个任务使用独立分支和命名 Session。</li>
+        <li>要求先复现或补测试，再做最小修改；完成后由外部脚本验证。</li>
+        <li>测试 <code>/tree</code>、resume、abort 和 Compaction；记录恢复失败。</li>
+        <li>同一任务用对照工具和同模型重复，至少交换先后顺序，减少学习偏差。</li>
+      </ol>
+
+      <h3 id="第三阶段最小扩展">第 6～8 天：一个最小 Extension</h3>
+      <p>只实现一个真实痛点，例如内部只读查询、测试结果格式化或禁止直接 push。扩展必须包含参数校验、取消、输出限制、错误标记、状态恢复和自动测试。若一个简单需求就需要大范围覆盖内置工具，说明 Pi 的扩展模型可能不匹配你的治理方式。</p>
+
+      <h3 id="第四阶段自动化">第 9～10 天：SDK 或 RPC 自动化</h3>
+      <ul>
+        <li>TypeScript 产品选 SDK；其他语言/故障隔离选 RPC，二者不必同时做。</li>
+        <li>实现 timeout、abort、进程/Session cleanup、结构化终态和一条只读 CI 工作流。</li>
+        <li>注入 Provider 429、网络超时、工具异常、畸形 JSONL 和进程退出。</li>
+        <li>验证同时两个任务不会共享 cwd、Session、Extension state 或凭据。</li>
+      </ul>
+
+      <h3 id="第五阶段对照复盘">第 11～14 天：对照与决策</h3>
+      <ol>
+        <li>用 Pi 和第二候选完成剩余任务，不临时改变评分权重。</li>
+        <li>审查所有 diff、测试证据、Session、成本和人工干预记录。</li>
+        <li>做一次版本升级演练和回退；做一次容器/凭据边界攻击测试。</li>
+        <li>输出采用、限定采用或退出结论；限定采用要写清任务类型、模型、工具和数据范围。</li>
+      </ol>
+
+      <h2 id="验收标准">验收标准</h2>
+      <div class="table-wrap"><table><thead><tr><th>类别</th><th>建议门槛</th><th>证据</th></tr></thead><tbody>
+        <tr><td>任务质量</td><td>小任务一次通过率不低于现有流程；跨模块任务无未解释回归</td><td>固定测试、人工 review、任务日志</td></tr>
+        <tr><td>人工效率</td><td>中位有效工时有明确下降；审批/纠错次数可接受</td><td>计时与干预计数，不用主观“感觉快”</td></tr>
+        <tr><td>可恢复</td><td>误改可用 Git 恢复；Session resume/tree 可复现关键上下文</td><td>故障演练录像/记录</td></tr>
+        <tr><td>安全</td><td>不能读取未挂载目录/未注入密钥；不能绕过发布边界</td><td>负面权限测试</td></tr>
+        <tr><td>取消</td><td>abort 后在约定秒数内停止模型、工具和子进程</td><td>进程表、网络和临时文件检查</td></tr>
+        <tr><td>成本</td><td>单位成功任务成本在预算内，异常循环有硬上限</td><td>Provider usage + 嵌套 Tool usage</td></tr>
+        <tr><td>兼容</td><td>固定版本可复现；升级 contract test 全过且可回退</td><td>锁文件、镜像、CI 报告</td></tr>
+        <tr><td>运维</td><td>有 owner、告警、日志脱敏、Session 清理和故障手册</td><td>责任表与 runbook</td></tr>
+      </tbody></table></div>
+
+      <h3 id="三档决策">三档决策</h3>
+      <ul>
+        <li><strong>采用：</strong>质量、效率、安全和维护全部过线；先限制到 PoC 验证过的任务与模型，再逐步扩展。</li>
+        <li><strong>限定采用：</strong>只读分析、个人开发或受限容器中过线，但自动化/多租户未过线；明确禁止超范围使用。</li>
+        <li><strong>不采用：</strong>安全边界、可恢复性或成本任一硬门槛失败；不要用“后续提示词优化”掩盖基础设施缺口。</li>
+      </ul>
+
+      <h3 id="退出策略">退出策略</h3>
+      <ol>
+        <li><strong>固定最后可用版本。</strong>保留 package lock、安装包/镜像、配置 schema 和已验证模型列表，确保过渡期可运行。</li>
+        <li><strong>导出数据。</strong>Session 为 JSONL，先备份并按数据政策脱敏；把关键决策转成普通文档/issue，而非只留在会话。</li>
+        <li><strong>隔离适配层。</strong>业务侧只依赖自定义的 <code>AgentRequest/AgentEvent/ToolResult</code>，由 adapter 映射 Pi SDK/RPC，便于替换。</li>
+        <li><strong>保持资产可移植。</strong>优先使用标准 AGENTS.md、Agent Skills、JSON Schema 和独立 CLI/MCP 服务；Pi Extension 只做薄胶水。</li>
+        <li><strong>建立双跑窗口。</strong>退出前让 Pi 与替代工具同时跑代表任务，比较结果与成本，再迁移流量。</li>
+        <li><strong>撤销权限。</strong>删除 Provider token、Package、Extension、容器镜像、缓存和不再需要的 Session；检查外部分享/Gist。</li>
+      </ol>
+
+      <h3 id="最终建议">最终建议</h3>
+      <p>对学习和可控的个人工程实验，Pi 值得优先投入：代码小而不玩具，能从统一 LLM API 一路看到 Agent Loop、TUI、Session 和嵌入接口。对团队生产采用，则应把它看成“需要自己完成最后一公里的平台组件”。只有当这份自主权带来的价值超过安全、运维和升级成本时，Pi 才是正确选择。</p>
+
+      <h2 id="参考资料">参考资料</h2>
+      <p>资料与选型基线检索于 <strong>2026-08-10</strong>。最终决策应使用当时锁定版本、组织策略和真实工作负载重新验证。</p>
+      <ul>
+        <li><a href="https://github.com/earendil-works/pi" target="_blank" rel="noopener noreferrer">Pi 官方仓库：定位、许可、权限与容器化</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/security.md" target="_blank" rel="noopener noreferrer">Pi 官方 Project Trust 安全边界</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/containerization.md" target="_blank" rel="noopener noreferrer">Pi 官方 OpenShell、Gondolin 与 Docker 方案</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/extensions.md" target="_blank" rel="noopener noreferrer">Pi 官方 Extension 权限与 API</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/sdk.md" target="_blank" rel="noopener noreferrer">Pi 官方 SDK 与 AgentSession</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/rpc.md" target="_blank" rel="noopener noreferrer">Pi 官方 RPC 协议</a></li>
+        <li><a href="https://code.claude.com/docs/en/permission-modes" target="_blank" rel="noopener noreferrer">Claude Code 权限模式（对照）</a></li>
+        <li><a href="https://learn.chatgpt.com/docs/security/sandboxing" target="_blank" rel="noopener noreferrer">OpenAI Docs：Codex Sandboxing（对照）</a></li>
+        <li><a href="https://dev.opencode.ai/docs/server/" target="_blank" rel="noopener noreferrer">OpenCode Server 架构（对照）</a></li>
+        <li><a href="https://aider.chat/docs/repomap.html" target="_blank" rel="noopener noreferrer">Aider Repository Map（对照）</a></li>
+        <li><a href="https://goose-docs.ai/docs/guides/goose-permissions/" target="_blank" rel="noopener noreferrer">Goose Permission Modes（对照）</a></li>
+      </ul>
+
+      <nav aria-label="Pi 七篇专题导航"><strong>Pi 专题：</strong> <a href="2026-08-10-Pi项目总览与学习路线.html">总览</a> · <a href="2026-08-10-Pi设计理念与边界.html">理念</a> · <a href="2026-08-10-Pi源码架构与运行机制.html">架构</a> · <a href="2026-08-10-Pi安装配置与使用教程.html">使用</a> · <a href="2026-08-10-Pi扩展开发与系统集成.html">扩展</a> · <a href="2026-08-10-Pi与主流编码Agent对比.html">对比</a></nav>
+    </article>
+  </main>
+</div>
+</body>
+</html>
