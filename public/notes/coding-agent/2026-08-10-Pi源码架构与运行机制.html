@@ -17,7 +17,20 @@
   <div class="topbar-actions"><button class="icon-button mobile-nav-toggle" type="button">文档</button><button class="icon-button theme-toggle" type="button">主题</button></div>
 </header>
 <div class="reader-layout">
-  <aside class="doc-sidebar"><div class="sidebar-header"><a class="sidebar-home-link" href="../../../index.html">← 知识库首页</a><button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button></div><nav class="doc-nav" aria-label="当前分类文档"></nav></aside>
+  <aside class="doc-sidebar"><div class="sidebar-header">
+      <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <div class="sidebar-category-summary">
+      <span class="eyebrow">当前分类</span>
+      <a class="sidebar-category-link" href="../../../index.html#category-编码-agent-5pooy1">
+        <strong>编码 Agent</strong>
+        <small>7 篇文档</small>
+      </a>
+      <a class="sidebar-featured-link" href="2026-08-10-Pi项目总览与学习路线.html">分类主目录<span>Pi 项目总览与学习路线</span></a>
+    </div><nav class="doc-nav" aria-label="当前分类文档">
+      <a class="doc-nav-item" href="2026-08-10-Pi安装配置与使用教程.html"><span>Pi 安装配置与使用教程</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-08-10-Pi扩展开发与系统集成.html"><span>Pi 扩展开发与系统集成</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-08-10-Pi设计理念与边界.html"><span>Pi 设计理念与边界</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-08-10-Pi项目总览与学习路线.html"><span>Pi 项目总览与学习路线</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-08-10-Pi选型建议与实践路线.html"><span>Pi 选型建议与实践路线</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-08-10-Pi与主流编码Agent对比.html"><span>Pi 与主流编码 Agent 对比</span><small>2026-08-10</small></a><a class="doc-nav-item is-active" href="2026-08-10-Pi源码架构与运行机制.html" aria-current="page"><span>Pi 源码架构与运行机制</span><small>2026-08-10</small></a>
+    </nav></aside>
   <main class="article-column">
     <div class="article-meta"><a href="../../../index.html">知识库首页</a><span>·</span><span>编码 Agent</span><span>·</span><time datetime="2026-08-10">2026-08-10</time></div>
     <article class="markdown-body">
@@ -194,7 +207,21 @@ emit("agent_end");</code></pre>
 
       <nav aria-label="Pi 七篇专题导航"><strong>Pi 专题：</strong> <a href="2026-08-10-Pi项目总览与学习路线.html">总览</a> · <a href="2026-08-10-Pi设计理念与边界.html">理念</a> · <a href="2026-08-10-Pi安装配置与使用教程.html">下一篇：使用</a> · <a href="2026-08-10-Pi扩展开发与系统集成.html">扩展</a> · <a href="2026-08-10-Pi与主流编码Agent对比.html">对比</a> · <a href="2026-08-10-Pi选型建议与实践路线.html">选型</a></nav>
     </article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/coding-agent/2026-08-10-Pi源码架构与运行机制.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="2026-08-10-Pi与主流编码Agent对比.html"><small>上一篇</small><span>Pi 与主流编码 Agent 对比</span></a>
+        <span class="pager-spacer"></span>
+      </nav>
+    </footer>
   </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#package地图">Package 地图</a></li><li class="toc-level-3"><a href="#演进中的远程组件">演进中的远程与持久化组件</a></li><li class="toc-level-2"><a href="#请求路径">一次请求的完整路径</a></li><li class="toc-level-3"><a href="#阶段一输入预处理">阶段一：AgentSession 预处理</a></li><li class="toc-level-3"><a href="#阶段二模型边界">阶段二：Agent 到 Provider</a></li><li class="toc-level-3"><a href="#阶段三工具与结果">阶段三：工具执行与回灌</a></li><li class="toc-level-2"><a href="#agent-loop">Agent Loop</a></li><li class="toc-level-3"><a href="#停止条件">停止并不只有“模型没调用工具”</a></li><li class="toc-level-3"><a href="#typescript实现要点">TypeScript 实现要点</a></li><li class="toc-level-2"><a href="#事件系统">事件系统</a></li><li class="toc-level-3"><a href="#遥测不是业务状态">Telemetry 不等于 Session</a></li><li class="toc-level-2"><a href="#会话模型">会话模型</a></li><li class="toc-level-3"><a href="#会话设计的三个结果">树结构带来的三个结果</a></li><li class="toc-level-3"><a href="#架构风险清单">架构风险清单</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
 </div>
 </body>
 </html>

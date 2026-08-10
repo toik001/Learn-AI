@@ -17,7 +17,20 @@
   <div class="topbar-actions"><button class="icon-button mobile-nav-toggle" type="button">文档</button><button class="icon-button theme-toggle" type="button">主题</button></div>
 </header>
 <div class="reader-layout">
-  <aside class="doc-sidebar"><div class="sidebar-header"><a class="sidebar-home-link" href="../../../index.html">← 知识库首页</a><button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button></div><nav class="doc-nav" aria-label="当前分类文档"></nav></aside>
+  <aside class="doc-sidebar"><div class="sidebar-header">
+      <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <div class="sidebar-category-summary">
+      <span class="eyebrow">当前分类</span>
+      <a class="sidebar-category-link" href="../../../index.html#category-编码-agent-5pooy1">
+        <strong>编码 Agent</strong>
+        <small>7 篇文档</small>
+      </a>
+      <a class="sidebar-featured-link" href="2026-08-10-Pi项目总览与学习路线.html">分类主目录<span>Pi 项目总览与学习路线</span></a>
+    </div><nav class="doc-nav" aria-label="当前分类文档">
+      <a class="doc-nav-item" href="2026-08-10-Pi安装配置与使用教程.html"><span>Pi 安装配置与使用教程</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-08-10-Pi扩展开发与系统集成.html"><span>Pi 扩展开发与系统集成</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-08-10-Pi设计理念与边界.html"><span>Pi 设计理念与边界</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-08-10-Pi项目总览与学习路线.html"><span>Pi 项目总览与学习路线</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-08-10-Pi选型建议与实践路线.html"><span>Pi 选型建议与实践路线</span><small>2026-08-10</small></a><a class="doc-nav-item is-active" href="2026-08-10-Pi与主流编码Agent对比.html" aria-current="page"><span>Pi 与主流编码 Agent 对比</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-08-10-Pi源码架构与运行机制.html"><span>Pi 源码架构与运行机制</span><small>2026-08-10</small></a>
+    </nav></aside>
   <main class="article-column">
     <div class="article-meta"><a href="../../../index.html">知识库首页</a><span>·</span><span>编码 Agent</span><span>·</span><time datetime="2026-08-10">2026-08-10</time></div>
     <article class="markdown-body">
@@ -192,7 +205,21 @@
 
       <nav aria-label="Pi 七篇专题导航"><strong>Pi 专题：</strong> <a href="2026-08-10-Pi项目总览与学习路线.html">总览</a> · <a href="2026-08-10-Pi设计理念与边界.html">理念</a> · <a href="2026-08-10-Pi源码架构与运行机制.html">架构</a> · <a href="2026-08-10-Pi安装配置与使用教程.html">使用</a> · <a href="2026-08-10-Pi扩展开发与系统集成.html">扩展</a> · <a href="2026-08-10-Pi选型建议与实践路线.html">下一篇：选型</a></nav>
     </article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/coding-agent/2026-08-10-Pi与主流编码Agent对比.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="2026-08-10-Pi选型建议与实践路线.html"><small>上一篇</small><span>Pi 选型建议与实践路线</span></a>
+        <a class="pager-link next" href="2026-08-10-Pi源码架构与运行机制.html"><small>下一篇</small><span>Pi 源码架构与运行机制</span></a>
+      </nav>
+    </footer>
   </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#比较方法">比较方法</a></li><li class="toc-level-2"><a href="#事实矩阵">事实矩阵</a></li><li class="toc-level-2"><a href="#逐项分析">逐项分析</a></li><li class="toc-level-3"><a href="#设计中心">1. 设计中心：Harness、产品、平台还是编辑器</a></li><li class="toc-level-3"><a href="#模型中立性">2. 模型中立性的三种层次</a></li><li class="toc-level-3"><a href="#权限安全">3. 权限、安全与默认值</a></li><li class="toc-level-3"><a href="#上下文策略">4. 上下文与会话策略</a></li><li class="toc-level-3"><a href="#扩展生态">5. 扩展：进程内 API 与协议生态</a></li><li class="toc-level-3"><a href="#自动化接口">6. 自动化与系统集成</a></li><li class="toc-level-2"><a href="#场景选择">场景选择</a></li><li class="toc-level-3"><a href="#不应这样比较">不应这样比较</a></li><li class="toc-level-2"><a href="#比较局限">比较局限</a></li><li class="toc-level-3"><a href="#建议的本地对照实验">建议的本地对照实验</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
 </div>
 </body>
 </html>

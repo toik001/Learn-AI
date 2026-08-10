@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-07T00:00:00.000Z",
-  "documentCount": 25,
+  "generatedAt": "2026-08-10T00:00:00.000Z",
+  "documentCount": 32,
   "documents": [
     {
       "output": "notes/agent/2026-07-27-01-Agent基础概念与边界.html",
@@ -169,6 +169,55 @@
       "category": "Codex 与 AI 工程",
       "date": "2026-08-07",
       "sections": 26
+    },
+    {
+      "output": "notes/coding-agent/2026-08-10-Pi安装配置与使用教程.html",
+      "title": "Pi 安装配置与使用教程",
+      "category": "编码 Agent",
+      "date": "2026-08-10",
+      "sections": 23
+    },
+    {
+      "output": "notes/coding-agent/2026-08-10-Pi扩展开发与系统集成.html",
+      "title": "Pi 扩展开发与系统集成",
+      "category": "编码 Agent",
+      "date": "2026-08-10",
+      "sections": 24
+    },
+    {
+      "output": "notes/coding-agent/2026-08-10-Pi设计理念与边界.html",
+      "title": "Pi 设计理念与边界",
+      "category": "编码 Agent",
+      "date": "2026-08-10",
+      "sections": 15
+    },
+    {
+      "output": "notes/coding-agent/2026-08-10-Pi项目总览与学习路线.html",
+      "title": "Pi 项目总览与学习路线",
+      "category": "编码 Agent",
+      "date": "2026-08-10",
+      "sections": 9
+    },
+    {
+      "output": "notes/coding-agent/2026-08-10-Pi选型建议与实践路线.html",
+      "title": "Pi 选型建议与实践路线",
+      "category": "编码 Agent",
+      "date": "2026-08-10",
+      "sections": 22
+    },
+    {
+      "output": "notes/coding-agent/2026-08-10-Pi与主流编码Agent对比.html",
+      "title": "Pi 与主流编码 Agent 对比",
+      "category": "编码 Agent",
+      "date": "2026-08-10",
+      "sections": 15
+    },
+    {
+      "output": "notes/coding-agent/2026-08-10-Pi源码架构与运行机制.html",
+      "title": "Pi 源码架构与运行机制",
+      "category": "编码 Agent",
+      "date": "2026-08-10",
+      "sections": 16
     },
     {
       "output": "notes/project/2026-07-29-GitHub-Pages部署与项目结构.html",
