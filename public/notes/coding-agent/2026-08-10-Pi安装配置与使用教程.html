@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Pi 当前版本的安装、迁移、Provider 认证、模型选择、Project Trust、日常编码、会话树、脚本模式和排错教程。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="编码 Agent">
+  <meta name="study-date" content="2026-08-10">
+  <title>Pi 安装配置与使用教程｜AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../../index.html"><span class="brand-mark">π</span><span>AI 学习库</span></a>
+  <div class="topbar-actions"><button class="icon-button mobile-nav-toggle" type="button">文档</button><button class="icon-button theme-toggle" type="button">主题</button></div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar"><div class="sidebar-header"><a class="sidebar-home-link" href="../../../index.html">← 知识库首页</a><button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button></div><nav class="doc-nav" aria-label="当前分类文档"></nav></aside>
+  <main class="article-column">
+    <div class="article-meta"><a href="../../../index.html">知识库首页</a><span>·</span><span>编码 Agent</span><span>·</span><time datetime="2026-08-10">2026-08-10</time></div>
+    <article class="markdown-body">
+      <h1>Pi 安装配置与使用教程</h1>
+      <blockquote>
+        <p><strong>最短路径：</strong>准备 Node.js 22.19.0 或更高版本 → 安装 <code>@earendil-works/pi-coding-agent</code> → 用 <code>/login</code> 或环境变量配置 Provider → 在一个无敏感信息的练习仓库启动 <code>pi</code> → 先做只读探索，再允许修改。</p>
+        <p><strong>验证范围：</strong>本文命令和配置已与 2026-08-10 主分支文档/CLI 源码核对，但涉及 OAuth、付费模型和第三方云服务的流程<strong>未执行外部端到端验证</strong>。</p>
+      </blockquote>
+      <nav aria-label="本页快速目录"><strong>快速阅读：</strong> <a href="#核心结论">核心结论</a> · <a href="#环境与安装">安装</a> · <a href="#认证与模型">认证</a> · <a href="#日常工作流">工作流</a> · <a href="#会话管理">会话</a> · <a href="#常见问题">排错</a> · <a href="#参考资料">资料</a></nav>
+
+      <h2 id="核心结论">核心结论</h2>
+      <ol>
+        <li><strong>新安装必须使用新 scope。</strong>当前包是 <code>@earendil-works/pi-coding-agent</code>；旧 <code>@mariozechner/*</code> 停在 0.73.1，升级可能需要运行两次 <code>pi update</code>。</li>
+        <li><strong>Project Trust 不是 Sandbox。</strong>它只决定项目本地设置、Package、Extension 和 Skill 是否加载；Pi 仍继承宿主进程的文件、网络、命令和凭据权限。</li>
+        <li><strong>先选 Provider，再选模型。</strong>Provider 管理模型目录、认证与 wire protocol；<code>/model</code> 只展示当前可认证且工具能力可用的模型。</li>
+        <li><strong>Session 默认持久化并可分支。</strong><code>-c</code> 继续最近会话，<code>-r</code> 浏览恢复，<code>/tree</code> 在同一 JSONL 内分支；敏感代码和工具输出因此会进入本地历史。</li>
+        <li><strong>四种模式有不同信任行为。</strong>Interactive 可以询问信任；print、JSON 和 RPC 不会弹窗，未保存信任时会按全局 <code>defaultProjectTrust</code> 决定是否忽略项目资源。</li>
+      </ol>
+
+      <h2 id="环境与安装">环境与安装</h2>
+      <h3 id="前置条件">前置条件</h3>
+      <div class="table-wrap"><table><thead><tr><th>项目</th><th>当前要求</th><th>检查命令</th><th>说明</th></tr></thead><tbody>
+        <tr><td>Node.js</td><td><code>&gt;= 22.19.0</code></td><td><code>node --version</code></td><td>来自当前 coding-agent package.json 的 engines</td></tr>
+        <tr><td>npm/pnpm/bun</td><td>任一可用</td><td><code>npm --version</code></td><td>官网给出三种全局安装方式</td></tr>
+        <tr><td>Shell</td><td>macOS/Linux 原生；Windows 需要可用 Bash</td><td><code>bash --version</code></td><td>Windows 可使用 Git Bash、WSL、Cygwin/MSYS2 或自定义 shellPath</td></tr>
+        <tr><td>Provider</td><td>API Key 或受支持订阅登录</td><td>启动后 <code>/login</code></td><td>实际费用和套餐规则由 Provider 决定</td></tr>
+        <tr><td>项目权限</td><td>建议练习仓库、最小权限账号</td><td><code>pwd</code>、<code>git status</code></td><td>默认工具可读写文件并执行 Bash</td></tr>
+      </tbody></table></div>
+
+      <h3 id="推荐安装">推荐安装：npm</h3>
+      <pre><code>node --version
+npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+pi --version
+pi --help</code></pre>
+      <p><code>--ignore-scripts</code> 禁用依赖 lifecycle scripts；官方说明正常 npm 安装不依赖 install scripts。若你的 Node.js 低于要求，应先用 nvm、mise、fnm 或系统包管理器升级，而不是强行忽略 engines。</p>
+
+      <h3 id="其他安装方式">其他安装方式</h3>
+      <pre><code># 官方安装脚本：执行前建议先下载并审查内容
+curl -fsSL https://pi.dev/install.sh -o /tmp/pi-install.sh
+less /tmp/pi-install.sh
+sh /tmp/pi-install.sh
+
+# pnpm / bun
+pnpm add -g --ignore-scripts @earendil-works/pi-coding-agent
+bun add -g --ignore-scripts @earendil-works/pi-coding-agent</code></pre>
+      <p>Windows 官网提供 PowerShell 安装脚本；如果 Bash 未被自动发现，可在 <code>~/.pi/agent/settings.json</code> 设置 <code>shellPath</code>。生产环境应优先固定 release 与校验摘要，而不是每次从 main 构建。</p>
+
+      <h3 id="旧版迁移">从旧 scope 迁移</h3>
+      <pre><code>pi --version
+pi update
+# 若最初版本早于 0.73.1，第一次只会升到旧 scope 的最终版本；再执行一次
+pi update
+pi --version</code></pre>
+      <p>官方公告说明 CLI 名仍是 <code>pi</code>，<code>~/.pi/agent/</code> 下的配置和 Session 不改位置。旧包未下架，所以固定旧版本仍可复现，但不应作为新项目安装说明。</p>
+
+      <h2 id="认证与模型">认证与模型</h2>
+      <div class="agent-call-flow" role="img" aria-label="Pi 模型准备流程：安装 Pi，选择 Provider，使用 login 或环境变量提供凭据，模型目录自动刷新或使用缓存，通过 model 命令选择工具模型，再设置 thinking level 并开始会话。">
+        <div class="agent-step"><strong>安装</strong><span>@earendil-works/pi-coding-agent</span></div>
+        <div class="agent-step"><strong>认证</strong><span>/login 或环境变量</span></div>
+        <div class="agent-step"><strong>目录</strong><span>内置 + 自动刷新 + models.json</span></div>
+        <div class="agent-step"><strong>选择</strong><span>/model 或 Ctrl+L</span></div>
+        <div class="agent-step"><strong>运行</strong><span>工具模型 + thinking level</span></div>
+      </div>
+      <p class="diagram-text">Provider 是运行时单元，拥有模型目录、认证与 stream 行为；model 是该 Provider 下的具体能力和上下文窗口定义。</p>
+
+      <h3 id="方式一订阅登录">方式一：订阅/OAuth 登录</h3>
+      <pre><code>pi
+/login
+# 选择 ChatGPT Plus/Pro (Codex)、Claude Pro/Max、GitHub Copilot 等受支持项
+/model
+/session</code></pre>
+      <p>Token 存储在 <code>~/.pi/agent/auth.json</code> 并在支持时自动刷新。订阅是否允许第三方 Harness、是否额外计费以及组织策略会变化，必须阅读对应 Provider 当前条款。例如 Pi 文档特别提示 Claude Pro/Max 的第三方 Harness 使用可能走 extra usage，而非套餐限额。</p>
+
+      <h3 id="方式二环境变量">方式二：API Key 环境变量</h3>
+      <pre><code># 只选择一个实际使用的 Provider；不要把真实值提交到仓库
+export ANTHROPIC_API_KEY="..."
+# 或 OPENAI_API_KEY / GEMINI_API_KEY / OPENROUTER_API_KEY 等
+
+pi --provider anthropic --model "claude-*"
+pi --list-models "claude"</code></pre>
+      <p>环境变量优于把明文 Key 写进项目文件。也可以通过 <code>/login</code> 把 API Key 存入 auth.json；该文件同样属于敏感凭据，需限制权限并纳入备份/清理策略。</p>
+
+      <h3 id="模型选择与切换">模型选择与切换</h3>
+      <div class="table-wrap"><table><thead><tr><th>操作</th><th>用途</th><th>注意</th></tr></thead><tbody>
+        <tr><td><code>/model</code> 或 Ctrl+L</td><td>交互选择模型</td><td>切换 Provider 后历史会被尽力转换，不保证推理块完全等价</td></tr>
+        <tr><td>Ctrl+P / Shift+Ctrl+P</td><td>循环 scoped models</td><td>先用 <code>/scoped-models</code> 或 enabledModels 限定集合</td></tr>
+        <tr><td>Shift+Tab</td><td>调整 thinking level</td><td>实际支持范围取决于模型</td></tr>
+        <tr><td><code>pi update --models</code></td><td>强制刷新模型目录</td><td>离线环境使用已有缓存</td></tr>
+        <tr><td><code>~/.pi/agent/models.json</code></td><td>增加兼容 API 的 Provider/模型</td><td>自定义 OAuth 或协议用 Extension 更合适</td></tr>
+      </tbody></table></div>
+
+      <h3 id="最小全局配置">最小全局配置</h3>
+      <pre><code>{
+  "defaultProvider": "anthropic",
+  "defaultModel": "claude-sonnet-*",
+  "defaultThinkingLevel": "medium",
+  "defaultProjectTrust": "ask",
+  "compaction": {
+    "enabled": true,
+    "reserveTokens": 16384,
+    "keepRecentTokens": 20000
+  },
+  "retry": { "enabled": true, "maxRetries": 3 }
+}</code></pre>
+      <p>保存到 <code>~/.pi/agent/settings.json</code>。模型 ID 会变化，通配或交互选择比复制过期示例更稳妥；若团队要求确定性，应固定已验证的模型 ID 和 Pi 版本。</p>
+
+      <h3 id="项目上下文与信任">项目上下文与信任</h3>
+      <p>Pi 从全局、父目录到当前目录加载 AGENTS.md 或 CLAUDE.md；<code>AGENTS.override.md</code> 可替换同目录的普通文件。<code>.pi/SYSTEM.md</code> 替换系统提示，<code>APPEND_SYSTEM.md</code> 追加内容。</p>
+      <div class="table-wrap"><table><thead><tr><th>状态</th><th>Interactive</th><th>Print/JSON/RPC</th><th>项目资源</th></tr></thead><tbody>
+        <tr><td>无保存决定，默认 ask</td><td>发现项目资源时询问</td><td>不弹窗，忽略项目资源</td><td>上下文文件仍可加载；项目 Extension/设置不执行</td></tr>
+        <tr><td><code>--approve</code></td><td>本次信任</td><td>本次信任</td><td>允许加载项目设置、资源和 Extension</td></tr>
+        <tr><td><code>--no-approve</code></td><td>本次忽略</td><td>本次忽略</td><td>只使用全局/显式安全资源</td></tr>
+        <tr><td><code>/trust</code></td><td>写入 trust.json，重启生效</td><td>不适用交互命令</td><td>最近的当前/父路径决定优先</td></tr>
+      </tbody></table></div>
+      <p><strong>安全重点：</strong>信任项目意味着项目 Extension 可执行代码、Package 可安装依赖；但“不信任”也不限制模型调用内置 Bash 对当前用户可访问的文件。需要真正隔离时使用容器、受限账号、网络策略或官方文档列出的 Gondolin/OpenShell 模式。</p>
+
+      <h2 id="日常工作流">日常工作流</h2>
+      <h3 id="场景一只读认识仓库">场景一：只读认识仓库</h3>
+      <pre><code>cd /path/to/practice-repo
+git status --short
+pi --tools read,grep,find,ls "阅读仓库，不修改文件。说明入口、测试命令和三个主要风险。"
+# 完成后再次验证
+git status --short</code></pre>
+      <p>显式 allowlist 比只在提示中说“不要修改”更可靠。第一次使用新模型、新 Extension 或陌生仓库时都应先走只读流程。</p>
+
+      <h3 id="场景二受控局部修改">场景二：受控局部修改</h3>
+      <pre><code>git switch -c experiment/pi-small-fix
+pi "只修改指定模块；先说明计划，再补测试并运行相关测试。不要提交。"
+
+git status --short
+git diff --check
+git diff</code></pre>
+      <p>Pi 没有内置 plan mode，但可以把计划写进会话或文件。真正的完成证据仍来自 Git diff、测试、lint 和程序行为，而不是模型自述。</p>
+
+      <h3 id="场景三修复测试">场景三：修复测试失败</h3>
+      <pre><code>pi "运行最小相关测试，解释根因，先新增或确认失败测试，再做最小修复。最后重跑。"
+# Esc：取消当前模型/工具；输入新消息可 steer；Alt+Enter 可排队 follow-up</code></pre>
+      <p>运行中按 Enter 发送 steering，会在当前工具执行后、下一次模型调用前送达；Alt+Enter 是 follow-up，只在 Agent 原本完成后继续。长任务可用这两个队列修正方向，而无需丢弃 session。</p>
+
+      <h3 id="场景四脚本与流水线">场景四：脚本与流水线</h3>
+      <pre><code># 一次性文本输出，不保存 session，并忽略未信任项目资源
+pi -p --no-session --no-approve --tools read,grep,find,ls \
+  "总结当前项目的公开 API；不要修改文件。"
+
+# JSONL 事件流，适合机器消费
+pi --mode json --no-session --no-approve "检查测试失败原因"</code></pre>
+      <p>非交互模式不会弹 trust prompt。CI 中应固定版本、模型、工具 allowlist、超时、工作目录、凭据权限和输出 schema；不要依赖用户主目录中不可见的全局 Extension。</p>
+
+      <h3 id="场景五离线启动">场景五：减少启动网络请求</h3>
+      <pre><code>PI_OFFLINE=1 pi
+# 或
+pi --offline</code></pre>
+      <p>Offline 会关闭版本检查、Package 更新检查和安装/更新 Telemetry 等启动网络操作，但模型 Provider 本身若是云 API 仍需要网络；这不是把云模型变成本地模型。</p>
+
+      <h2 id="会话管理">会话管理</h2>
+      <div class="table-wrap"><table><thead><tr><th>命令</th><th>行为</th><th>适用场景</th></tr></thead><tbody>
+        <tr><td><code>pi -c</code></td><td>继续当前工作目录最近 session</td><td>回到刚才中断的任务</td></tr>
+        <tr><td><code>pi -r</code></td><td>交互选择历史 session</td><td>同一仓库存在多个任务</td></tr>
+        <tr><td><code>/session</code></td><td>查看路径、ID、消息、Token 和成本</td><td>记录当前运行信息</td></tr>
+        <tr><td><code>/tree</code></td><td>跳到历史 entry，在同一文件创建分支</td><td>尝试另一种实现而保留旧路径</td></tr>
+        <tr><td><code>/fork</code></td><td>从旧用户消息创建新 session 文件</td><td>需要独立文件与后续生命周期</td></tr>
+        <tr><td><code>/clone</code></td><td>复制当前 active branch 到新 session</td><td>保留当前上下文后开始新分支</td></tr>
+        <tr><td><code>/compact</code></td><td>摘要旧消息，保留最近上下文</td><td>接近 context limit；摘要是有损的</td></tr>
+        <tr><td><code>/export</code>/<code>/share</code></td><td>导出 HTML/JSONL 或上传 gist</td><td>分享前必须审查密钥、代码和日志</td></tr>
+        <tr><td><code>--no-session</code></td><td>临时运行，不持久化</td><td>CI、敏感一次性检查、可重复脚本</td></tr>
+      </tbody></table></div>
+      <p>默认目录是 <code>~/.pi/agent/sessions/</code>，可通过 <code>--session-dir</code>、<code>PI_CODING_AGENT_SESSION_DIR</code> 或 settings 的 <code>sessionDir</code> 改变，优先级依次递减。</p>
+
+      <h3 id="推荐的会话卫生">推荐的会话卫生</h3>
+      <ul>
+        <li>一个明确任务一个命名 session；用 <code>--name</code> 或 <code>/name</code> 标识。</li>
+        <li>切换完全不同的目标时用新 session，不要无限依赖 Compaction。</li>
+        <li>把关键决策、测试命令和当前阻塞写入仓库可审查文件，Session 不是唯一事实源。</li>
+        <li>定期清理含敏感数据的导出、gist 和本地历史；不要把 auth.json 放入项目。</li>
+      </ul>
+
+      <h2 id="常见问题">常见问题</h2>
+      <div class="table-wrap"><table><thead><tr><th>现象</th><th>优先检查</th><th>处理</th></tr></thead><tbody>
+        <tr><td>安装时报 engines/语法错误</td><td><code>node --version</code></td><td>升级到 Node.js 22.19.0+，重新全局安装</td></tr>
+        <tr><td><code>pi</code> 仍是旧包</td><td><code>which pi</code>、<code>pi --version</code>、全局包列表</td><td>运行两次 <code>pi update</code> 或卸载旧 scope 后安装新包</td></tr>
+        <tr><td>找不到模型</td><td>Provider 凭据、<code>pi --list-models</code>、目录缓存</td><td>重新 <code>/login</code>，运行 <code>pi update --models</code>，核对模型是否支持工具调用</td></tr>
+        <tr><td>项目 Extension 未加载</td><td>Project Trust、<code>.pi/settings.json</code>、启动头诊断</td><td>审查后 <code>/trust</code> 并重启，或仅本次 <code>--approve</code></td></tr>
+        <tr><td>CI 与本地行为不同</td><td>非交互 trust、全局资源、模型和 Pi 版本</td><td>固定版本并显式传 <code>--approve/--no-approve</code>、工具、模型和资源参数</td></tr>
+        <tr><td>长会话遗忘细节</td><td><code>/session</code>、Compaction 配置、session tree</td><td>查看完整 JSONL/树，重新注入事实，或新建目标明确的 session</td></tr>
+        <tr><td>命令权限过大</td><td>启动用户、容器 mount、网络和凭据</td><td>停止运行；用最小权限容器/账号重新启动，不依赖提示词</td></tr>
+        <tr><td>TUI 颜色/按键异常</td><td>终端类型、tmux、Windows 键位、主题</td><td>查 terminal-setup/keybindings/windows 文档，必要时设置 shellPath</td></tr>
+      </tbody></table></div>
+
+      <h3 id="验收练习">30 分钟验收练习</h3>
+      <ol>
+        <li>在无敏感信息的练习仓库安装并启动 Pi，记录版本和选定 Provider/model。</li>
+        <li>用只读工具 allowlist 让 Pi 解释项目，确认 <code>git status</code> 无变化。</li>
+        <li>建立新分支，允许 edit/write/bash，完成一个小修改并用测试验证。</li>
+        <li>用 <code>/tree</code> 回到修改前提示，尝试另一方案；确认两个分支仍在同一 session。</li>
+        <li>退出后用 <code>pi -c</code> 恢复，再用 <code>/session</code> 检查路径、Token 和成本。</li>
+        <li>最后检查本地 session 是否包含敏感文本，并制定清理规则。</li>
+      </ol>
+
+      <h2 id="参考资料">参考资料</h2>
+      <p>资料与命令检索于 <strong>2026-08-10</strong>；Provider 套餐、模型和认证规则可能变化。</p>
+      <ul>
+        <li><a href="https://pi.dev/" target="_blank" rel="noopener noreferrer">Pi 官网：当前安装方式与能力概览</a></li>
+        <li><a href="https://pi.dev/news/2026/5/7/pi-has-a-new-home" target="_blank" rel="noopener noreferrer">旧 scope 到 Earendil scope 的官方迁移说明</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/quickstart.md" target="_blank" rel="noopener noreferrer">官方 Quickstart</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/providers.md" target="_blank" rel="noopener noreferrer">Provider、OAuth、API Key 与解析优先级</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/settings.md" target="_blank" rel="noopener noreferrer">Settings、Project Trust、Retry 与 Compaction</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/usage.md" target="_blank" rel="noopener noreferrer">Interactive、命令、四种模式与 CLI 参考</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/session-format.md" target="_blank" rel="noopener noreferrer">Session JSONL Tree 格式</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/security.md" target="_blank" rel="noopener noreferrer">Project Trust 安全边界</a></li>
+      </ul>
+
+      <nav aria-label="Pi 七篇专题导航"><strong>Pi 专题：</strong> <a href="2026-08-10-Pi项目总览与学习路线.html">总览</a> · <a href="2026-08-10-Pi设计理念与边界.html">理念</a> · <a href="2026-08-10-Pi源码架构与运行机制.html">架构</a> · <a href="2026-08-10-Pi扩展开发与系统集成.html">下一篇：扩展</a> · <a href="2026-08-10-Pi与主流编码Agent对比.html">对比</a> · <a href="2026-08-10-Pi选型建议与实践路线.html">选型</a></nav>
+    </article>
+  </main>
+</div>
+</body>
+</html>
