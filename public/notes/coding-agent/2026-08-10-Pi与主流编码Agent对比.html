@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="以统一口径比较 Pi、Claude Code、Codex CLI、OpenCode、Aider 与 Goose 的许可、模型、权限、上下文、扩展和自动化能力。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="编码 Agent">
+  <meta name="study-date" content="2026-08-10">
+  <title>Pi 与主流编码 Agent 对比｜AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../../index.html"><span class="brand-mark">π</span><span>AI 学习库</span></a>
+  <div class="topbar-actions"><button class="icon-button mobile-nav-toggle" type="button">文档</button><button class="icon-button theme-toggle" type="button">主题</button></div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar"><div class="sidebar-header"><a class="sidebar-home-link" href="../../../index.html">← 知识库首页</a><button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button></div><nav class="doc-nav" aria-label="当前分类文档"></nav></aside>
+  <main class="article-column">
+    <div class="article-meta"><a href="../../../index.html">知识库首页</a><span>·</span><span>编码 Agent</span><span>·</span><time datetime="2026-08-10">2026-08-10</time></div>
+    <article class="markdown-body">
+      <h1>Pi 与主流编码 Agent 对比</h1>
+      <blockquote>
+        <p><strong>一句话结论：</strong>Pi 的核心优势是“可读、可改、可嵌入的极简 Agent Harness”，不是功能数量；Claude Code 与 Codex CLI 更像集成度高的完整产品，OpenCode 是多界面、client/server 型开源平台，Aider 是 Git 与编辑格式驱动的专注型结对工具，Goose 是以 MCP 为中心的通用自动化 Agent。</p>
+        <p><strong>不要把模型质量当成 Harness 质量。</strong>同一模型在不同工具中的上下文选择、编辑协议、提示、工具、重试和权限路径不同；不同模型的结果更不能直接归因于 CLI。</p>
+      </blockquote>
+      <nav aria-label="本页快速目录"><strong>快速阅读：</strong> <a href="#核心结论">结论</a> · <a href="#比较方法">方法</a> · <a href="#事实矩阵">矩阵</a> · <a href="#逐项分析">分析</a> · <a href="#场景选择">场景</a> · <a href="#比较局限">局限</a> · <a href="#参考资料">资料</a></nav>
+
+      <h2 id="核心结论">核心结论</h2>
+      <ol>
+        <li><strong>想研究或塑造 Agent Runtime：</strong>Pi 的五个核心包、Extension、SDK 和 JSONL Session 很适合阅读与二次开发；代价是权限治理、MCP、多 Agent 等要自己组合。</li>
+        <li><strong>想要厂商整合的完整工作流：</strong>Claude Code 的 Skills、Hooks、MCP、Subagent/Agent Teams、插件和多端面最丰富，但主 CLI 是 Anthropic 商业许可，模型范围围绕 Claude。</li>
+        <li><strong>想要开源 CLI + 强安全执行边界：</strong>Codex CLI 将审批与 read-only/workspace-write/danger-full-access Sandbox 作为一等能力，并提供 MCP、插件、SDK、App Server 与非交互模式；主要体验围绕 OpenAI 模型，另有 Ollama/LM Studio 本地 OSS 路径。</li>
+        <li><strong>想要多 Provider、多客户端与可服务化架构：</strong>OpenCode 的 TUI、桌面、IDE、HTTP Server/OpenAPI SDK、Agent 和 MCP 形成完整平台；能力面较大，也意味着配置与版本演进面更大。</li>
+        <li><strong>想要可预测的 Git 结对编辑：</strong>Aider 的 repo map、编辑格式、自动提交、undo、lint/test 仍然独特；它不像另外几项那样以通用工具生态和长期 Agent 编排为中心。</li>
+        <li><strong>想要 MCP 优先的通用本地自动化：</strong>Goose 同时提供桌面、CLI、API、Recipe、权限模式和大量 MCP Extension；但默认 Autonomous，需要先调整安全配置。</li>
+      </ol>
+
+      <h2 id="比较方法">比较方法</h2>
+      <p>本文只比较“本地/终端 Agent Harness”这一重叠面。Claude Code 与 Codex 还有云端、桌面和企业功能，Goose 也定位为通用 Agent；这些非对称能力会单独标明，不用来制造总分。</p>
+      <div class="table-wrap"><table><thead><tr><th>维度</th><th>观察问题</th><th>为什么重要</th></tr></thead><tbody>
+        <tr><td>许可与治理</td><td>核心实现能否审计、修改、再分发？谁决定路线？</td><td>影响可控性、合规、维护与供应商依赖</td></tr>
+        <tr><td>模型与 Provider</td><td>是模型中立还是围绕一家模型？支持本地模型吗？</td><td>影响质量、成本、数据路径和议价能力</td></tr>
+        <tr><td>交互面</td><td>TUI、IDE、桌面、Web、headless、SDK/Server 是否统一？</td><td>影响个人体验和系统集成成本</td></tr>
+        <tr><td>权限与隔离</td><td>有 allow/ask/deny、Sandbox、项目资源信任吗？</td><td>决定“误操作”与“真正越权”分别在哪里阻断</td></tr>
+        <tr><td>上下文与会话</td><td>如何选择代码、压缩历史、恢复和撤销？</td><td>影响长任务准确性、成本与可审计性</td></tr>
+        <tr><td>扩展</td><td>Skill、Hook、Plugin、MCP、自定义 Tool 如何组合？</td><td>决定能否接入团队流程和外部系统</td></tr>
+        <tr><td>自动化</td><td>非交互输出、API、SDK、结构化事件是否稳定？</td><td>决定 CI、IDE、平台化和多租户可行性</td></tr>
+      </tbody></table></div>
+      <p>事实以 2026-08-10 可访问的官方文档与仓库为准；没有进行“相同仓库 + 相同模型 + 相同提示 + 多次重复”的效果基准，所以本文不输出胜率或代码质量排名。</p>
+
+      <div class="agent-call-flow" role="img" aria-label="六个项目的设计中心：Pi 偏可组合 Harness，Aider 偏 Git 结对编辑器，Claude Code 与 Codex CLI 偏完整编码产品，OpenCode 偏多客户端平台，Goose 偏 MCP 通用自动化。">
+        <div class="agent-step"><strong>Harness</strong><span>Pi</span></div>
+        <div class="agent-step"><strong>专注编辑</strong><span>Aider</span></div>
+        <div class="agent-step"><strong>编码产品</strong><span>Claude Code / Codex CLI</span></div>
+        <div class="agent-step"><strong>平台 / 通用 Agent</strong><span>OpenCode / Goose</span></div>
+      </div>
+      <p class="diagram-text">这张图表示设计重心而非能力高低；所有项目都有重叠能力，真正选型仍需看下面的事实矩阵。</p>
+
+      <h2 id="事实矩阵">事实矩阵</h2>
+      <div class="table-wrap"><table><thead><tr><th>项目</th><th>核心许可/治理</th><th>模型路线</th><th>主要界面</th><th>权限/隔离</th><th>扩展与集成</th></tr></thead><tbody>
+        <tr><td><strong>Pi</strong></td><td>MIT；Earendil 维护，源自 Mario Zechner 的 badlogic/pi-mono</td><td>统一多 Provider API，云端与兼容/本地模型</td><td>TUI、print/JSON、RPC、TypeScript SDK</td><td><strong>无内置权限系统</strong>；Project Trust 只管项目资源；官方建议外部 Sandbox/容器</td><td>Prompt、Skill、进程内 Extension、Package、SDK、RPC；无内置 MCP</td></tr>
+        <tr><td><strong>Claude Code</strong></td><td>Anthropic 商业许可；公开仓库主要是分发、插件和 issue，不是完整开源核心</td><td>Claude 系列；Anthropic、Bedrock、Vertex、Foundry 等部署渠道</td><td>CLI、IDE、Desktop、Web/移动、Agent SDK、headless</td><td>多 permission mode、规则、Hook、受保护路径与企业 managed policy；不是通用 OS Sandbox 的同义词</td><td>CLAUDE.md、Skill、Hook、MCP、LSP、Subagent、Agent Teams、Plugin/Marketplace</td></tr>
+        <tr><td><strong>Codex CLI</strong></td><td>Apache-2.0；OpenAI</td><td>OpenAI/ChatGPT 为主；<code>--oss</code> 支持 Ollama 或 LM Studio</td><td>TUI、IDE、Desktop/Cloud、<code>codex exec</code>、SDK、App Server</td><td>审批 + read-only/workspace-write/danger-full-access Sandbox；可配置额外目录与网络</td><td>AGENTS.md、Skill、Plugin、Hook、MCP client；自身也可作 MCP Server</td></tr>
+        <tr><td><strong>OpenCode</strong></td><td>MIT；开源项目</td><td>Models.dev + AI SDK，官方称 75+ Provider，支持本地模型</td><td>TUI、Desktop、IDE、run、Web/HTTP Server、生成 SDK</td><td>全局/Agent 级 ask/allow/deny，命令 glob、外部目录和 MCP Tool 规则</td><td>Agent/Subagent、Command、Skill、custom tool/plugin、MCP、OpenAPI Server</td></tr>
+        <tr><td><strong>Aider</strong></td><td>Apache-2.0；开源社区项目</td><td>通过多种 API/兼容层连接大多数 LLM 与本地模型</td><td>终端聊天、一次性 message、Python 调用；以文件列表和 Git 为中心</td><td>确认、dry-run、只问不改模式、Git commit/undo；未见与 Codex 等价的内置 OS Sandbox</td><td>配置、命令、lint/test、脚本；官方主线不是 MCP/Plugin 平台</td></tr>
+        <tr><td><strong>Goose</strong></td><td>Apache-2.0；AAIF（Linux Foundation）项目</td><td>官方称 15+ Provider；API Key 与 ACP 订阅路径</td><td>Desktop、CLI、<code>goose run</code>、JSON/stream-json、API/<code>serve</code></td><td>Auto（默认）、Approve、Smart Approve、Chat；细粒度工具权限，分类含 best-effort 成分</td><td>MCP Extension 为核心；内置 Extension、Skill、Summon/Subagent、Recipe、定制发行版</td></tr>
+      </tbody></table></div>
+      <p><strong>“有权限系统”不等于“已沙箱化”。</strong>审批/规则主要决定是否调用；Sandbox/容器/受限账号才决定即使调用成功能触达什么。Pi 明确把后一层交给宿主，Codex CLI 则把 Sandbox policy 集成进运行时；其他工具仍应根据部署面验证真实系统边界。</p>
+
+      <h2 id="逐项分析">逐项分析</h2>
+      <h3 id="设计中心">1. 设计中心：Harness、产品、平台还是编辑器</h3>
+      <ul>
+        <li><strong>Pi：</strong>提供可组合 primitive。核心保持小，特殊流程由 Extension/Skill/SDK 构建。它适合“我要决定 Agent 应该长什么样”。</li>
+        <li><strong>Claude Code：</strong>提供一致的成品工作区，从代码理解延伸到插件、团队、后台任务和企业治理。它适合“我接受 Claude 生态，想直接获得完整能力”。</li>
+        <li><strong>Codex CLI：</strong>把本地 Agent、安全执行、OpenAI 模型和多 Codex 客户端连接起来。它适合“我要可审计开源 CLI，同时要内置 Sandbox 与自动化接口”。</li>
+        <li><strong>OpenCode：</strong>TUI 本身就是本地 Server 的客户端，OpenAPI 再生成 SDK，天然适合多 UI 和服务化。它更像一套 coding-agent platform。</li>
+        <li><strong>Aider：</strong>核心心智模型仍是“选择文件 → 提供 repo map → 让模型生成特定编辑格式 → 应用变更 → Git 记录”。它是专注的 AI pair programmer。</li>
+        <li><strong>Goose：</strong>开发工具只是默认 Developer Extension 之一；MCP、Recipe、桌面自动化、研究和数据工作同属一套通用 Agent。</li>
+      </ul>
+
+      <h3 id="模型中立性">2. 模型中立性的三种层次</h3>
+      <div class="table-wrap"><table><thead><tr><th>层次</th><th>代表</th><th>含义</th><th>边界</th></tr></thead><tbody>
+        <tr><td>原生多 Provider</td><td>Pi、OpenCode、Aider、Goose</td><td>一套 Harness 面向多家 API/本地模型</td><td>模型工具语义、推理块和编辑质量仍不等价</td></tr>
+        <tr><td>单模型家族、多部署渠道</td><td>Claude Code</td><td>Claude 可经 Anthropic 或公有云企业渠道使用</td><td>不是任意第三方模型 Harness</td></tr>
+        <tr><td>主生态 + 本地 OSS 通道</td><td>Codex CLI</td><td>主线使用 OpenAI/ChatGPT；<code>--oss</code> 可接 Ollama/LM Studio</td><td>不能据此推断所有 Provider 都有同等官方支持</td></tr>
+      </tbody></table></div>
+      <p>如果组织要求按地区、成本或数据政策动态路由多家模型，优先评估 Pi/OpenCode/Goose/Aider。如果首要目标是某一厂商模型的最佳集成，原厂 Harness 往往能更快采用专用能力。</p>
+
+      <h3 id="权限安全">3. 权限、安全与默认值</h3>
+      <ul>
+        <li><strong>Pi：</strong>默认继承启动进程的全部可用权限。工具 allowlist 能减少模型看到的工具，但不是文件系统强隔离；官方列出 OpenShell、Gondolin 和 Docker 方案。</li>
+        <li><strong>Claude Code：</strong>default/acceptEdits/plan/auto/dontAsk/bypassPermissions 面向不同监督强度，配合 deny/ask/allow 与 PreToolUse Hook。bypass 明确只适合隔离环境。</li>
+        <li><strong>Codex CLI：</strong>审批策略与 Sandbox policy 分离；workspace-write 可把写入约束在工作区，danger-full-access 才放宽系统边界。<code>--yolo</code> 同时绕过审批和 Sandbox，风险语义清晰。</li>
+        <li><strong>OpenCode：</strong>Permission 可按工具、命令 pattern、Agent 和 MCP tool 配置，适合声明式团队策略；部署 Server 时还要单独设置认证与网络边界。</li>
+        <li><strong>Aider：</strong>Git 自动提交和 <code>/undo</code> 对可恢复性很有价值，ask/dry-run 能减少写入，但 Git 回滚不等于阻止命令、网络或仓库外访问。</li>
+        <li><strong>Goose：</strong>官方明确 Autonomous 是默认；首次用于敏感仓库应切到 approve/smart_approve/chat 并设置 Tool Permissions。官方也说明读写分类包含 LLM/best-effort 判断。</li>
+      </ul>
+
+      <h3 id="上下文策略">4. 上下文与会话策略</h3>
+      <ul>
+        <li><strong>Pi：</strong>透明 JSONL Tree，entry 有 id/parentId，可在同一会话树导航、分支与 Compaction；适合研究 Harness 和审计原始历史。</li>
+        <li><strong>Aider：</strong>显式把文件加入/移出 chat，repo map 用图排序在有限 Token 中展示跨仓库关键符号；控制感强，特别适合代码编辑。</li>
+        <li><strong>Claude Code：</strong>CLAUDE.md、Rules、Skill 描述按需加载、MCP Tool Search、独立 Subagent context 和 Compaction 共同管理上下文，自动化层次更多。</li>
+        <li><strong>Codex CLI：</strong>AGENTS.md、Skill、Compaction、resume/fork/archive 以及多 Agent/工作区机制联动；本地与桌面/云端面需要区分数据边界。</li>
+        <li><strong>OpenCode：</strong>Session 是 Server API 的一等资源，TUI 可 sessions/undo/redo/share；适合不同 client 使用同一后端抽象。</li>
+        <li><strong>Goose：</strong>named session、resume、no-session、Recipe 与结构化输出适合重复工作流；Chat Recall、Memory 等通过平台 Extension 增强。</li>
+      </ul>
+
+      <h3 id="扩展生态">5. 扩展：进程内 API 与协议生态</h3>
+      <div class="table-wrap"><table><thead><tr><th>问题</th><th>Pi</th><th>Claude Code / Codex</th><th>OpenCode</th><th>Aider</th><th>Goose</th></tr></thead><tbody>
+        <tr><td>增加领域流程</td><td>Prompt/Skill</td><td>Skill/Plugin</td><td>Command/Agent/Skill</td><td>Prompt/config/script</td><td>Skill/Recipe</td></tr>
+        <tr><td>拦截生命周期</td><td>Extension event</td><td>Hook</td><td>Plugin/事件</td><td>非核心抽象</td><td>权限/Extension 与平台机制</td></tr>
+        <tr><td>增加外部工具</td><td>进程内 registerTool；MCP 需自建桥接</td><td>一等 MCP client</td><td>custom tool + MCP</td><td>主要通过 shell/命令工作流</td><td>MCP 即 Extension 标准</td></tr>
+        <tr><td>嵌入应用</td><td>TypeScript SDK/RPC</td><td>SDK/App Server/非交互</td><td>HTTP Server + generated SDK</td><td>CLI/Python 脚本</td><td>API/serve + JSON stream</td></tr>
+      </tbody></table></div>
+      <p>Pi 进程内 Extension 的优势是低摩擦和深度控制，缺点是 API 耦合与同权限域。MCP 的优势是语言/进程边界和可复用生态，缺点是连接、认证、schema/token、故障恢复和供应链面更大。两者不是简单的先进/落后关系。</p>
+
+      <h3 id="自动化接口">6. 自动化与系统集成</h3>
+      <ul>
+        <li>Pi 提供 print、JSON event、严格 LF JSONL RPC 和同进程 SDK；底层自由度高，但调用方要自己做版本适配和治理。</li>
+        <li>Claude Code 提供 <code>-p</code> headless 与 Agent SDK，适合围绕 Claude 构建定制 Agent；商业条款和数据路径需要组织审查。</li>
+        <li>Codex 的稳定 <code>codex exec</code> 可输出 JSONL/恢复 Session；另有 SDK、experimental App Server 与自身 MCP Server，适合脚本到客户端集成的渐进路线。</li>
+        <li>OpenCode 的 TUI 即 Server client；<code>opencode serve</code> 暴露 OpenAPI 3.1 并生成 SDK，是六项中最明确的 HTTP client/server 架构。</li>
+        <li>Aider 的 <code>--message</code>/<code>--message-file</code> 和 Python 使用方式适合批处理；它不是以长驻多客户端 Agent Server 为首要定位。</li>
+        <li>Goose 的 <code>goose run</code> 支持 text/file/Recipe、no-session、JSON/stream-json，<code>goose serve</code> 需要 secret，适合本地自动化与 MCP 工作流。</li>
+      </ul>
+
+      <h2 id="场景选择">场景选择</h2>
+      <div class="table-wrap"><table><thead><tr><th>首要需求</th><th>优先试用</th><th>同时对照</th><th>原因</th></tr></thead><tbody>
+        <tr><td>学习 Agent Loop、Provider、TUI 与 Session 内部机制</td><td>Pi</td><td>Codex CLI、OpenCode</td><td>Pi 分包清楚且扩展直接；后两者可观察更完整产品架构</td></tr>
+        <tr><td>Claude 模型 + 丰富原厂工作流</td><td>Claude Code</td><td>Pi + Claude Provider</td><td>原厂能力最完整；Pi 可检验简化 Harness 是否已足够</td></tr>
+        <tr><td>OpenAI 模型 + 内置本地 Sandbox</td><td>Codex CLI</td><td>Pi in container</td><td>Codex 把审批与隔离做成产品能力；Pi 方案更可定制但需自组</td></tr>
+        <tr><td>多 Provider + TUI/Desktop/IDE + HTTP API</td><td>OpenCode</td><td>Goose、Pi</td><td>OpenCode client/server 面完整；Goose 偏通用自动化，Pi 偏最小嵌入</td></tr>
+        <tr><td>Git 驱动的小步结对编辑</td><td>Aider</td><td>Pi、Codex CLI</td><td>repo map、编辑格式、commit/undo 是核心体验</td></tr>
+        <tr><td>MCP 工具编排、桌面与通用自动化</td><td>Goose</td><td>Claude Code、OpenCode</td><td>Extension 即 MCP，Recipe/CLI/桌面组合自然</td></tr>
+        <tr><td>嵌入 TypeScript 产品并完全自定义 Agent</td><td>Pi SDK</td><td>Codex SDK、OpenCode SDK</td><td>Pi API 直接且可换模型；其他方案提供更多成品治理/服务能力</td></tr>
+      </tbody></table></div>
+
+      <h3 id="不应这样比较">不应这样比较</h3>
+      <ul>
+        <li>只跑一次提示就宣布胜负；随机性、缓存、仓库状态和模型版本都会影响结果。</li>
+        <li>拿一个工具的最新旗舰模型对另一个工具的廉价模型，再把差异归因于 Harness。</li>
+        <li>把 Git undo 当 Sandbox，或把审批弹窗当权限隔离。</li>
+        <li>用 GitHub star、功能数量或 Provider 数量代替维护质量和真实需求匹配。</li>
+        <li>忽略云端订阅、API 计费、遥测、Session 留存和企业条款，只比较安装命令。</li>
+      </ul>
+
+      <h2 id="比较局限">比较局限</h2>
+      <ol>
+        <li><strong>时间截面：</strong>六个项目都在快速更新；尤其 experimental server、Agent teams、插件与安全模式可能变化。</li>
+        <li><strong>文档口径：</strong>“Provider 支持”可能只是能发请求，不代表工具调用、推理块、缓存、图像和编辑质量均被完整适配。</li>
+        <li><strong>未做效果基准：</strong>本文没有声称 Pi 或任何竞争者在代码正确率、Token 成本、延迟上领先。</li>
+        <li><strong>企业能力不对称：</strong>Claude Code/Codex 的云端和管理面、OpenCode/Goose 的服务面、Aider 的专注编辑面都无法压成一个公平总分。</li>
+        <li><strong>安全需实测：</strong>文档中的 mode、permission、sandbox、trust 含义不同；实际部署应做越权、Prompt Injection、网络和凭据泄漏测试。</li>
+      </ol>
+
+      <h3 id="建议的本地对照实验">建议的本地对照实验</h3>
+      <ol>
+        <li>选一个有测试、20～50 个源文件、无敏感信息的仓库，固定初始 commit。</li>
+        <li>尽量使用同一模型/温度/思考强度；无法同模型时明确把模型作为独立变量。</li>
+        <li>准备三类任务：只读定位、带测试的小修复、跨模块功能；每类至少重复 3 次。</li>
+        <li>记录一次成功率、人工干预数、误改文件、测试结果、Token/成本、耗时和恢复难度。</li>
+        <li>单独做权限实验：仓库外文件、敏感环境变量、网络、危险命令、未信任项目配置。</li>
+        <li>最后按团队权重评分，而不是直接套用网上榜单。</li>
+      </ol>
+
+      <h2 id="参考资料">参考资料</h2>
+      <p>官方资料检索于 <strong>2026-08-10</strong>。OpenAI/Codex 事实使用 OpenAI Docs 与官方仓库；其他项目使用各自官方文档和仓库。</p>
+      <ul>
+        <li><a href="https://github.com/earendil-works/pi" target="_blank" rel="noopener noreferrer">Pi 官方仓库：MIT、Packages、权限与容器说明</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/README.md" target="_blank" rel="noopener noreferrer">Pi Coding Agent 官方 README</a></li>
+        <li><a href="https://code.claude.com/docs/en/features-overview" target="_blank" rel="noopener noreferrer">Claude Code 官方扩展能力总览</a></li>
+        <li><a href="https://code.claude.com/docs/en/permission-modes" target="_blank" rel="noopener noreferrer">Claude Code 官方权限模式</a></li>
+        <li><a href="https://github.com/anthropics/claude-code/blob/main/LICENSE.md" target="_blank" rel="noopener noreferrer">Claude Code 官方仓库许可声明</a></li>
+        <li><a href="https://learn.chatgpt.com/docs/developer-commands?surface=cli" target="_blank" rel="noopener noreferrer">OpenAI Docs：Codex CLI 命令、Sandbox、exec 与 MCP</a></li>
+        <li><a href="https://learn.chatgpt.com/docs/extend/mcp?surface=cli" target="_blank" rel="noopener noreferrer">OpenAI Docs：Codex MCP 支持</a></li>
+        <li><a href="https://github.com/openai/codex" target="_blank" rel="noopener noreferrer">Codex CLI 官方 Apache-2.0 仓库</a></li>
+        <li><a href="https://opencode.ai/docs" target="_blank" rel="noopener noreferrer">OpenCode 官方总览与客户端形态</a></li>
+        <li><a href="https://dev.opencode.ai/docs/server/" target="_blank" rel="noopener noreferrer">OpenCode 官方 Server/OpenAPI 架构</a></li>
+        <li><a href="https://opencode.ai/docs/agents/" target="_blank" rel="noopener noreferrer">OpenCode 官方 Agent 与权限</a></li>
+        <li><a href="https://aider.chat/docs/repomap.html" target="_blank" rel="noopener noreferrer">Aider 官方 Repository Map 设计</a></li>
+        <li><a href="https://aider.chat/docs/git.html" target="_blank" rel="noopener noreferrer">Aider 官方 Git 集成</a></li>
+        <li><a href="https://aider.chat/docs/scripting.html" target="_blank" rel="noopener noreferrer">Aider 官方脚本模式</a></li>
+        <li><a href="https://github.com/aaif-goose/goose" target="_blank" rel="noopener noreferrer">Goose 官方 Apache-2.0 仓库与 AAIF 治理</a></li>
+        <li><a href="https://goose-docs.ai/docs/getting-started/using-extensions/" target="_blank" rel="noopener noreferrer">Goose 官方 MCP Extension 文档</a></li>
+        <li><a href="https://goose-docs.ai/docs/guides/goose-permissions/" target="_blank" rel="noopener noreferrer">Goose 官方权限模式</a></li>
+        <li><a href="https://goose-docs.ai/docs/guides/running-tasks/" target="_blank" rel="noopener noreferrer">Goose 官方非交互任务与 JSON 输出</a></li>
+      </ul>
+
+      <nav aria-label="Pi 七篇专题导航"><strong>Pi 专题：</strong> <a href="2026-08-10-Pi项目总览与学习路线.html">总览</a> · <a href="2026-08-10-Pi设计理念与边界.html">理念</a> · <a href="2026-08-10-Pi源码架构与运行机制.html">架构</a> · <a href="2026-08-10-Pi安装配置与使用教程.html">使用</a> · <a href="2026-08-10-Pi扩展开发与系统集成.html">扩展</a> · <a href="2026-08-10-Pi选型建议与实践路线.html">下一篇：选型</a></nav>
+    </article>
+  </main>
+</div>
+</body>
+</html>
