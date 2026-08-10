@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>pi-mono 七篇专题实施计划</title>
+</head>
+<body>
+<main>
+<article>
+  <h1>pi-mono 七篇专题实施计划</h1>
+  <blockquote>
+    <p><strong>Agent 执行要求：</strong>实施时使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans，逐任务执行并使用复选项跟踪；当前仓库禁止新增 Markdown 学习笔记，因此本计划使用 HTML。</p>
+  </blockquote>
+  <p><strong>目标：</strong>创建七篇互链的 pi-mono 中文专题，让开发者能理解设计理念与源码架构、完成安装使用与扩展开发，并与五个主流编码 Agent 做基于一手资料的选型比较。</p>
+  <p><strong>架构：</strong>七篇静态 HTML 位于同一 <code>coding-agent</code> 分类，共用现有 CSS、JavaScript、根索引生成器和站点验证器。每篇承担单一主题，通过显式专题导航连接；一个 Node.js 契约测试支持按页面执行，以便每个写作任务都能独立验证，最后再运行全专题互链与全站检查。</p>
+  <p><strong>技术栈：</strong>HTML5、共享 CSS、原生 JavaScript/Node.js 测试、TypeScript/Node.js 示例、GitHub Pages branch 部署。</p>
+
+  <h2>全局约束</h2>
+  <ul>
+    <li>恰好新增七篇学习页，统一位于 <code>public/notes/coding-agent/</code>，日期固定为 2026-08-10。</li>
+    <li>源码与扩展示例保持 Pi 原生的 TypeScript、JavaScript 和 Node.js 技术语境，不增加 Java、Spring Boot 或其他特定后端语言视角。</li>
+    <li>每篇包含 <code>header</code>、<code>nav</code>、<code>main</code>、<code>article</code>、完整元数据、“核心结论”和“参考资料”；所有 h2～h4 使用唯一稳定 ID。</li>
+    <li>外部资料检索日期为 2026-08-10；关键版本、许可证、功能与扩展边界必须来自官方仓库、官方文档或发布说明。</li>
+    <li>外链使用 <code>target="_blank"</code> 和 <code>rel="noopener noreferrer"</code>；站内链接保持相对路径，适配 <code>/Learn-AI/</code> 项目子路径。</li>
+    <li>图表只使用语义化 HTML/CSS 与等价文字说明，不加入第三方前端依赖、远程图片或 Mermaid 运行时。</li>
+    <li>明确标注“官方说明”“仓库观察”“选型建议”；不声称对外部认证、付费模型或云端服务完成了未执行的端到端实测。</li>
+    <li>比较对象固定为 Claude Code、Codex CLI、OpenCode、Aider、Goose；不建立缺乏可复现实验的性能排名或综合分数。</li>
+  </ul>
+
+  <h2>文件结构</h2>
+  <ul>
+    <li><code>scripts/test-pi-mono-series.mjs</code>：按页面键或全量验证七篇页面的结构、章节、关键事实标签、来源、互链和技术边界。</li>
+    <li><code>public/notes/coding-agent/2026-08-10-Pi项目总览与学习路线.html</code>：能力地图、学习路线、定位与术语。</li>
+    <li><code>public/notes/coding-agent/2026-08-10-Pi设计理念与边界.html</code>：设计原则、取舍、适用边界和误区。</li>
+    <li><code>public/notes/coding-agent/2026-08-10-Pi源码架构与运行机制.html</code>：monorepo package、请求路径、Agent Loop、事件和会话。</li>
+    <li><code>public/notes/coding-agent/2026-08-10-Pi安装配置与使用教程.html</code>：安装、认证、模型、项目上下文、会话、命令与排错。</li>
+    <li><code>public/notes/coding-agent/2026-08-10-Pi扩展开发与系统集成.html</code>：Extension、工具、Prompt、Skill、SDK、RPC 与集成边界。</li>
+    <li><code>public/notes/coding-agent/2026-08-10-Pi与主流编码Agent对比.html</code>：六项目统一维度事实矩阵与场景比较。</li>
+    <li><code>public/notes/coding-agent/2026-08-10-Pi选型建议与实践路线.html</code>：决策树、风险清单、分阶段练习和验收。</li>
+    <li><code>index.html</code>、<code>public/manifest.json</code>与所有知识页导航：由 <code>scripts/build-html-index.mjs</code> 统一生成更新。</li>
+  </ul>
+
+  <h2>任务 1：建立七篇专题内容契约</h2>
+  <p><strong>文件：</strong>创建 <code>scripts/test-pi-mono-series.mjs</code>。</p>
+  <p><strong>接口：</strong>命令 <code>node scripts/test-pi-mono-series.mjs --page &lt;key&gt;</code> 验证单页，key 为 overview、philosophy、architecture、usage、extension、comparison、selection；无参数时验证全部页面及七篇互链。任一断言失败时非零退出，成功时输出 PASS。</p>
+  <ol>
+    <li>[ ] 写入页面清单、公共结构断言和各页面专属章节/关键词，代码使用以下固定页面契约：</li>
+  </ol>
+  <pre><code>const pages = {
+  overview: ["2026-08-10-Pi项目总览与学习路线.html", ["项目定位", "学习路线", "能力地图", "术语表"]],
+  philosophy: ["2026-08-10-Pi设计理念与边界.html", ["核心理念", "取舍分析", "不是什么", "适用边界"]],
+  architecture: ["2026-08-10-Pi源码架构与运行机制.html", ["package地图", "请求路径", "agent-loop", "事件系统", "会话模型"]],
+  usage: ["2026-08-10-Pi安装配置与使用教程.html", ["环境与安装", "认证与模型", "日常工作流", "会话管理", "常见问题"]],
+  extension: ["2026-08-10-Pi扩展开发与系统集成.html", ["扩展点选择", "extension", "自定义工具", "prompt与skill", "sdk", "rpc"]],
+  comparison: ["2026-08-10-Pi与主流编码Agent对比.html", ["比较方法", "事实矩阵", "逐项分析", "场景选择", "比较局限"]],
+  selection: ["2026-08-10-Pi选型建议与实践路线.html", ["决策树", "场景建议", "采用风险", "实践路线", "验收标准"]],
+};</code></pre>
+  <ol start="2">
+    <li>[ ] 公共断言检查语义标签、三项 meta、共享资源、“核心结论”“参考资料”、检索日期、至少四个一手外链及其安全属性、至少一个表格和一个带 <code>role="img"</code> 或等价文字的图示。</li>
+    <li>[ ] 专属断言检查架构页含 <code>pi-ai</code>、<code>pi-agent-core</code>、<code>pi-coding-agent</code>、<code>pi-tui</code>、<code>pi-web-ui</code>；扩展页含 Extension、SDK、RPC、TypeScript；对比页含六个项目名；全专题不得出现 Java 25、Spring Boot 或 Spring AI。</li>
+    <li>[ ] 无参数模式检查每篇都显式链接其余六篇，且七篇使用 <code>study-category="编码 Agent"</code>。</li>
+    <li>[ ] 运行 <code>node scripts/test-pi-mono-series.mjs</code>，预期因总览页面不存在而失败。</li>
+    <li>[ ] 运行 <code>git diff --check</code>，提交 <code>test: define pi-mono series contract</code>。</li>
+  </ol>
+
+  <h2>任务 2：编写专题总览与设计理念</h2>
+  <p><strong>文件：</strong>创建总览页和设计理念页。</p>
+  <p><strong>资料输入：</strong><code>badlogic/pi-mono</code> 根 README、<code>packages/coding-agent/README.md</code>、作者公开的项目说明与仓库许可证；使用官方仓库的当前默认分支和提交记录核验易变描述。</p>
+  <p><strong>产出接口：</strong>两页建立六个固定专题互链 URL，供后续页面复用；总览页定义统一术语，理念页沿用相同定义。</p>
+  <ol>
+    <li>[ ] 打开并核验官方根 README、coding-agent README、package 清单、许可证和最近发布/提交时间；在正文附近记录对应官方 URL 与检索日期。</li>
+    <li>[ ] 编写总览页：项目定位与“不是什么”、能力地图、七篇学习路线、五分钟适用性判断、术语表、已确认事实与待验证边界。</li>
+    <li>[ ] 编写理念页：极简核心、组合优于内置、终端优先、模型中立、透明可控、扩展优先；每项使用“依据—机制—收益—代价—适用场景”结构。</li>
+    <li>[ ] 在两页加入统一专题导航、相邻篇导航、核心结论、可访问图示、表格与不少于四个一手来源，不用作者未明确表达的动机冒充官方立场。</li>
+    <li>[ ] 运行 <code>node scripts/test-pi-mono-series.mjs --page overview</code> 和 <code>node scripts/test-pi-mono-series.mjs --page philosophy</code>，预期均 PASS。</li>
+    <li>[ ] 运行 <code>git diff --check</code>，提交 <code>docs: add pi overview and design philosophy</code>。</li>
+  </ol>
+
+  <h2>任务 3：编写源码架构与运行机制</h2>
+  <p><strong>文件：</strong>创建架构页。</p>
+  <p><strong>资料输入：</strong>根 <code>package.json</code>、各 package README 与入口源码，重点核验 <code>pi-ai</code>、<code>pi-agent-core</code>、<code>pi-coding-agent</code>、<code>pi-tui</code>、<code>pi-web-ui</code> 的真实职责与依赖。</p>
+  <p><strong>产出接口：</strong>页面定义一条从用户输入到会话持久化的请求/事件路径，扩展页引用该路径解释工具和 Extension 注入位置。</p>
+  <ol>
+    <li>[ ] 检查 workspace/package 配置和每个核心 package 的公开入口，记录 package 名、职责、依赖方向与无法从公开接口确认的实现细节。</li>
+    <li>[ ] 编写 package 地图、分层边界和选择指南，说明哪些 package 可单独嵌入，哪些提供最终用户体验。</li>
+    <li>[ ] 追踪输入 → 上下文 → 模型流 → 工具调用 → 工具结果 → Agent 事件 → TUI/Web UI → Session 的完整路径，并区分源码确认与教学抽象。</li>
+    <li>[ ] 解释 Agent Loop、流式事件、消息转换、取消/错误、会话树或持久化语义；补充 TypeScript 联合类型、异步迭代器和 Node.js 边界。</li>
+    <li>[ ] 加入 package 依赖图、请求时序图、事件表、源码定位链接和限制说明。</li>
+    <li>[ ] 运行 <code>node scripts/test-pi-mono-series.mjs --page architecture</code>，预期 PASS；运行 <code>git diff --check</code>，提交 <code>docs: explain pi architecture and runtime</code>。</li>
+  </ol>
+
+  <h2>任务 4：编写安装配置与使用教程</h2>
+  <p><strong>文件：</strong>创建使用教程页。</p>
+  <p><strong>资料输入：</strong>coding-agent 官方 README、安装与认证说明、Provider/模型配置、命令与会话文档；命令需与当前 package 名和 CLI 帮助一致。</p>
+  <p><strong>产出接口：</strong>提供一条可复制的“安装 → 首次启动 → 选择模型 → 打开项目 → 执行只读任务 → 保存/恢复会话”最小路径，以及独立的日常工作流和排错表。</p>
+  <ol>
+    <li>[ ] 核验 Node.js/package manager 要求、全局/临时/源码运行方式、认证方式、Provider 与模型配置位置、高频命令和 session 行为。</li>
+    <li>[ ] 编写环境检查、安装、首次启动、API Key/OAuth 前置条件、模型选择、项目上下文和安全注意事项。</li>
+    <li>[ ] 编写五个日常场景：代码阅读、局部修改、测试修复、会话恢复、无头/脚本化调用；每个场景包含命令、预期观察和退出/回滚方式。</li>
+    <li>[ ] 编写配置优先级、项目指令、模型切换、上下文/压缩、会话管理和常见错误排查；对需真实账号或付费额度的步骤标为未执行外部端到端验证。</li>
+    <li>[ ] 加入安全提示、工作流图、命令速查表、验证练习与官方来源。</li>
+    <li>[ ] 运行 <code>node scripts/test-pi-mono-series.mjs --page usage</code>，预期 PASS；运行 <code>git diff --check</code>，提交 <code>docs: add pi installation and usage guide</code>。</li>
+  </ol>
+
+  <h2>任务 5：编写扩展开发与系统集成</h2>
+  <p><strong>文件：</strong>创建扩展页。</p>
+  <p><strong>资料输入：</strong>官方 Extension、custom tools、prompt templates、skills、SDK 与 RPC 文档和示例目录；所有 API 名称、文件位置和事件名从当前源码核验。</p>
+  <p><strong>产出接口：</strong>页面给出扩展选择表和三个最小 TypeScript 示例：一个 Extension 生命周期、一个只读自定义工具、一个 SDK 或 RPC 调用；架构页的请求路径用于标注插入点。</p>
+  <ol>
+    <li>[ ] 核验六种扩展面的职责、发现/加载位置、生命周期、权限边界、稳定性和组合方式。</li>
+    <li>[ ] 编写“只改提示 → Prompt；封装流程知识 → Skill；增加进程内行为或工具 → Extension；嵌入 Node 应用 → SDK；跨进程/跨语言 → RPC”的选择矩阵。</li>
+    <li>[ ] 提供可复制的 TypeScript Extension 与只读工具示例，使用项目当前导出类型；展示输入 schema、结果、错误/取消和验证步骤。</li>
+    <li>[ ] 提供 SDK/RPC 最小示例与协议边界，说明超时、取消、并发、日志、进程生命周期、密钥隔离与版本兼容。</li>
+    <li>[ ] 说明 Extension、Prompt、Skill、MCP/外部工具之间的边界与常见误区，不虚构稳定性承诺。</li>
+    <li>[ ] 运行 <code>node scripts/test-pi-mono-series.mjs --page extension</code>，预期 PASS；运行 <code>git diff --check</code>，提交 <code>docs: add pi extension and integration guide</code>。</li>
+  </ol>
+
+  <h2>任务 6：编写主流编码 Agent 对比</h2>
+  <p><strong>文件：</strong>创建对比页。</p>
+  <p><strong>资料输入：</strong>Pi、Claude Code、Codex CLI、OpenCode、Aider、Goose 的官方文档、官方仓库、许可证和发布说明；各项目使用同一 2026-08-10 时间截面。</p>
+  <p><strong>产出接口：</strong>产生一张六项目事实矩阵和五类场景矩阵，选型页只引用这些事实，不另造评价维度。</p>
+  <ol>
+    <li>[ ] 对六个项目分别核验定位、开源/许可证、模型与 Provider、交互、编辑策略、项目指令、会话、扩展、MCP/工具、无头/SDK/CI、生态和限制。</li>
+    <li>[ ] 为每个单元格保留来源依据；套餐、登录方式或平台限制在相应结论附近说明，不用“支持”掩盖条件差异。</li>
+    <li>[ ] 编写比较方法与局限：不做性能总分，不用 Star 代表质量，官方声明不等于本地实测，缺失公开证据时写“官方资料未确认”。</li>
+    <li>[ ] 编写统一事实矩阵、逐项目分析、关键差异、个人交互/团队协作/多 Provider/定制 Harness/自动化五类场景矩阵。</li>
+    <li>[ ] 对每个项目至少引用两个相互补充的一手页面，确保外链安全属性和检索日期一致。</li>
+    <li>[ ] 运行 <code>node scripts/test-pi-mono-series.mjs --page comparison</code>，预期 PASS；运行 <code>git diff --check</code>，提交 <code>docs: compare pi with coding agents</code>。</li>
+  </ol>
+
+  <h2>任务 7：编写选型建议与实践路线</h2>
+  <p><strong>文件：</strong>创建选型页。</p>
+  <p><strong>资料输入：</strong>前六篇已经核验的事实和来源；不为推荐结论引入未经核验的新产品事实。</p>
+  <p><strong>产出接口：</strong>决策树的终点固定为“优先试 Pi”“优先试其他指定项目”“先做短期 PoC 再决定”三类，并附可量化验收表。</p>
+  <ol>
+    <li>[ ] 编写决策树：从是否需要深度定制、Provider 自由、成熟商业支持、极简终端体验、自动化嵌入和团队治理依次分流。</li>
+    <li>[ ] 编写个人学习、日常编码、小团队、自动化流水线、自定义 Agent Harness 五类建议，每条区分事实依据、推断和推荐。</li>
+    <li>[ ] 编写采用风险：项目演进速度、接口稳定性、Provider 差异、扩展维护、权限与密钥、会话数据、团队可观测性。</li>
+    <li>[ ] 编写四阶段实践路线：只读体验、受控修改、Extension/工具、SDK/RPC 集成；每阶段包含任务、失败条件和验收指标。</li>
+    <li>[ ] 添加“不要选择 Pi 的情形”、迁移/退出策略和 PoC 评分表，但不输出无证据的产品排名。</li>
+    <li>[ ] 运行 <code>node scripts/test-pi-mono-series.mjs --page selection</code>，预期 PASS；运行 <code>git diff --check</code>，提交 <code>docs: add pi selection and practice roadmap</code>。</li>
+  </ol>
+
+  <h2>任务 8：完成专题互链、索引生成与全站验证</h2>
+  <p><strong>文件：</strong>补齐七篇专题导航；生成更新 <code>index.html</code>、<code>public/manifest.json</code>和所有知识页导航。</p>
+  <p><strong>产出接口：</strong>根入口出现“编码 Agent”分类与七篇文章；每篇专题导航可到达其余六篇；生成器重复执行不产生新差异。</p>
+  <ol>
+    <li>[ ] 检查七篇专题导航的文件名完全一致，运行 <code>node scripts/test-pi-mono-series.mjs</code> 至 PASS。</li>
+    <li>[ ] 运行 <code>node scripts/build-html-index.mjs</code>，检查根入口、分类计数、侧栏、上一篇/下一篇和 manifest。</li>
+    <li>[ ] 运行 <code>test -s index.html</code> 与 <code>test ! -e public/index.html</code>。</li>
+    <li>[ ] 运行 <code>node --check scripts/build-html-index.mjs</code>、<code>node --check scripts/verify-site.mjs</code>、<code>node --check public/assets/app.js</code>。</li>
+    <li>[ ] 运行 <code>for test_file in scripts/test-*.mjs; do node "$test_file"; done</code> 和 <code>node scripts/verify-site.mjs</code>，预期所有测试与站点验证通过。</li>
+    <li>[ ] 再运行 <code>node scripts/build-html-index.mjs</code>，随后运行 <code>git diff --exit-code -- index.html public</code>，预期没有生成器造成的新差异。</li>
+    <li>[ ] 运行 <code>git diff --check</code> 和 <code>git status --short</code>，确认仅包含本专题测试、七篇页面与生成文件；提交 <code>docs: publish pi-mono seven-part series</code>。</li>
+  </ol>
+
+  <h2>计划自审</h2>
+  <p>规格覆盖检查通过：七篇边界、Pi 设计理念、package 架构、完整使用方法、六类扩展面、五个竞品、一般开发者选型、TypeScript/Node.js 原生语境、事实标签、资料日期、互链、索引和全站验证都有对应任务。占位符扫描通过。七个页面键、文件名和单页测试命令在所有任务中保持一致；对比页产出的事实矩阵是选型页唯一的产品事实输入，不会出现评价维度漂移。</p>
+</article>
+</main>
+</body>
+</html>
