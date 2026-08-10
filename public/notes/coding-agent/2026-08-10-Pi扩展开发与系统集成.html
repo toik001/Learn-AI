@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="系统讲解 Pi 的 Prompt、Skill、Extension、Package、SDK 与 RPC 扩展路径，并给出 TypeScript 示例、安全边界和工程化集成建议。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="编码 Agent">
+  <meta name="study-date" content="2026-08-10">
+  <title>Pi 扩展开发与系统集成｜AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../../index.html"><span class="brand-mark">π</span><span>AI 学习库</span></a>
+  <div class="topbar-actions"><button class="icon-button mobile-nav-toggle" type="button">文档</button><button class="icon-button theme-toggle" type="button">主题</button></div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar"><div class="sidebar-header"><a class="sidebar-home-link" href="../../../index.html">← 知识库首页</a><button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button></div><nav class="doc-nav" aria-label="当前分类文档"></nav></aside>
+  <main class="article-column">
+    <div class="article-meta"><a href="../../../index.html">知识库首页</a><span>·</span><span>编码 Agent</span><span>·</span><time datetime="2026-08-10">2026-08-10</time></div>
+    <article class="markdown-body">
+      <h1>Pi 扩展开发与系统集成</h1>
+      <blockquote>
+        <p><strong>先做路径选择：</strong>只复用文字流程用 Prompt；需要可发现、按需加载的知识与脚本用 Skill；需要事件拦截、工具或 TUI 用 Extension；需要分发一组资源用 Pi Package；同一 Node.js 进程嵌入用 SDK；跨语言或进程隔离用 RPC。</p>
+        <p><strong>版本基线：</strong>本文使用迁移后的 <code>@earendil-works/*</code> 包名和 2026-08-10 主分支 API，不沿用旧 <code>@mariozechner/*</code> 示例。</p>
+      </blockquote>
+      <nav aria-label="本页快速目录"><strong>快速阅读：</strong> <a href="#核心结论">结论</a> · <a href="#扩展点选择">选路径</a> · <a href="#extension">Extension</a> · <a href="#自定义工具">工具</a> · <a href="#prompt与skill">Prompt/Skill</a> · <a href="#sdk">SDK</a> · <a href="#rpc">RPC</a> · <a href="#参考资料">资料</a></nav>
+
+      <h2 id="核心结论">核心结论</h2>
+      <ol>
+        <li><strong>从最小机制开始。</strong>能用 Markdown 表达的流程不应先写可执行 Extension；能力越强，安装、审查、测试和故障面越大。</li>
+        <li><strong>Extension 不是沙箱插件。</strong>它与 Pi 同进程运行，拥有启动用户可用的文件、网络、环境变量和子进程权限；项目 Extension 只有在 Project Trust 通过后才自动加载，但信任并不限制其权限。</li>
+        <li><strong>并发是工具作者必须处理的事实。</strong>当前 Agent Loop 默认可并行执行工具；文件修改工具要进入 <code>withFileMutationQueue()</code>，长操作要响应 <code>AbortSignal</code>。</li>
+        <li><strong>SDK 与 RPC 解决不同边界。</strong>SDK 类型完整、事件直接、开销小，但与宿主共享进程；RPC 允许任何语言接入并隔离崩溃，但必须管理子进程、JSONL framing、背压、取消和版本兼容。</li>
+        <li><strong>集成验收不能只看“能回复”。</strong>还应验证工具 allowlist、超时与取消、进程退出、凭据隔离、Session 留存、并发请求、协议异常和升级回滚。</li>
+      </ol>
+
+      <h2 id="扩展点选择">扩展点选择</h2>
+      <div class="table-wrap"><table><thead><tr><th>机制</th><th>最适合</th><th>运行形态</th><th>主要风险</th><th>何时升级</th></tr></thead><tbody>
+        <tr><td>Prompt Template</td><td>重复提示、检查清单、参数化工作流</td><td>Markdown 展开为用户消息</td><td>约束是软性的，不能提供新权限</td><td>需要资源、脚本或按需知识时升级为 Skill</td></tr>
+        <tr><td>Skill</td><td>可发现的领域说明、脚本和模板</td><td>先注入描述，模型按需读取 SKILL.md</td><td>模型可能不选择；脚本仍需审查</td><td>需要事件、工具或确定性交互时用 Extension</td></tr>
+        <tr><td>Extension</td><td>工具、命令、事件拦截、Provider、TUI</td><td>TypeScript 与 Pi 同进程执行</td><td>任意代码权限、API 耦合、状态泄漏</td><td>需要复用分发时封装 Pi Package</td></tr>
+        <tr><td>Pi Package</td><td>一起分发 Extension、Skill、Prompt、Theme</td><td>npm/git/本地路径安装</td><td>供应链、依赖与升级风险</td><td>这不是新运行时，只是资源分发单元</td></tr>
+        <tr><td>SDK</td><td>Node.js 应用内嵌 Agent、自动化、定制 UI</td><td>直接创建 AgentSession</td><td>宿主与 Agent 共享故障和权限域</td><td>需要语言无关或故障隔离时改 RPC</td></tr>
+        <tr><td>RPC</td><td>IDE、非 Node 宿主、服务进程、隔离式 UI</td><td><code>pi --mode rpc</code> 子进程</td><td>协议、背压、生命周期和版本漂移</td><td>高吞吐服务可评估自建会话层或 Server</td></tr>
+      </tbody></table></div>
+
+      <div class="agent-call-flow" role="img" aria-label="Pi 扩展路径决策：文字复用选择 Prompt，需要知识资源选择 Skill，需要进程内行为选择 Extension，多资源分发选择 Package，同进程嵌入选择 SDK，跨语言或进程隔离选择 RPC。">
+        <div class="agent-step"><strong>文字复用</strong><span>Prompt</span></div>
+        <div class="agent-step"><strong>知识资源</strong><span>Skill</span></div>
+        <div class="agent-step"><strong>运行行为</strong><span>Extension</span></div>
+        <div class="agent-step"><strong>应用嵌入</strong><span>SDK / RPC</span></div>
+      </div>
+      <p class="diagram-text">这是能力递增路径，不是成熟度排名。一个生产集成通常会组合使用，例如 Package 分发 Skill 与 Extension，宿主再通过 SDK 调用。</p>
+
+      <h3 id="资源发现与信任">资源发现与信任</h3>
+      <div class="table-wrap"><table><thead><tr><th>资源</th><th>全局位置</th><th>项目位置</th><th>加载说明</th></tr></thead><tbody>
+        <tr><td>Extension</td><td><code>~/.pi/agent/extensions/</code></td><td><code>.pi/extensions/</code></td><td>项目资源需信任；自动发现位置支持 <code>/reload</code></td></tr>
+        <tr><td>Prompt</td><td><code>~/.pi/agent/prompts/*.md</code></td><td><code>.pi/prompts/*.md</code></td><td>以 <code>/文件名</code> 调用，可用参数占位符</td></tr>
+        <tr><td>Skill</td><td><code>~/.pi/agent/skills/</code>、<code>~/.agents/skills/</code></td><td><code>.pi/skills/</code>、<code>.agents/skills/</code></td><td>描述先进入上下文，正文按需读取</td></tr>
+        <tr><td>Package</td><td>全局 settings packages</td><td><code>pi install -l</code></td><td>可来自 npm、git 或 path；具有完整系统访问权</td></tr>
+      </tbody></table></div>
+      <p>显式 <code>pi -e ./extension.ts</code> 适合短期测试，不适合假装“安全”。它仍会执行目标文件。安装陌生 Package 前应检查固定版本、package.json、依赖树、入口代码和更新策略。</p>
+
+      <h2 id="extension">Extension：改变运行时行为</h2>
+      <p>Extension 默认导出一个接收 <code>ExtensionAPI</code> 的 factory。Pi 会等待异步 factory 完成，再进入 <code>session_start</code>。factory 只适合一次性初始化；进程、Socket、Watcher 等长生命周期资源应在 session 启动或首次使用时创建，并在幂等的 <code>session_shutdown</code> 中释放。</p>
+
+      <h3 id="最小扩展">最小可运行 Extension</h3>
+      <pre><code>import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+
+export default function (pi: ExtensionAPI) {
+  pi.on("session_start", async (_event, ctx) =&gt; {
+    ctx.ui.notify("team-guard 已加载", "info");
+  });
+
+  pi.on("tool_call", async (event) =&gt; {
+    if (event.toolName !== "bash") return;
+    const command = String(event.input.command ?? "");
+    if (/\bgit\s+push\b/.test(command)) {
+      return { block: true, reason: "团队规则：push 必须由操作者显式执行" };
+    }
+  });
+
+  pi.registerCommand("guard-status", {
+    description: "显示当前保护策略",
+    handler: async (_args, ctx) =&gt; {
+      ctx.ui.notify("git push：阻止；其他命令：未修改", "info");
+    },
+  });
+}</code></pre>
+      <pre><code># 临时验证
+pi -e ./team-guard.ts
+# 在交互界面执行
+/guard-status</code></pre>
+      <p>这个例子展示拦截点，而不是完整命令安全策略。正则黑名单容易被 shell 包装、别名、脚本和间接调用绕过。高风险环境应在容器、操作系统权限和网络层实施强制控制；Extension 更适合额外提示、审计或业务规则。</p>
+
+      <h3 id="事件与中间件">事件与中间件</h3>
+      <div class="table-wrap"><table><thead><tr><th>阶段</th><th>典型事件</th><th>能做什么</th><th>注意</th></tr></thead><tbody>
+        <tr><td>资源/信任</td><td><code>project_trust</code>、<code>resources_discover</code></td><td>参与信任决定、追加资源</td><td>project_trust 仅由用户/全局/CLI Extension 处理</td></tr>
+        <tr><td>Session</td><td><code>session_start</code>、切换/分支/压缩、<code>session_shutdown</code></td><td>恢复状态、清理连接、自定义 Compaction</td><td>状态应能从持久化 entry 重建</td></tr>
+        <tr><td>Agent</td><td><code>agent_start</code>、turn/message、<code>agent_end</code></td><td>观测、注入上下文、统计</td><td>避免阻塞流式事件处理</td></tr>
+        <tr><td>工具</td><td><code>tool_call</code>、<code>tool_result</code></td><td>预检阻断、修改结果、记录审计</td><td>并行 batch 会先顺序预检，再并发执行</td></tr>
+        <tr><td>输入/模型</td><td><code>input</code>、<code>before_agent_start</code>、model events</td><td>改写输入、补上下文、处理模型切换</td><td>必须避免不可追踪的隐式改写</td></tr>
+      </tbody></table></div>
+
+      <h3 id="扩展状态">状态与恢复</h3>
+      <p>需要跟随 Session 保存的状态，应通过 <code>pi.appendEntry()</code> 或工具结果的 <code>details</code> 持久化，再在 session 启动时遍历当前 branch 重建。不要只放在模块全局变量中：<code>/reload</code>、Session 切换、分支导航和进程重启都会暴露这种设计的缺陷。</p>
+
+      <h2 id="自定义工具">自定义工具：给模型增加确定性操作</h2>
+      <p>工具定义包含名称、面向模型的描述、TypeBox 参数 schema、执行函数和可选渲染。描述决定模型何时调用，schema 决定入口结构，<code>execute</code> 决定真实权限，因此三者都需要测试。</p>
+
+      <h3 id="只读工具示例">只读工具示例</h3>
+      <pre><code>import { readFile } from "node:fs/promises";
+import { resolve, relative } from "node:path";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import { Type } from "typebox";
+
+export default function (pi: ExtensionAPI) {
+  pi.registerTool({
+    name: "read_project_text",
+    label: "Read project text",
+    description: "Read one UTF-8 text file inside the current project",
+    promptSnippet: "Read a UTF-8 text file constrained to the current project",
+    promptGuidelines: [
+      "Use read_project_text only for text files under the current project root."
+    ],
+    parameters: Type.Object({
+      path: Type.String({ description: "Project-relative path" }),
+    }),
+
+    async execute(_id, params, signal, _onUpdate, ctx) {
+      if (signal?.aborted) throw new Error("Cancelled");
+      const root = resolve(ctx.cwd);
+      const target = resolve(root, params.path.replace(/^@/, ""));
+      const inside = relative(root, target);
+      if (inside.startsWith("..") || inside === "") {
+        throw new Error("Path must name a file inside the project");
+      }
+      const text = await readFile(target, "utf8");
+      return {
+        content: [{ type: "text", text: text.slice(0, 50_000) }],
+        details: { path: inside, truncated: text.length &gt; 50_000 },
+      };
+    },
+  });
+}</code></pre>
+      <p>示例只是教学最小值。真实实现还要处理符号链接逃逸、特殊文件、体积限制、编码、访问日志和读取过程中的取消。失败必须 <code>throw</code> 才会被标记为工具错误；返回带 error 文本的普通结果不会设置 <code>isError</code>。</p>
+
+      <h3 id="工具并发与写入">工具并发与写入</h3>
+      <ul>
+        <li>当前 Tool Call 默认可能并行；若工具声明需要顺序执行，整个 batch 会顺序运行。</li>
+        <li>修改文件时，用当前包导出的 <code>withFileMutationQueue(absolutePath, callback)</code> 包围完整的读—改—写窗口，避免与内置 edit/write 丢更新。</li>
+        <li>用 <code>signal</code> 取消外部命令、HTTP 和耗时循环；用 <code>onUpdate</code> 流式报告进度。</li>
+        <li>String enum 应使用 <code>StringEnum</code>（来自 <code>@earendil-works/pi-ai</code>）以保持 Google API 兼容。</li>
+        <li>若嵌套调用模型，返回 <code>usage</code>，这样 Session、RPC 和页脚成本统计才完整。</li>
+        <li>返回 <code>terminate: true</code> 只是结束提示；只有同一 batch 的全部最终工具结果都终止，才跳过自动 follow-up。</li>
+      </ul>
+
+      <h3 id="工具测试清单">工具测试清单</h3>
+      <ol>
+        <li>合法、缺失、额外、旧版兼容参数是否按 schema 处理。</li>
+        <li>绝对路径、<code>..</code>、符号链接和以 <code>@</code> 开头的路径是否越界。</li>
+        <li>两个相同目标的并发调用是否丢失修改。</li>
+        <li>执行中 abort 是否终止子进程/请求且不留下半成品。</li>
+        <li>输出是否有限长、可渲染且不泄露密钥。</li>
+        <li>Extension reload、Session resume/tree/fork 后状态是否一致。</li>
+      </ol>
+
+      <h2 id="prompt与skill">Prompt 与 Skill：先用声明式扩展</h2>
+      <h3 id="prompt模板">Prompt Template</h3>
+      <pre><code>---
+description: 评审指定文件，不执行修改
+argument-hint: &lt;path&gt; [focus]
+---
+只读评审 `$1`，重点关注 `${2:-正确性与安全性}`。
+先说明证据，再列问题；不要修改文件或执行发布命令。</code></pre>
+      <p>保存为项目的 <code>.pi/prompts/review.md</code>，信任项目后通过 <code>/review src/example.ts security</code> 使用。模板支持 <code>$1</code>、<code>$@</code>、默认值和切片，适合把团队话术变成可审查文件；它不能强制工具权限，需结合 <code>--tools</code> 或 Extension。</p>
+
+      <h3 id="skill结构">Skill</h3>
+      <pre><code>.pi/skills/release-check/
+├── SKILL.md
+├── scripts/
+│   └── verify.mjs
+└── references/
+    └── policy.html</code></pre>
+      <pre><code>---
+name: release-check
+description: 当用户准备发布、打 tag 或生成发布说明时使用
+---
+# Release Check
+
+1. 阅读项目发布规则。
+2. 运行 scripts/verify.mjs。
+3. 汇总失败项；未经用户确认不得发布。</code></pre>
+      <p>Pi 对 Agent Skills 标准采取宽容加载：启动时主要把名称和描述放入上下文，模型选择后再读取完整 SKILL.md，因此 Skill 比无条件注入长提示更节省上下文。用户也可用 <code>/skill:release-check</code> 显式调用。</p>
+
+      <h3 id="package分发">Pi Package</h3>
+      <pre><code>{
+  "name": "@example/pi-team-kit",
+  "version": "1.0.0",
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "@earendil-works/pi-ai": "*"
+  },
+  "pi": {
+    "extensions": ["./extensions"],
+    "skills": ["./skills"],
+    "prompts": ["./prompts"]
+  }
+}</code></pre>
+      <pre><code>pi install npm:@example/pi-team-kit@1.0.0
+pi list
+pi update
+pi remove @example/pi-team-kit</code></pre>
+      <p>Package 是分发约定，不是权限容器。官方建议把 Pi 核心包放在 <code>peerDependencies</code> 并使用 <code>*</code>，让运行时类型和实例保持一致；包自己的运行依赖必须位于 <code>dependencies</code>，因为生产安装会省略 devDependencies。</p>
+
+      <h2 id="sdk">SDK：在 Node.js/TypeScript 进程内嵌入</h2>
+      <p>SDK 主入口是 <code>createAgentSession()</code>。它返回 AgentSession，负责消息、模型、Compaction、事件和取消。只做单个临时任务可使用内存 Session；需要切换/恢复/分支 Session 的完整 UI，应使用 <code>AgentSessionRuntime</code>，因为替换后 <code>runtime.session</code> 会变化，订阅也必须重新绑定。</p>
+
+      <h3 id="sdk最小示例">最小 SDK 示例</h3>
+      <pre><code>import {
+  createAgentSession,
+  ModelRuntime,
+  SessionManager,
+} from "@earendil-works/pi-coding-agent";
+
+const modelRuntime = await ModelRuntime.create();
+const { session } = await createAgentSession({
+  cwd: process.cwd(),
+  tools: ["read", "grep", "find", "ls"],
+  sessionManager: SessionManager.inMemory(process.cwd()),
+  modelRuntime,
+});
+
+const unsubscribe = session.subscribe((event) =&gt; {
+  if (event.type === "message_update" &amp;&amp;
+      event.assistantMessageEvent.type === "text_delta") {
+    process.stdout.write(event.assistantMessageEvent.delta);
+  }
+});
+
+try {
+  await session.prompt("只读解释这个项目的入口与测试方式");
+} finally {
+  unsubscribe();
+  session.dispose();
+}</code></pre>
+      <p>生产宿主还应显式选择 Provider/model、ResourceLoader、认证来源、工具集合、cwd 和 SessionManager。不要让多租户请求共享可变 Session、工作目录或凭据；一个 Session 的 prompt 也不应被当作任意并发请求队列。</p>
+
+      <h3 id="sdk适用边界">SDK 适用与限制</h3>
+      <ul>
+        <li><strong>优势：</strong>TypeScript 类型、直接事件订阅、无协议序列化、可注入 customTools/Extension factory。</li>
+        <li><strong>代价：</strong>Agent 的异常、CPU/内存、环境变量和文件权限与宿主共域；SDK 升级可能带来编译期或行为变化。</li>
+        <li><strong>建议：</strong>用固定版本和 contract test 包装 Pi API；把业务对象与 Pi 事件模型隔离在 adapter 后；对 session 创建、prompt、abort、dispose 做结构化日志。</li>
+      </ul>
+
+      <h2 id="rpc">RPC：跨进程与跨语言集成</h2>
+      <p>启动 <code>pi --mode rpc</code> 后，宿主向 stdin 写一行一个 JSON command；Pi 在 stdout 交错输出 command response 与 Agent events。每个请求应带 <code>id</code> 做关联，但 <code>prompt</code> 的 success 只代表被接受/排队/立即处理，后续模型或工具失败仍通过事件流报告。</p>
+
+      <h3 id="rpc协议示例">协议示例</h3>
+      <pre><code># 宿主启动子进程
+pi --mode rpc --no-session --no-approve --provider anthropic --model "claude-*"
+
+# stdin：每条记录必须以 LF 结束
+{"id":"state-1","type":"get_state"}
+{"id":"prompt-1","type":"prompt","message":"只读解释当前目录"}
+{"id":"abort-1","type":"abort"}
+
+# stdout：response 与 event 交错出现
+{"id":"prompt-1","type":"response","command":"prompt","success":true}
+{"type":"agent_start",...}
+{"type":"message_update",...}
+{"type":"agent_end",...}</code></pre>
+      <p><strong>Framing 陷阱：</strong>协议只以 LF（<code>\n</code>）分隔记录；输入可接受 CRLF 并去掉末尾 CR。不要使用会把 Unicode U+2028/U+2029 也当换行的通用 reader。官方明确指出 Node.js <code>readline</code> 对此协议不合规，应按字节缓冲并只搜索 <code>0x0A</code>。</p>
+
+      <h3 id="rpc工程清单">RPC 工程清单</h3>
+      <div class="table-wrap"><table><thead><tr><th>问题</th><th>最低处理</th><th>失败表现</th></tr></thead><tbody>
+        <tr><td>关联</td><td>每个 command 唯一 id；response 与 event 分流</td><td>把“已接受”误判为“任务成功”</td></tr>
+        <tr><td>Framing</td><td>按 LF 拆帧；限制单帧和缓冲大小</td><td>Unicode 文本截断、内存无限增长</td></tr>
+        <tr><td>背压</td><td>等待 stdin drain；消费 stdout/stderr</td><td>双方管道塞满后死锁</td></tr>
+        <tr><td>取消</td><td>先发 abort，超时后 TERM，再到 KILL</td><td>工具和子进程残留</td></tr>
+        <tr><td>生命周期</td><td>监听 exit/error，拒绝 pending promise</td><td>请求永久悬挂</td></tr>
+        <tr><td>并发</td><td>同 Session 对 prompt 串行化，streaming 时显式 steer/followUp</td><td>RPC 返回“正在流式运行”错误或语义交叉</td></tr>
+        <tr><td>隔离</td><td>独立 cwd、最小环境变量、工具 allowlist、OS 限权</td><td>跨租户文件/凭据泄漏</td></tr>
+        <tr><td>兼容</td><td>固定 Pi 版本，启动握手并做 schema contract tests</td><td>升级后未知事件/字段导致崩溃</td></tr>
+      </tbody></table></div>
+
+      <h3 id="选择sdk还是rpc">选择 SDK 还是 RPC</h3>
+      <ul>
+        <li>宿主是 TypeScript、需要深度类型集成、信任域一致：优先 SDK。</li>
+        <li>宿主是其他语言、需要独立升级/重启、希望限制 Agent 进程权限：优先 RPC。</li>
+        <li>需要远程多租户服务：不要直接把裸 RPC 暴露到网络；在前面增加身份认证、租户隔离、队列、配额、审计和会话映射。</li>
+        <li><code>pi-server</code> 当前官方 README 标为 experimental，可能变化或移除；不应仅因名称像服务端就默认作为稳定生产 API。</li>
+      </ul>
+
+      <h3 id="集成验收">集成验收</h3>
+      <ol>
+        <li><strong>功能：</strong>固定输入能得到可解析输出；工具调用、Session 恢复和模型切换行为明确。</li>
+        <li><strong>安全：</strong>未知项目默认不加载项目 Extension；Agent 进程看不到不必要的密钥和目录；发布命令由基础设施限制。</li>
+        <li><strong>可靠性：</strong>模拟 Provider 超时、429、工具失败、进程崩溃、畸形 JSON、半帧和超大帧。</li>
+        <li><strong>取消：</strong>用户取消后模型流、工具、子进程和文件临时状态全部收敛。</li>
+        <li><strong>可观测：</strong>记录版本、sessionId、request id、model、工具名称、耗时、Token/成本和终态，但对提示、输出和环境变量脱敏。</li>
+        <li><strong>升级：</strong>在 canary 中同时跑旧/新版本 contract test，可一键回退包版本和 Session 读取路径。</li>
+      </ol>
+
+      <h2 id="参考资料">参考资料</h2>
+      <p>资料与 API 检索于 <strong>2026-08-10</strong>；Extension、SDK、RPC 和 experimental package 的接口仍可能变化，实施时应固定版本并重跑契约测试。</p>
+      <ul>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/extensions.md" target="_blank" rel="noopener noreferrer">官方 Extensions 文档：事件、API、工具、状态与安全</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/sdk.md" target="_blank" rel="noopener noreferrer">官方 SDK 文档：AgentSession 与嵌入示例</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/rpc.md" target="_blank" rel="noopener noreferrer">官方 RPC 文档：JSONL framing、命令和事件</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/prompt-templates.md" target="_blank" rel="noopener noreferrer">官方 Prompt Templates 文档</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/skills.md" target="_blank" rel="noopener noreferrer">官方 Skills 文档与 Agent Skills 兼容说明</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/packages.md" target="_blank" rel="noopener noreferrer">官方 Pi Packages 分发与依赖约定</a></li>
+        <li><a href="https://github.com/earendil-works/pi/tree/main/packages/coding-agent/examples" target="_blank" rel="noopener noreferrer">官方 Extension、SDK 与 RPC 示例目录</a></li>
+        <li><a href="https://agentskills.io/" target="_blank" rel="noopener noreferrer">Agent Skills 开放标准</a></li>
+      </ul>
+
+      <nav aria-label="Pi 七篇专题导航"><strong>Pi 专题：</strong> <a href="2026-08-10-Pi项目总览与学习路线.html">总览</a> · <a href="2026-08-10-Pi设计理念与边界.html">理念</a> · <a href="2026-08-10-Pi源码架构与运行机制.html">架构</a> · <a href="2026-08-10-Pi安装配置与使用教程.html">使用</a> · <a href="2026-08-10-Pi与主流编码Agent对比.html">下一篇：对比</a> · <a href="2026-08-10-Pi选型建议与实践路线.html">选型</a></nav>
+    </article>
+  </main>
+</div>
+</body>
+</html>
