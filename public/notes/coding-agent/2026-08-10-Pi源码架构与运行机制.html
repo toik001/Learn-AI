@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="从当前 Earendil Pi 源码追踪 package 依赖、AgentSession、Agent Loop、工具事件、TUI 更新和 JSONL Session Tree。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="编码 Agent">
+  <meta name="study-date" content="2026-08-10">
+  <title>Pi 源码架构与运行机制｜AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../../index.html"><span class="brand-mark">π</span><span>AI 学习库</span></a>
+  <div class="topbar-actions"><button class="icon-button mobile-nav-toggle" type="button">文档</button><button class="icon-button theme-toggle" type="button">主题</button></div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar"><div class="sidebar-header"><a class="sidebar-home-link" href="../../../index.html">← 知识库首页</a><button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button></div><nav class="doc-nav" aria-label="当前分类文档"></nav></aside>
+  <main class="article-column">
+    <div class="article-meta"><a href="../../../index.html">知识库首页</a><span>·</span><span>编码 Agent</span><span>·</span><time datetime="2026-08-10">2026-08-10</time></div>
+    <article class="markdown-body">
+      <h1>Pi 源码架构与运行机制</h1>
+      <blockquote>
+        <p><strong>一句话：</strong>Pi 把“模型协议、Agent 循环、编码会话、终端渲染、遥测和远程协议”拆成独立 package；一次交互由 <code>AgentSession</code> 做应用编排，<code>Agent</code>/<code>agentLoop</code> 执行模型—工具循环，事件同时驱动 TUI、Extension 和 JSONL Session Tree。</p>
+        <p><strong>源码快照：</strong>本文检查 2026-08-10 下载的 <code>earendil-works/pi</code> 主分支，package 版本字段为 <code>0.84.1</code>。主分支可能领先正式 release，因此版本号属于仓库观察。</p>
+      </blockquote>
+      <nav aria-label="本页快速目录"><strong>快速阅读：</strong> <a href="#核心结论">核心结论</a> · <a href="#package地图">Package</a> · <a href="#请求路径">请求路径</a> · <a href="#agent-loop">Loop</a> · <a href="#事件系统">事件</a> · <a href="#会话模型">会话</a> · <a href="#参考资料">资料</a></nav>
+
+      <h2 id="核心结论">核心结论</h2>
+      <ol>
+        <li><strong>分层边界清晰：</strong><code>pi-ai</code> 只负责模型与 Provider，<code>pi-agent-core</code> 负责通用 Agent 状态和 Loop，<code>pi-coding-agent</code> 负责编码领域的资源、工具、会话和模式。</li>
+        <li><strong>AgentSession 是应用编排核心：</strong>它处理 Extension 输入拦截、Skill/Prompt 展开、模型认证、Compaction、队列和持久化，再调用通用 Agent。</li>
+        <li><strong>事件是内部主干：</strong>同一组 agent/message/tool/turn 事件被 AgentSession 转发给 Extension、TUI 订阅者和 SessionManager，减少 UI、存储与 Loop 的直接耦合。</li>
+        <li><strong>Session 是树而不是线性聊天：</strong>JSONL entry 使用 <code>id</code>/<code>parentId</code>；<code>/tree</code> 改变当前叶节点即可分叉，无需复制整个文件。</li>
+        <li><strong>当前仓库正在演进远程架构：</strong>protocol/client/server/session backend 已存在，但根 README 仍只把五个 package 列为公开核心，server README 明确标为 experimental。</li>
+      </ol>
+
+      <h2 id="package地图">Package 地图</h2>
+      <p><strong>官方说明：</strong>当前根 README 的“All Packages”列出 <code>pi-telemetry</code>、<code>pi-ai</code>、<code>pi-agent-core</code>、<code>pi-coding-agent</code> 和 <code>pi-tui</code>。下面先解释这五个稳定入口，再单列源码中出现的远程/持久化组件。</p>
+      <div class="layer-stack" role="img" aria-label="Pi 当前核心 package 依赖：coding-agent 位于顶层，组合 agent-core、ai、tui，以及正在演进的 client 和 protocol；agent-core 依赖 ai 和 telemetry；ai 依赖 telemetry；tui 提供独立终端组件。">
+        <div class="layer-card"><strong>pi-coding-agent</strong><span>CLI、AgentSession、资源加载、编码工具、Session、四种运行模式</span></div>
+        <div class="layer-card"><strong>pi-agent-core</strong><span>Agent 状态、Agent Loop、工具执行、消息队列、附件与 Transport 抽象</span></div>
+        <div class="layer-card"><strong>pi-ai</strong><span>Provider/模型目录、认证、流式调用、工具 schema、跨模型上下文</span></div>
+        <div class="layer-card"><strong>pi-tui</strong><span>终端输入、组件、布局、差分渲染、同步输出</span></div>
+        <div class="layer-card"><strong>pi-telemetry</strong><span>显式 TelemetryContext、typed schema、NOOP 与内存适配器</span></div>
+      </div>
+      <p class="diagram-text">图中不是严格的单链依赖：coding-agent 同时直接组合 agent-core、ai、tui、client 和 protocol；telemetry 是跨层的可选显式上下文。</p>
+
+      <div class="table-wrap"><table><thead><tr><th>Package</th><th>公开职责</th><th>关键入口</th><th>何时单独使用</th></tr></thead><tbody>
+        <tr><td><code>@earendil-works/pi-telemetry</code></td><td>与厂商无关的 span、event、attribute、status 契约</td><td><code>TelemetryContext</code>、typed schema、conformance suite</td><td>需要把 Pi 遥测适配到 OpenTelemetry、Sentry 或日志后端</td></tr>
+        <tr><td><code>@earendil-works/pi-ai</code></td><td>统一多 Provider LLM API 和模型目录</td><td><code>Models</code>、<code>stream</code>/<code>complete</code>、Provider factory</td><td>只需要模型调用、工具 schema、认证和模型切换，不需要 Agent Loop</td></tr>
+        <tr><td><code>@earendil-works/pi-agent-core</code></td><td>带状态、工具执行和事件流的通用 Agent</td><td><code>Agent</code>、<code>agentLoop</code>、<code>AgentMessage</code></td><td>构建非编码 Agent 或自定义 UI，同时复用 Pi 的循环</td></tr>
+        <tr><td><code>@earendil-works/pi-tui</code></td><td>高效终端 UI 组件与差分渲染</td><td>TUI、layout、editor、keybindings、terminal</td><td>构建其他终端应用，不依赖编码 Agent</td></tr>
+        <tr><td><code>@earendil-works/pi-coding-agent</code></td><td>可直接使用或嵌入的编码 Harness</td><td>CLI、<code>createAgentSession</code>、<code>AgentSession</code>、Extension API</td><td>日常编码、定制 Pi、SDK 或 RPC 集成</td></tr>
+      </tbody></table></div>
+
+      <h3 id="演进中的远程组件">演进中的远程与持久化组件</h3>
+      <div class="table-wrap"><table><thead><tr><th>源码 package</th><th>职责</th><th>稳定性判断</th></tr></thead><tbody>
+        <tr><td><code>pi-protocol</code></td><td>长度前缀 CBOR、schema、请求/响应/事件 envelope</td><td>README 明确称 protocol experimental，暂无兼容保证</td></tr>
+        <tr><td><code>pi-client</code></td><td>transport-neutral 远程 Session client、lease 和 snapshot</td><td>公开 package，但不在根 README 的核心五包表中</td></tr>
+        <tr><td><code>pi-server</code></td><td>组合 transport listener 与用户提供的 Session service</td><td>README 明确写“may change or be removed”</td></tr>
+        <tr><td><code>pi-session-backend-sqlite-node</code></td><td>把 SQLite backend 从 agent-core 的 runtime 依赖中拆出</td><td>适配 Node <code>node:sqlite</code>，允许未来出现其他 backend</td></tr>
+        <tr><td><code>pi-evals</code></td><td>项目内部评测工具</td><td>package description 为空，不应按产品能力承诺</td></tr>
+      </tbody></table></div>
+      <p><strong>历史边界：</strong><code>pi-web-ui</code> 出现在 2026-05 迁移映射和旧仓库清单中，但不在当前根 README 核心清单，也不在本次主分支的 packages 目录中，因此本文不把它写成当前架构层。</p>
+
+      <h2 id="请求路径">一次请求的完整路径</h2>
+      <div class="agent-call-flow" role="img" aria-label="Pi 请求路径：InteractiveMode 收到输入，AgentSession 预处理命令技能提示与认证，Agent Core 转换上下文并调用 pi-ai Provider 流，工具调用经过校验与前后钩子，事件回到 AgentSession，再驱动 Extension、TUI 和 SessionManager 持久化。">
+        <div class="agent-step"><strong>1. Input</strong><span>InteractiveMode / SDK / RPC</span></div>
+        <div class="agent-step"><strong>2. AgentSession</strong><span>命令、资源展开、认证、Compaction</span></div>
+        <div class="agent-step"><strong>3. Agent</strong><span>状态、队列、transformContext</span></div>
+        <div class="agent-step"><strong>4. pi-ai</strong><span>Provider stream 与增量事件</span></div>
+        <div class="agent-step"><strong>5. Tools</strong><span>校验、preflight、并行/顺序执行</span></div>
+        <div class="agent-step"><strong>6. Events</strong><span>Extension、TUI、JSONL Session</span></div>
+      </div>
+      <p class="diagram-text">一次“用户消息”可能包含多个 LLM turn：每当模型返回 tool call，结果会成为 toolResult 消息，Loop 再次调用模型；直到没有工具、发生错误/取消，或 termination hook 停止。</p>
+
+      <h3 id="阶段一输入预处理">阶段一：AgentSession 预处理</h3>
+      <ol>
+        <li><code>InteractiveMode</code> 把普通输入交给 <code>session.prompt()</code>；若正在 streaming，则指定 steer 或 followUp 进入不同队列。</li>
+        <li><code>AgentSession.prompt()</code> 先尝试 Extension command，再触发 Extension <code>input</code> 事件，允许 handled 或 transform。</li>
+        <li>展开 <code>/skill:name</code> 和 Prompt Template；随后检查 model、认证和可能需要的 Compaction。</li>
+        <li>构造 user message，并触发 <code>before_agent_start</code>，Extension 可以注入 custom message 或临时修改 system prompt。</li>
+        <li>最终调用内部 <code>_runAgentPrompt()</code>，把消息交给 <code>Agent</code>；上层错误重试、context overflow 恢复和 auto-compaction 仍由 AgentSession 管理。</li>
+      </ol>
+
+      <h3 id="阶段二模型边界">阶段二：Agent 到 Provider</h3>
+      <p><code>Agent</code> 持有 system prompt、model、thinking level、tools 和 messages。每个 turn 先执行可选的 <code>transformContext()</code>，再由 <code>convertToLlm()</code> 把允许包含自定义消息的 <code>AgentMessage[]</code> 转成 Provider 可识别的 user/assistant/toolResult。</p>
+      <p><code>createAgentSession()</code> 注入的 stream function 最终调用 <code>ModelRuntime.streamSimple()</code>，同时应用 timeout、Provider retry、header transform、Extension 的 provider request/response hook 和 session ID。<code>pi-ai</code> 再根据 model 所属 Provider 选择真实 wire protocol。</p>
+
+      <h3 id="阶段三工具与结果">阶段三：工具执行与回灌</h3>
+      <p>模型生成 tool call 后，Agent Core 查找同名工具、使用 schema 校验参数，再调用 <code>beforeToolCall</code>。Hook 可以阻止执行并产生错误结果；通过后执行工具，并以 <code>AbortSignal</code> 传播取消。</p>
+      <p>当前默认 tool execution 为 <code>parallel</code>：先按模型输出顺序做 preflight，允许的调用并发执行；完成事件可按真实完成顺序出现，但写入上下文的 toolResult 仍按模型原始顺序排列。只要批次中有工具声明 sequential，整个批次改为顺序执行。<code>afterToolCall</code> 可以修改结果、错误状态或终止提示。</p>
+
+      <h2 id="agent-loop">Agent Loop</h2>
+      <pre><code>// 教学化伪代码：对应 packages/agent/src/agent-loop.ts
+emit("agent_start");
+emitUserMessages();
+
+while (true) {
+  emit("turn_start");
+  const assistant = await streamAssistantResponse(context, streamFn);
+  const calls = assistant.content.filter(block =&gt; block.type === "toolCall");
+
+  if (assistant.stopReason === "error" || assistant.stopReason === "aborted") break;
+  const results = calls.length ? await executeToolCalls(calls) : [];
+  context.messages.push(...results);
+  emit("turn_end", { assistant, results });
+
+  if (shouldStopAfterTurn?.(...) || (calls.length === 0 &amp;&amp; noQueuedMessages())) break;
+}
+
+emit("agent_end");</code></pre>
+      <p>上面省略了 steering/follow-up 两层队列：内部循环处理工具与 steering；当模型原本准备结束时，外层循环检查 follow-up，再决定是否开启下一轮。</p>
+
+      <h3 id="停止条件">停止并不只有“模型没调用工具”</h3>
+      <div class="table-wrap"><table><thead><tr><th>条件</th><th>发生位置</th><th>结果</th></tr></thead><tbody>
+        <tr><td>模型无 tool call，且无队列消息</td><td>Agent Loop</td><td>正常 <code>agent_end</code></td></tr>
+        <tr><td>Provider error 或 Abort</td><td>Assistant stream</td><td>结束本轮；AgentSession 可根据策略 retry/恢复</td></tr>
+        <tr><td>所有 tool result 都带 <code>terminate: true</code></td><td>工具批次</td><td>跳过自动 follow-up LLM call</td></tr>
+        <tr><td><code>shouldStopAfterTurn</code> 返回 true</td><td>turn_end 后</td><td>在下一次模型调用前优雅停止</td></tr>
+        <tr><td>Context overflow</td><td>Provider/AgentSession</td><td>可能触发 overflow recovery 与 Compaction 后重试</td></tr>
+        <tr><td>用户 steering/follow-up</td><td>消息队列</td><td>原本要结束的 Agent 继续运行</td></tr>
+      </tbody></table></div>
+
+      <h3 id="typescript实现要点">TypeScript 实现要点</h3>
+      <ul>
+        <li><strong>Discriminated union：</strong><code>event.type</code> 和 content block 的 <code>type</code> 让 switch 分支获得类型收窄，新增事件时可做穷尽检查。</li>
+        <li><strong>Async stream：</strong><code>EventStream</code> 同时支持 <code>for await</code> 增量消费和 <code>result()</code> 最终结果；UI 不需要等完整消息。</li>
+        <li><strong>AbortSignal：</strong>模型 stream、transform、工具和 hook 共用取消信号，避免只停止界面却让副作用继续。</li>
+        <li><strong>Declaration merging：</strong><code>AgentMessage</code> 允许应用声明自定义消息类型；<code>convertToLlm</code> 是最终进入模型前的强制边界。</li>
+      </ul>
+
+      <h2 id="事件系统">事件系统</h2>
+      <p>Agent Core 事件既是 UI 协议，也是持久化和扩展的同步点。<code>AgentSession</code> 的处理顺序很关键：先向 Extension 发对应事件，再通知 session listener，随后在 <code>message_end</code> 把最终消息交给 SessionManager。Extension 在 message_end 返回替换消息时，Agent 状态、后续事件和最终持久化会保持同一对象语义。</p>
+      <div class="table-wrap"><table><thead><tr><th>事件</th><th>含义</th><th>TUI 行为</th><th>持久化</th></tr></thead><tbody>
+        <tr><td><code>agent_start/end</code></td><td>一次 prompt/continue 运行边界</td><td>开启/关闭 working 状态</td><td>不直接写消息</td></tr>
+        <tr><td><code>turn_start/end</code></td><td>一次 LLM call 加工具批次</td><td>更新 footer、扩展状态</td><td>消息通过 message_end 单独写入</td></tr>
+        <tr><td><code>message_start</code></td><td>user/assistant/toolResult 开始</td><td>创建消息或流式组件</td><td>尚未写入</td></tr>
+        <tr><td><code>message_update</code></td><td>assistant text/thinking/tool args 增量</td><td>差分更新文本与工具卡片</td><td>不写 partial，避免历史污染</td></tr>
+        <tr><td><code>message_end</code></td><td>消息最终形态</td><td>结束 streaming component</td><td>写入 SessionMessageEntry</td></tr>
+        <tr><td><code>tool_execution_start/update/end</code></td><td>工具生命周期</td><td>创建、刷新、结束工具卡片</td><td>最终 toolResult 作为消息写入</td></tr>
+      </tbody></table></div>
+
+      <h3 id="遥测不是业务状态">Telemetry 不等于 Session</h3>
+      <p><code>pi-telemetry</code> 使用显式传递的 <code>TelemetryContext</code> 和 callback-owned span，刻意不提供全局 current span 或内置 exporter。Span 是诊断数据；Session entry 是 Agent 历史与恢复数据。两者不能互相替代：关闭遥测不应改变任务结果，而删除 Session 会影响恢复和上下文。</p>
+
+      <h2 id="会话模型">会话模型</h2>
+      <p>coding-agent 的 Session 默认保存在 <code>~/.pi/agent/sessions/</code>，按工作目录组织。JSONL 第一部分包含 session header，后续 entry 通过 <code>id</code> 与 <code>parentId</code> 形成树；SessionManager 维护当前 <code>leafId</code>，追加消息就是把新 entry 挂在当前叶子并推进叶子。</p>
+      <pre><code>{"type":"session","version":...,"id":"...","cwd":"..."}
+{"type":"message","id":"a1","parentId":null,"message":{"role":"user",...}}
+{"type":"message","id":"a2","parentId":"a1","message":{"role":"assistant",...}}
+{"type":"message","id":"b1","parentId":"a1","message":{"role":"user",...}}
+// a2 与 b1 是从同一用户消息出发的两个分支</code></pre>
+      <div class="table-wrap"><table><thead><tr><th>Entry 类型</th><th>记录内容</th><th>为什么不是普通 message</th></tr></thead><tbody>
+        <tr><td><code>message</code></td><td>user、assistant、toolResult、custom/Bash 消息</td><td>直接参与或展示会话</td></tr>
+        <tr><td><code>model_change</code></td><td>Provider 与 model ID</td><td>恢复时需要重建选择，不应伪装成聊天文本</td></tr>
+        <tr><td><code>thinking_level_change</code></td><td>推理强度</td><td>属于运行配置历史</td></tr>
+        <tr><td><code>compaction</code></td><td>摘要、保留边界、压缩前 Token 和 details</td><td>替代旧上下文的结构化检查点</td></tr>
+        <tr><td><code>branch_summary</code></td><td>跨分支切换时的摘要</td><td>帮助新分支保留离开路径的上下文</td></tr>
+        <tr><td><code>custom</code>/<code>session_info</code></td><td>Extension 数据、session 名称</td><td>可持久化但不必进入 LLM</td></tr>
+      </tbody></table></div>
+
+      <h3 id="会话设计的三个结果">树结构带来的三个结果</h3>
+      <ol>
+        <li><strong>分支不复制文件：</strong><code>/tree</code> 选择旧 entry 后继续追加即可形成新路径；<code>/fork</code> 才创建新的 session 文件。</li>
+        <li><strong>完整历史与当前上下文分离：</strong>JSONL 保留完整 entry；构造 LLM context 时只取当前分支并应用 compaction/转换。</li>
+        <li><strong>Extension 能持久化自己的状态：</strong>custom entry 不必污染模型消息，但开发者要负责 schema 版本和兼容。</li>
+      </ol>
+
+      <h3 id="架构风险清单">架构风险清单</h3>
+      <ul>
+        <li>不要把根 README 未列出的 experimental server/protocol 当作稳定远程平台承诺。</li>
+        <li>不要在 <code>message_update</code> 就写业务副作用；partial tool arguments 可能继续变化。</li>
+        <li>并行工具完成顺序不稳定；任何有先后依赖的工具必须声明 sequential 或在外部串行编排。</li>
+        <li>Session 保存了提示、代码片段和工具结果，必须按敏感开发数据管理；<code>/share</code> 前先审查。</li>
+        <li>Project Trust 控制项目资源加载，不提供文件系统、网络或命令沙箱。</li>
+      </ul>
+
+      <h2 id="参考资料">参考资料</h2>
+      <p>资料与源码检索于 <strong>2026-08-10</strong>。源码链接指向 main，精确复现时应固定 commit。</p>
+      <ul>
+        <li><a href="https://github.com/earendil-works/pi" target="_blank" rel="noopener noreferrer">Pi 根仓库与核心 package 清单</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/agent/README.md" target="_blank" rel="noopener noreferrer">pi-agent-core README：消息流、事件流、工具与状态</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/agent/src/agent-loop.ts" target="_blank" rel="noopener noreferrer">agent-loop.ts：当前 Loop 与工具执行源码</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/src/core/agent-session.ts" target="_blank" rel="noopener noreferrer">AgentSession：编码领域编排、Extension 与持久化</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/coding-agent/src/core/session-manager.ts" target="_blank" rel="noopener noreferrer">SessionManager：JSONL Tree 与 entry</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/ai/README.md" target="_blank" rel="noopener noreferrer">pi-ai README：Provider、stream、tool 与上下文转换</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/telemetry/README.md" target="_blank" rel="noopener noreferrer">pi-telemetry README：显式遥测契约</a></li>
+        <li><a href="https://github.com/earendil-works/pi/blob/main/packages/protocol/README.md" target="_blank" rel="noopener noreferrer">Experimental Pi Protocol</a></li>
+      </ul>
+
+      <nav aria-label="Pi 七篇专题导航"><strong>Pi 专题：</strong> <a href="2026-08-10-Pi项目总览与学习路线.html">总览</a> · <a href="2026-08-10-Pi设计理念与边界.html">理念</a> · <a href="2026-08-10-Pi安装配置与使用教程.html">下一篇：使用</a> · <a href="2026-08-10-Pi扩展开发与系统集成.html">扩展</a> · <a href="2026-08-10-Pi与主流编码Agent对比.html">对比</a> · <a href="2026-08-10-Pi选型建议与实践路线.html">选型</a></nav>
+    </article>
+  </main>
+</div>
+</body>
+</html>
