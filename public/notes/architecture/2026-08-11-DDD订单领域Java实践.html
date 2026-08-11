@@ -1,0 +1,950 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="用一套可编译、可运行的 Java 21 订单案例串起 DDD 聚合、应用用例、端口适配器、领域事件、Outbox 与测试。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="软件架构与 DDD">
+  <meta name="study-date" content="2026-08-11">
+  <title>DDD 订单领域 Java 实践｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <div class="sidebar-category-summary"><span class="eyebrow">专题</span><strong>软件架构与 DDD</strong><small>七篇学习系列</small></div>
+    <nav class="doc-nav" aria-label="DDD 专题文档">
+      <a class="doc-nav-item" href="2026-08-11-DDD架构总览与学习路线.html"><span>1. 架构总览与学习路线</span></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD基础概念与统一语言.html"><span>2. 基础概念与统一语言</span></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD战略设计与限界上下文.html"><span>3. 战略设计与限界上下文</span></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD战术设计与领域模型.html"><span>4. 战术设计与领域模型</span></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD分层架构模式对比.html"><span>5. 分层架构模式对比</span></a>
+      <a class="doc-nav-item is-active" href="2026-08-11-DDD订单领域Java实践.html" aria-current="page"><span>6. 订单领域 Java 实践</span></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD落地演进与常见误区.html"><span>7. 落地演进与常见误区</span></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta"><a href="../../../index.html">知识库首页</a><span>·</span><span>软件架构与 DDD</span><span>·</span><time datetime="2026-08-11">2026-08-11</time></div>
+    <article class="markdown-body">
+      <h1 id="ddd订单领域java实践">DDD 订单领域 Java 21 完整实践</h1>
+      <blockquote><p>整理日期与资料检索日期：2026-08-11。前置条件：JDK 21。Spring Boot 只作为外部适配器与组合根的运行环境；本页标为“完整可编译”的领域、应用、端口和测试代码只依赖 JDK，可脱离 Spring 编译运行。</p></blockquote>
+
+      <nav aria-label="本页目录">
+        <strong>本页目录</strong>
+        <ol>
+          <li><a href="#核心结论">核心结论</a></li>
+          <li><a href="#目录与依赖">目录与依赖</a></li>
+          <li><a href="#订单聚合">订单聚合</a></li>
+          <li><a href="#创建订单用例">创建订单用例</a></li>
+          <li><a href="#端口与适配器">端口与适配器</a></li>
+          <li><a href="#领域事件">领域事件</a></li>
+          <li><a href="#测试">测试</a></li>
+          <li><a href="#spring-boot组合">Spring Boot 组合</a></li>
+          <li><a href="#实践与验收">实践与验收</a></li>
+          <li><a href="#本篇小结">本篇小结</a></li>
+          <li><a href="#参考资料">参考资料</a></li>
+          <li><a href="#专题导航">专题导航</a></li>
+        </ol>
+      </nav>
+
+      <h2 id="核心结论">核心结论</h2>
+      <ul>
+        <li><strong>领域模型拥有不变量和状态转换：</strong><code>Order</code> 决定能否加行、能否提交、币种能否混用；Controller 或 Service 不能替它做最终裁决。</li>
+        <li><strong>应用用例拥有编排和事务边界：</strong><code>CreateOrderService</code> 按“创建 → 加行 → 提交 → 保存 → 交出事件 → 返回”组织一次业务请求，Spring 在外层为它施加事务政策。</li>
+        <li><strong>端口是核心拥有、面向目的的契约：</strong><code>OrderRepository</code> 和 <code>DomainEventPublisher</code>只暴露本用例需要的能力，JPA、Outbox 等适配器在外层实现。</li>
+        <li><strong>领域事件记录内部事实：</strong><code>OrderCreated</code> 不直接充当 Kafka/支付/库存契约；跨限界上下文前，由应用/集成适配器翻译成版本化消息并可靠持久化、异步发布。</li>
+        <li><strong>Spring Boot 负责组装，不定义领域：</strong>Web、事务、JPA、序列化和消息组件可以更换，领域类型仍是普通 Java 21。</li>
+      </ul>
+      <p><a href="https://www.domainlanguage.com/ddd/reference/" target="_blank" rel="noopener noreferrer">Eric Evans 的 DDD Reference</a>把 Aggregate、Repository、Service 与 Layered Architecture 放进同一套模型语言；<a href="https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/microservice-domain-model" target="_blank" rel="noopener noreferrer">Microsoft 的领域模型设计指南</a>也强调实体方法应守护不变量，而不是把规则散落在应用层。本文把这些原则翻译为 Java 工程边界，不把任何框架 API 当成 DDD 定义。</p>
+
+      <h2 id="目录与依赖">目录与依赖</h2>
+      <div class="code-block">
+        <div class="code-toolbar"><span>Context First · 一种可维护组织方式（不是 DDD 标准）</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code>order/
+  domain/          Order, OrderId, ProductId, OrderLine, Money, OrderCreated
+  application/     CreateOrderCommand, CreateOrderUseCase, CreateOrderService
+  port/out/        OrderRepository, DomainEventPublisher
+  adapter/in/web/  HttpCreateOrderAdapter
+  adapter/out/persistence/ JpaOrderRepositoryAdapter + mapping
+  adapter/out/event/ OutboxDomainEventPublisher
+  bootstrap/       Spring composition</code></pre>
+      </div>
+      <p>先按 <code>order</code> 限界上下文聚合变化，再在上下文内分责任。<code>domain</code>只拥有业务状态和规则；<code>application</code>拥有用例流程和稳定输入/输出；<code>port/out</code>是核心为了完成用例而定义的能力；三类 <code>adapter</code>翻译 HTTP、持久化和消息协议；<code>bootstrap</code>选择实现并施加事务、时钟等政策。这是一个维护性示例，不是 DDD 强制目录。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>源代码区域</th><th>允许依赖</th><th>不应认识</th><th>所有权</th></tr></thead>
+          <tbody>
+            <tr><td><code>domain</code></td><td>JDK 与同域类型</td><td>Spring、HTTP、JPA、Broker</td><td>不变量、状态转换、内部事实</td></tr>
+            <tr><td><code>application</code> / <code>port</code></td><td>Domain、JDK</td><td>具体数据库、Controller、消息 SDK</td><td>用例与核心所需能力</td></tr>
+            <tr><td><code>adapter</code> / <code>bootstrap</code></td><td>核心契约、框架与驱动</td><td>不得反向迫使核心 import 框架</td><td>协议映射、持久化、可靠投递、组装</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><a href="https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/infrastructure-persistence-layer-design" target="_blank" rel="noopener noreferrer">Microsoft 的基础设施持久化层指南</a>把仓储实现放在基础设施，避免应用直接依赖数据库实现；接口究竟放 Domain 还是 Application 要由语义所有者决定。本例的两个端口服务于创建用例，因此放在核心的 <code>port/out</code>。</p>
+
+      <h2 id="订单聚合">订单聚合</h2>
+      <p><strong>本例事件语义：</strong><code>OrderCreated</code>表示“Order 上下文已建立一个具有合法标识和时间的 Draft 聚合”这一内部审计事实，记录点就是 <code>Order.create</code>。它不表示“已支付”“已预占库存”或“已对外发布”；命令边界先拒绝空行列表，因此正常创建用例不会保存空草稿。若后续行为失败，事务回滚且事件不会进入 Outbox。</p>
+      <p><a href="https://www.dddcommunity.org/wp-content/uploads/files/pdf_articles/Vernon_2011_1.pdf" target="_blank" rel="noopener noreferrer">Vaughn Vernon 的 Effective Aggregate Design</a>建议从真实一致性规则出发设计小聚合；<a href="https://martinfowler.com/bliki/ValueObject.html" target="_blank" rel="noopener noreferrer">Fowler 的 Value Object</a>说明值对象按属性相等。Java <code>record</code>自动生成 final 组件、访问器与值相等方法，但仍需构造校验；详见 <a href="https://docs.oracle.com/en/java/javase/21/language/records.html" target="_blank" rel="noopener noreferrer">Oracle Java 21 Record 文档</a>。<code>sealed</code>只限制事件层次扩展范围，不创造业务语义；其语言规则见 <a href="https://docs.oracle.com/en/java/javase/21/language/sealed-classes-and-interfaces.html" target="_blank" rel="noopener noreferrer">Oracle Sealed Classes 文档</a>。</p>
+
+      <h3 id="领域基础类型">领域基础类型</h3>
+      <p>以下六个文件均为<strong>完整可编译 Java 21</strong>，文件边界由注释标明。<code>Money</code>把金额规范化到币种的小数位，拒绝需要隐式舍入的输入；相加要求同币种，乘法要求正数量。</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>Java 21 · domain 基础类型 · 完整可编译</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-java">// src/example/order/domain/OrderId.java
+package example.order.domain;
+
+import java.util.Objects;
+import java.util.UUID;
+
+public record OrderId(UUID value) {
+    public OrderId {
+        Objects.requireNonNull(value, "value");
+    }
+
+    public static OrderId random() {
+        return new OrderId(UUID.randomUUID());
+    }
+}
+
+// src/example/order/domain/ProductId.java
+package example.order.domain;
+
+public record ProductId(String value) {
+    public ProductId {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("productId must not be blank");
+        }
+    }
+}
+
+// src/example/order/domain/Money.java
+package example.order.domain;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Currency;
+import java.util.Objects;
+
+public record Money(BigDecimal amount, Currency currency) {
+    public Money {
+        Objects.requireNonNull(amount, "amount");
+        Objects.requireNonNull(currency, "currency");
+        if (amount.signum() &lt; 0) {
+            throw new IllegalArgumentException("money must not be negative");
+        }
+        int scale = currency.getDefaultFractionDigits();
+        if (scale &lt; 0) {
+            throw new IllegalArgumentException("currency must define a fraction scale");
+        }
+        amount = amount.setScale(scale, RoundingMode.UNNECESSARY);
+    }
+
+    public Money add(Money other) {
+        Objects.requireNonNull(other, "other");
+        requireSameCurrency(other);
+        return new Money(amount.add(other.amount), currency);
+    }
+
+    public Money multiply(int quantity) {
+        if (quantity &lt;= 0) {
+            throw new IllegalArgumentException("quantity must be positive");
+        }
+        return new Money(amount.multiply(BigDecimal.valueOf(quantity)), currency);
+    }
+
+    private void requireSameCurrency(Money other) {
+        if (!currency.equals(other.currency)) {
+            throw new IllegalArgumentException("currencies must match");
+        }
+    }
+}
+
+// src/example/order/domain/OrderStatus.java
+package example.order.domain;
+
+public enum OrderStatus {
+    DRAFT,
+    SUBMITTED
+}
+
+// src/example/order/domain/DomainEvent.java
+package example.order.domain;
+
+public sealed interface DomainEvent permits OrderCreated {
+}
+
+// src/example/order/domain/OrderCreated.java
+package example.order.domain;
+
+import java.time.Instant;
+import java.util.Objects;
+
+public record OrderCreated(OrderId orderId, Instant occurredAt) implements DomainEvent {
+    public OrderCreated {
+        Objects.requireNonNull(orderId, "orderId");
+        Objects.requireNonNull(occurredAt, "occurredAt");
+    }
+}</code></pre>
+      </div>
+
+      <h3 id="order聚合完整代码">Order 聚合完整代码</h3>
+      <p><code>OrderLine</code>是带身份的内部实体，但被定义为 <code>private static final</code>；外部只拿到不可变 record 快照和不可变列表。修改入口只有聚合行为。<code>rehydrate</code>是持久化适配器专用的显式还原路径：重建并复核状态，但不会把历史 <code>OrderCreated</code>再次加入待发布列表。</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>Java 21 · Order.java · 完整可编译</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-java">package example.order.domain;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+
+public final class Order {
+    private final OrderId id;
+    private final List&lt;OrderLine&gt; lines = new ArrayList&lt;&gt;();
+    private final List&lt;DomainEvent&gt; domainEvents = new ArrayList&lt;&gt;();
+    private OrderStatus status;
+
+    public record OrderLineSnapshot(
+            UUID id,
+            ProductId productId,
+            int quantity,
+            Money unitPrice,
+            Money subtotal) {
+        public OrderLineSnapshot {
+            Objects.requireNonNull(id, "id");
+            Objects.requireNonNull(productId, "productId");
+            Objects.requireNonNull(unitPrice, "unitPrice");
+            Objects.requireNonNull(subtotal, "subtotal");
+            if (quantity &lt;= 0) {
+                throw new IllegalArgumentException("quantity must be positive");
+            }
+            if (!unitPrice.multiply(quantity).equals(subtotal)) {
+                throw new IllegalArgumentException("subtotal must equal unitPrice * quantity");
+            }
+        }
+    }
+
+    private Order(OrderId id, OrderStatus status) {
+        this.id = Objects.requireNonNull(id, "id");
+        this.status = Objects.requireNonNull(status, "status");
+    }
+
+    public static Order create(OrderId id, Instant occurredAt) {
+        var order = new Order(id, OrderStatus.DRAFT);
+        order.domainEvents.add(new OrderCreated(id, occurredAt));
+        return order;
+    }
+
+    public static Order rehydrate(
+            OrderId id,
+            OrderStatus status,
+            List&lt;OrderLineSnapshot&gt; snapshots) {
+        Objects.requireNonNull(snapshots, "snapshots");
+        var order = new Order(id, status);
+        for (OrderLineSnapshot snapshot : List.copyOf(snapshots)) {
+            order.addRestoredLine(snapshot);
+        }
+        if (status == OrderStatus.SUBMITTED &amp;&amp; order.lines.isEmpty()) {
+            throw new IllegalArgumentException("submitted order must contain a line");
+        }
+        return order;
+    }
+
+    public void addLine(ProductId productId, int quantity, Money unitPrice) {
+        requireDraft();
+        Objects.requireNonNull(productId, "productId");
+        Objects.requireNonNull(unitPrice, "unitPrice");
+        requireCurrency(unitPrice);
+        lines.add(new OrderLine(UUID.randomUUID(), productId, quantity, unitPrice));
+    }
+
+    public void submit() {
+        requireDraft();
+        if (lines.isEmpty()) {
+            throw new IllegalStateException("empty order cannot be submitted");
+        }
+        total();
+        status = OrderStatus.SUBMITTED;
+    }
+
+    public OrderId id() {
+        return id;
+    }
+
+    public OrderStatus status() {
+        return status;
+    }
+
+    public List&lt;OrderLineSnapshot&gt; lineSnapshots() {
+        return lines.stream().map(OrderLine::snapshot).toList();
+    }
+
+    public Money total() {
+        if (lines.isEmpty()) {
+            throw new IllegalStateException("empty order has no total");
+        }
+        Money result = lines.getFirst().subtotal();
+        for (int index = 1; index &lt; lines.size(); index++) {
+            result = result.add(lines.get(index).subtotal());
+        }
+        return result;
+    }
+
+    public List&lt;DomainEvent&gt; pullEvents() {
+        List&lt;DomainEvent&gt; collected = List.copyOf(domainEvents);
+        domainEvents.clear();
+        return collected;
+    }
+
+    private void addRestoredLine(OrderLineSnapshot snapshot) {
+        Objects.requireNonNull(snapshot, "snapshot");
+        requireCurrency(snapshot.unitPrice());
+        lines.add(new OrderLine(
+                snapshot.id(), snapshot.productId(), snapshot.quantity(), snapshot.unitPrice()));
+    }
+
+    private void requireCurrency(Money candidate) {
+        if (!lines.isEmpty()
+                &amp;&amp; !lines.getFirst().unitPrice.currency().equals(candidate.currency())) {
+            throw new IllegalArgumentException("all order lines must use one currency");
+        }
+    }
+
+    private void requireDraft() {
+        if (status != OrderStatus.DRAFT) {
+            throw new IllegalStateException("only draft orders can change or be submitted");
+        }
+    }
+
+    private static final class OrderLine {
+        private final UUID id;
+        private final ProductId productId;
+        private final int quantity;
+        private final Money unitPrice;
+
+        private OrderLine(UUID id, ProductId productId, int quantity, Money unitPrice) {
+            this.id = Objects.requireNonNull(id, "id");
+            this.productId = Objects.requireNonNull(productId, "productId");
+            if (quantity &lt;= 0) {
+                throw new IllegalArgumentException("quantity must be positive");
+            }
+            this.quantity = quantity;
+            this.unitPrice = Objects.requireNonNull(unitPrice, "unitPrice");
+        }
+
+        private Money subtotal() {
+            return unitPrice.multiply(quantity);
+        }
+
+        private OrderLineSnapshot snapshot() {
+            return new OrderLineSnapshot(id, productId, quantity, unitPrice, subtotal());
+        }
+    }
+}</code></pre>
+      </div>
+      <p><strong>不变量审查：</strong>负金额和非正数量无法构造；同一订单只能使用一种币种；空订单不能提交；提交后不能加行或再次提交；总额只能由内部行计算；没有 public setter，也没有可逃逸的 <code>OrderLine</code>引用。聚合不调用 Repository、Spring 或网络客户端。<a href="https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/domain-model-layer-validations" target="_blank" rel="noopener noreferrer">Microsoft 的聚合校验指南</a>明确把跨状态变化的不变量守护归于实体，尤其是聚合根。</p>
+
+      <h2 id="创建订单用例">创建订单用例</h2>
+      <p>Command 是输入边界数据，不是 HTTP DTO，也不是 JPA Entity。它复制行列表并拒绝空列表；每个行请求再次保证商品、金额和数量有效。示例没有加入未被使用的 customer/request 字段；生产系统若要求幂等，应把 <code>requestId</code>加入命令，并在应用/数据库边界用唯一约束持久化请求与稳定结果，而不是只在 Controller 做内存去重。</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>Java 21 · application · 完整可编译</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-java">// src/example/order/application/CreateOrderCommand.java
+package example.order.application;
+
+import example.order.domain.Money;
+import example.order.domain.ProductId;
+
+import java.util.List;
+import java.util.Objects;
+
+public record CreateOrderCommand(List&lt;Line&gt; lines) {
+    public CreateOrderCommand {
+        Objects.requireNonNull(lines, "lines");
+        lines = List.copyOf(lines);
+        if (lines.isEmpty()) {
+            throw new IllegalArgumentException("order must contain at least one line");
+        }
+    }
+
+    public record Line(ProductId productId, int quantity, Money unitPrice) {
+        public Line {
+            Objects.requireNonNull(productId, "productId");
+            Objects.requireNonNull(unitPrice, "unitPrice");
+            if (quantity &lt;= 0) {
+                throw new IllegalArgumentException("quantity must be positive");
+            }
+        }
+    }
+}
+
+// src/example/order/application/CreateOrderResult.java
+package example.order.application;
+
+import example.order.domain.Money;
+import example.order.domain.OrderId;
+import example.order.domain.OrderStatus;
+
+import java.util.Objects;
+
+public record CreateOrderResult(OrderId orderId, OrderStatus status, Money total) {
+    public CreateOrderResult {
+        Objects.requireNonNull(orderId, "orderId");
+        Objects.requireNonNull(status, "status");
+        Objects.requireNonNull(total, "total");
+    }
+}
+
+// src/example/order/application/CreateOrderUseCase.java
+package example.order.application;
+
+public interface CreateOrderUseCase {
+    CreateOrderResult create(CreateOrderCommand command);
+}
+
+// src/example/order/application/CreateOrderService.java
+package example.order.application;
+
+import example.order.domain.Order;
+import example.order.domain.OrderId;
+import example.order.port.out.DomainEventPublisher;
+import example.order.port.out.OrderRepository;
+
+import java.time.Clock;
+import java.util.Objects;
+import java.util.function.Supplier;
+
+public final class CreateOrderService implements CreateOrderUseCase {
+    private final OrderRepository orders;
+    private final DomainEventPublisher events;
+    private final Clock clock;
+    private final Supplier&lt;OrderId&gt; orderIds;
+
+    public CreateOrderService(
+            OrderRepository orders,
+            DomainEventPublisher events,
+            Clock clock,
+            Supplier&lt;OrderId&gt; orderIds) {
+        this.orders = Objects.requireNonNull(orders, "orders");
+        this.events = Objects.requireNonNull(events, "events");
+        this.clock = Objects.requireNonNull(clock, "clock");
+        this.orderIds = Objects.requireNonNull(orderIds, "orderIds");
+    }
+
+    @Override
+    public CreateOrderResult create(CreateOrderCommand command) {
+        Objects.requireNonNull(command, "command");
+        OrderId orderId = Objects.requireNonNull(orderIds.get(), "generated orderId");
+        Order order = Order.create(orderId, clock.instant());
+        for (CreateOrderCommand.Line line : command.lines()) {
+            order.addLine(line.productId(), line.quantity(), line.unitPrice());
+        }
+        order.submit();
+        orders.save(order);
+        events.publish(order.pullEvents());
+        return new CreateOrderResult(order.id(), order.status(), order.total());
+    }
+}</code></pre>
+      </div>
+      <ol>
+        <li>Command 构造时完成边界形状校验；Service 再拒绝 null 并获得可替换的 ID 与时间。</li>
+        <li>聚合建立 Draft、逐行执行规则、提交；任何不变量失败都停止流程。</li>
+        <li>Repository 保存整个聚合；随后应用层拉取内部事件并交给发布端口。</li>
+        <li>生产 Outbox 实现中的“publish”是<strong>在同一数据库事务中写 Outbox</strong>，不是同步调用消息 Broker；事务提交后由 relay 异步发送。</li>
+      </ol>
+      <p>“保存后再交事件”只有在 Repository 写订单与 Publisher 写 Outbox 共享同一事务时才可靠。若这里换成内存回调或直接发 Kafka，就会出现数据库已提交、消息未发送（或反之）的 dual-write 缝隙。事务属于用例政策；框架注解放在外层代理/组合代码，不进入 Domain。</p>
+
+      <figure>
+        <img src="../../assets/ddd/order-use-case-event-flow.svg" alt="HTTP 适配器调用 CreateOrderUseCase，应用层驱动 Order 聚合、OrderRepository 与事件发布端口；OrderCreated 内部事件经 Outbox 映射为版本化集成消息后异步传向外部消费者">
+        <figcaption>创建订单流：上半部是一个聚合事务；下半部的 <code>OrderCreated</code>首先是内部领域事件，Event Publisher 在本例表示事务性 Outbox 写入边界，而不是聚合直接发送网络消息。</figcaption>
+      </figure>
+      <p>图的文字等价说明：HTTP Adapter 把请求翻译成 Command；Use Case 调用 Order 规则并经 Repository 保存；Order 只记录内部 <code>OrderCreated</code>。应用/集成适配器再把它映射为独立的 <code>OrderCreatedV1</code>，与订单状态同事务落入 Outbox。事务提交后，独立 relay 才向支付、库存等边界外消费者发送。图中虚线箭头是两阶段语义的压缩表达，绝不表示 Aggregate 调用 Broker。</p>
+
+      <h2 id="端口与适配器">端口与适配器</h2>
+      <h3 id="核心拥有的输出端口">核心拥有的输出端口</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>Java 21 · port/out · 完整可编译</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-java">// src/example/order/port/out/OrderRepository.java
+package example.order.port.out;
+
+import example.order.domain.Order;
+import example.order.domain.OrderId;
+
+import java.util.Optional;
+
+public interface OrderRepository {
+    void save(Order order);
+
+    Optional&lt;Order&gt; findById(OrderId id);
+}
+
+// src/example/order/port/out/DomainEventPublisher.java
+package example.order.port.out;
+
+import example.order.domain.DomainEvent;
+
+import java.util.List;
+
+public interface DomainEventPublisher {
+    void publish(List&lt;? extends DomainEvent&gt; events);
+}</code></pre>
+      </div>
+      <p><code>OrderRepository</code>是聚合导向的最小集合语义，不暴露 EntityManager、分页 CRUD 或订单行 DAO。<code>DomainEventPublisher</code>接收不可变事件列表；它的生产实现必须明确语义。本文的实现约定是“把事件转换并写入事务性 Outbox”，名字中的 Publisher 不承诺已到达远程 Broker。</p>
+
+      <h3 id="http输入适配器">HTTP 输入适配器</h3>
+      <p><strong>聚焦外层摘录，非框架无关 bundle：</strong>需要 Spring Web、Jackson 与 Jakarta Validation 依赖；省略统一异常映射。Spring 类型只出现在 Adapter。</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>Spring MVC · 聚焦摘录（不可单独编译）</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-java">@RestController
+@RequestMapping("/orders")
+final class HttpCreateOrderAdapter {
+    private final CreateOrderUseCase useCase;
+
+    HttpCreateOrderAdapter(CreateOrderUseCase useCase) {
+        this.useCase = useCase;
+    }
+
+    @PostMapping
+    ResponseEntity&lt;CreateOrderResponse&gt; create(
+            @Valid @RequestBody CreateOrderRequest request) {
+        var command = new CreateOrderCommand(request.lines().stream()
+                .map(line -&gt; new CreateOrderCommand.Line(
+                        new ProductId(line.productId()),
+                        line.quantity(),
+                        new Money(line.unitPrice(), Currency.getInstance(line.currency()))))
+                .toList());
+        var result = useCase.create(command);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new CreateOrderResponse(
+                        result.orderId().value(), result.status().name(), result.total().amount()));
+    }
+}
+
+record CreateOrderRequest(@NotEmpty List&lt;@Valid LineRequest&gt; lines) {}
+record LineRequest(@NotBlank String productId, @Positive int quantity,
+                   @NotNull BigDecimal unitPrice, @NotBlank String currency) {}
+record CreateOrderResponse(UUID orderId, String status, BigDecimal total) {}</code></pre>
+      </div>
+
+      <h3 id="jpa持久化适配器">JPA 持久化适配器</h3>
+      <p><strong>聚焦伪代码，非框架无关 bundle：</strong>需要 Spring Data JPA/Jakarta Persistence；映射细节（级联、乐观锁、删除差异）需按表结构完成。关键点是 JPA Row 与 Domain <code>Order</code>分离，Adapter 映射并调用 <code>rehydrate</code>，不会回放历史事件。Spring Data 的 <a href="https://docs.spring.io/spring-data/jpa/reference/jpa/entity-persistence.html" target="_blank" rel="noopener noreferrer"><code>save</code> 持久化语义文档</a>描述的是 <code>persist/merge</code>机制；这不自动证明一个 <code>JpaRepository</code>就是业务语义上的 DDD Repository。</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>Spring Data JPA · 聚焦伪代码（明确省略映射细节）</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-java">@Entity
+@Table(name = "orders")
+class OrderRow {                 // persistence model, not domain Order
+    @Id UUID id;
+    String status;
+    @Version long version;
+    @OneToMany(cascade = ALL, orphanRemoval = true) List&lt;OrderLineRow&gt; lines;
+}
+
+interface SpringDataOrderRows extends JpaRepository&lt;OrderRow, UUID&gt; {}
+
+@Repository
+final class JpaOrderRepositoryAdapter implements OrderRepository {
+    private final SpringDataOrderRows rows;
+    private final OrderPersistenceMapper mapper;
+
+    public void save(Order order) {
+        rows.save(mapper.toRow(order));
+    }
+
+    public Optional&lt;Order&gt; findById(OrderId id) {
+        return rows.findById(id.value()).map(row -&gt; Order.rehydrate(
+                new OrderId(row.id),
+                OrderStatus.valueOf(row.status),
+                mapper.toSnapshots(row.lines)));
+    }
+}</code></pre>
+      </div>
+
+      <h3 id="outbox事件适配器">Outbox 事件适配器</h3>
+      <p><strong>聚焦外层摘录，非框架无关 bundle：</strong>内部事件先映射为不同生命周期的集成消息。<code>OrderCreatedV1</code>拥有消息 ID、稳定字段和显式版本；Outbox Row 与订单在同一数据库事务写入，relay 独立读取并发送。</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>Outbox Adapter · 聚焦摘录（不可单独编译）</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-java">record OrderCreatedV1(
+        UUID messageId,
+        UUID orderId,
+        Instant occurredAt,
+        int schemaVersion) {}
+
+@Repository
+final class OutboxDomainEventPublisher implements DomainEventPublisher {
+    private final OutboxRowRepository outboxRows;
+    private final JsonMapper json;
+
+    @Override
+    public void publish(List&lt;? extends DomainEvent&gt; events) {
+        events.stream()
+                .map(this::toIntegrationMessage)
+                .map(message -&gt; OutboxRow.pending(
+                        message.messageId(), "order.created.v1", json.write(message)))
+                .forEach(outboxRows::save); // only a DB write in the current transaction
+    }
+
+    private OrderCreatedV1 toIntegrationMessage(DomainEvent event) {
+        if (event instanceof OrderCreated created) {
+            return new OrderCreatedV1(
+                    UUID.randomUUID(), created.orderId().value(), created.occurredAt(), 1);
+        }
+        throw new IllegalArgumentException("unsupported event: " + event.getClass());
+    }
+}</code></pre>
+      </div>
+
+      <h2 id="领域事件">领域事件</h2>
+      <p><a href="https://martinfowler.com/eaaDev/DomainEvent.html" target="_blank" rel="noopener noreferrer">Fowler 的 Domain Event</a>把事件描述为领域中值得记忆的事实，并强调源数据不可变；<a href="https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/domain-events-design-implementation" target="_blank" rel="noopener noreferrer">Microsoft 的 Domain Event 设计指南</a>区分上下文内部领域事件与跨微服务 Integration Event，并要求外部事件只在状态成功持久化后传播。</p>
+      <ol>
+        <li><strong>记录：</strong>聚合行为发生时创建过去式、不可变的内部事实，不做 I/O。</li>
+        <li><strong>收集：</strong>聚合暂存事件；应用层在状态转换成功后 <code>pullEvents()</code>。</li>
+        <li><strong>可靠落盘：</strong>订单行与 Outbox 消息在同一事务提交，避免数据库/Broker 双写缺口。</li>
+        <li><strong>异步投递：</strong>relay 重试发送并记录投递状态；消费者按 <code>messageId</code>幂等，不能假设 exactly-once。</li>
+        <li><strong>演进：</strong>消息用显式版本和兼容字段；若要求同一聚合有序，使用聚合键/序列并在消费者检测乱序。</li>
+      </ol>
+      <p><a href="https://learn.microsoft.com/en-us/azure/architecture/databases/guide/transactional-out-box-cosmos" target="_blank" rel="noopener noreferrer">Azure Architecture Center 的 Transactional Outbox 指南</a>说明：业务对象和事件先在同一数据事务保存，再由独立 worker 发布。Outbox缩小了丢消息窗口，但重试会带来重复，因此消费者幂等、告警、死信和重放仍是生产责任。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>对象</th><th>主要范围</th><th>契约所有者/生命周期</th><th>可靠性含义</th><th>本例</th></tr></thead>
+          <tbody>
+            <tr><td>Domain Event</td><td>Order 上下文内部</td><td>领域模型；随模型重构演进</td><td>聚合内先收集，不直接联网</td><td><code>OrderCreated</code></td></tr>
+            <tr><td>Integration Message</td><td>限界上下文之间</td><td>发布者与消费者共同依赖；长期兼容、版本化</td><td>Outbox 持久化、异步投递、消费幂等</td><td><code>OrderCreatedV1</code></td></tr>
+            <tr><td>Spring Application Event</td><td>通常同进程、框架分发</td><td>应用/框架内部</td><td>可绑定事务阶段，但默认不是持久消息</td><td><code>ApplicationEventPublisher</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Spring 的 <a href="https://docs.spring.io/spring-framework/reference/data-access/transaction/event.html" target="_blank" rel="noopener noreferrer"><code>@TransactionalEventListener</code>官方文档</a>支持把监听器绑定到提交阶段，但“提交后执行”并不等于“宕机后仍可重放”。需要跨进程可靠投递时仍使用 Outbox 或等价持久机制。</p>
+
+      <h2 id="测试">测试</h2>
+      <p>下面是<strong>完整可运行 Java 21</strong>验证入口。它使用真实内存 Fake，不使用只验证调用次数的 Mock：Repository 实际保存聚合并可按 ID 读取，Publisher 实际收集不可变事件副本。八项检查覆盖成功流、边界输入、聚合状态、币种、ID、一致性封装和无事件重放。</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>Java 21 · OrderWalkthrough.java · 完整可运行</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-java">package example.order.testing;
+
+import example.order.application.CreateOrderCommand;
+import example.order.application.CreateOrderResult;
+import example.order.application.CreateOrderService;
+import example.order.domain.DomainEvent;
+import example.order.domain.Money;
+import example.order.domain.Order;
+import example.order.domain.OrderCreated;
+import example.order.domain.OrderId;
+import example.order.domain.OrderStatus;
+import example.order.domain.ProductId;
+import example.order.port.out.DomainEventPublisher;
+import example.order.port.out.OrderRepository;
+
+import java.lang.reflect.Modifier;
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Currency;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+public final class OrderWalkthrough {
+    private static final Currency CNY = Currency.getInstance("CNY");
+    private static final Currency USD = Currency.getInstance("USD");
+    private static final Instant NOW = Instant.parse("2026-08-11T02:00:00Z");
+    private static int checks;
+
+    public static void main(String[] args) {
+        validOrderSucceedsAndHandsOffEvent();
+        emptyOrderIsRejected();
+        invalidQuantityAndMoneyAreRejected();
+        submittedOrderCannotChangeOrResubmit();
+        mixedCurrencyIsRejected();
+        repositorySeesSameAggregateId();
+        internalOrderLineCannotEscape();
+        rehydrationDoesNotReplayHistoricalEvents();
+        System.out.println("PASS: " + checks + " Java 21 DDD checks");
+    }
+
+    private static void validOrderSucceedsAndHandsOffEvent() {
+        var fixture = new Fixture();
+        CreateOrderResult result = fixture.service.create(validCommand());
+
+        assert result.status() == OrderStatus.SUBMITTED;
+        assert result.total().equals(money("25.00", CNY));
+        assert fixture.repository.saveCount == 1;
+        assert fixture.publisher.events.size() == 1;
+        DomainEvent event = fixture.publisher.events.getFirst();
+        assert event instanceof OrderCreated;
+        OrderCreated created = (OrderCreated) event;
+        assert created.orderId().equals(result.orderId());
+        assert created.occurredAt().equals(NOW);
+        pass();
+    }
+
+    private static void emptyOrderIsRejected() {
+        expectThrows(IllegalArgumentException.class,
+                () -&gt; new CreateOrderCommand(List.of()));
+        Order empty = Order.create(
+                new OrderId(UUID.fromString("00000000-0000-0000-0000-000000000002")), NOW);
+        expectThrows(IllegalStateException.class, empty::submit);
+        pass();
+    }
+
+    private static void invalidQuantityAndMoneyAreRejected() {
+        expectThrows(IllegalArgumentException.class,
+                () -&gt; new CreateOrderCommand.Line(
+                        new ProductId("sku-1"), 0, money("1.00", CNY)));
+        expectThrows(IllegalArgumentException.class,
+                () -&gt; new CreateOrderCommand.Line(
+                        new ProductId("sku-1"), -1, money("1.00", CNY)));
+        expectThrows(IllegalArgumentException.class,
+                () -&gt; money("-0.01", CNY));
+        pass();
+    }
+
+    private static void submittedOrderCannotChangeOrResubmit() {
+        Order order = submittedOrder();
+        expectThrows(IllegalStateException.class,
+                () -&gt; order.addLine(new ProductId("sku-2"), 1, money("2.00", CNY)));
+        expectThrows(IllegalStateException.class, order::submit);
+        pass();
+    }
+
+    private static void mixedCurrencyIsRejected() {
+        Order order = Order.create(new OrderId(UUID.randomUUID()), NOW);
+        order.addLine(new ProductId("sku-cny"), 1, money("3.00", CNY));
+        expectThrows(IllegalArgumentException.class,
+                () -&gt; order.addLine(new ProductId("sku-usd"), 1, money("4.00", USD)));
+        assert order.total().equals(money("3.00", CNY));
+        pass();
+    }
+
+    private static void repositorySeesSameAggregateId() {
+        var fixture = new Fixture();
+        CreateOrderResult result = fixture.service.create(validCommand());
+        assert fixture.repository.saved.id().equals(result.orderId());
+        assert fixture.repository.findById(result.orderId()).orElseThrow()
+                == fixture.repository.saved;
+        pass();
+    }
+
+    private static void internalOrderLineCannotEscape() {
+        Order order = submittedOrder();
+        List&lt;Order.OrderLineSnapshot&gt; snapshots = order.lineSnapshots();
+        expectThrows(UnsupportedOperationException.class,
+                () -&gt; snapshots.add(snapshots.getFirst()));
+        assert snapshots.getFirst().getClass().isRecord();
+        List&lt;Class&lt;?&gt;&gt; internalLines = List.of(Order.class.getDeclaredClasses()).stream()
+                .filter(type -&gt; type.getSimpleName().equals("OrderLine"))
+                .toList();
+        assert internalLines.size() == 1;
+        assert Modifier.isPrivate(internalLines.getFirst().getModifiers());
+        assert List.of(Order.class.getMethods()).stream()
+                .noneMatch(method -&gt; method.getReturnType().getSimpleName().equals("OrderLine"));
+        pass();
+    }
+
+    private static void rehydrationDoesNotReplayHistoricalEvents() {
+        Order original = submittedOrder();
+        original.pullEvents();
+        Order restored = Order.rehydrate(
+                original.id(), original.status(), original.lineSnapshots());
+        assert restored.pullEvents().isEmpty();
+        assert restored.total().equals(original.total());
+        pass();
+    }
+
+    private static CreateOrderCommand validCommand() {
+        return new CreateOrderCommand(List.of(
+                new CreateOrderCommand.Line(
+                        new ProductId("book"), 2, money("10.00", CNY)),
+                new CreateOrderCommand.Line(
+                        new ProductId("pen"), 1, money("5.00", CNY))));
+    }
+
+    private static Order submittedOrder() {
+        Order order = Order.create(new OrderId(UUID.randomUUID()), NOW);
+        order.addLine(new ProductId("sku-1"), 2, money("6.00", CNY));
+        order.submit();
+        return order;
+    }
+
+    private static Money money(String amount, Currency currency) {
+        return new Money(new BigDecimal(amount), currency);
+    }
+
+    private static void expectThrows(Class&lt;? extends Throwable&gt; expected, Runnable action) {
+        try {
+            action.run();
+            throw new AssertionError("Expected " + expected.getSimpleName());
+        } catch (Throwable actual) {
+            if (!expected.isInstance(actual)) {
+                throw new AssertionError(
+                        "Expected " + expected.getSimpleName() + " but got " + actual, actual);
+            }
+        }
+    }
+
+    private static void pass() {
+        checks++;
+    }
+
+    private static final class Fixture {
+        final FakeOrderRepository repository = new FakeOrderRepository();
+        final FakeDomainEventPublisher publisher = new FakeDomainEventPublisher();
+        final OrderId generatedId = new OrderId(
+                UUID.fromString("00000000-0000-0000-0000-000000000001"));
+        final CreateOrderService service = new CreateOrderService(
+                repository,
+                publisher,
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                () -&gt; generatedId);
+    }
+
+    private static final class FakeOrderRepository implements OrderRepository {
+        private Order saved;
+        private int saveCount;
+
+        @Override
+        public void save(Order order) {
+            saved = order;
+            saveCount++;
+        }
+
+        @Override
+        public Optional&lt;Order&gt; findById(OrderId id) {
+            return saved != null &amp;&amp; saved.id().equals(id)
+                    ? Optional.of(saved) : Optional.empty();
+        }
+    }
+
+    private static final class FakeDomainEventPublisher implements DomainEventPublisher {
+        private final List&lt;DomainEvent&gt; events = new ArrayList&lt;&gt;();
+
+        @Override
+        public void publish(List&lt;? extends DomainEvent&gt; newEvents) {
+            events.addAll(List.copyOf(newEvents));
+        }
+    }
+}</code></pre>
+      </div>
+      <p>对应到 JUnit 5 时，每个 private 检查方法就是一个 <code>@Test</code>，把 <code>assert</code>换成 <code>assertEquals</code>/<code>assertThrows</code>即可。测试金字塔应分三层：大量无框架 Domain 单元测试；用 Fake/真实事务边界的 Application 集成测试；较少的 MVC、JPA、Outbox relay Adapter slice/容器集成测试。</p>
+
+      <h2 id="spring-boot组合">Spring Boot 组合</h2>
+      <p><strong>聚焦外层摘录，非框架无关 bundle：</strong>需要 Spring Context 与 Spring Transaction。事务代理包住整个用例，使 JPA 订单保存和 Outbox Row 插入原子提交；<code>@Transactional</code>不放在 <code>Order</code>、<code>Money</code>或领域事件上。Spring 的<a href="https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/annotations.html" target="_blank" rel="noopener noreferrer">声明式事务文档</a>说明该注解是事务语义元数据，本例把这种技术政策留在组合边缘。</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>Spring Boot Composition · 聚焦摘录（不可单独编译）</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-java">@Configuration
+class OrderConfiguration {
+    @Bean
+    Clock orderClock() {
+        return Clock.systemUTC();
+    }
+
+    @Bean
+    CreateOrderService coreCreateOrderService(
+            OrderRepository orders,
+            DomainEventPublisher outbox,
+            Clock orderClock) {
+        return new CreateOrderService(orders, outbox, orderClock, OrderId::random);
+    }
+
+    @Bean
+    CreateOrderUseCase createOrderUseCase(CreateOrderService core) {
+        return new TransactionalCreateOrderUseCase(core);
+    }
+}
+
+final class TransactionalCreateOrderUseCase implements CreateOrderUseCase {
+    private final CreateOrderUseCase delegate;
+
+    TransactionalCreateOrderUseCase(CreateOrderUseCase delegate) {
+        this.delegate = delegate;
+    }
+
+    @Override
+    @Transactional
+    public CreateOrderResult create(CreateOrderCommand command) {
+        return delegate.create(command);
+    }
+}</code></pre>
+      </div>
+
+      <h2 id="实践与验收">实践与验收</h2>
+      <h3 id="提取编译运行">提取、编译、运行</h3>
+      <p>把五个标为“完整可编译/运行”的代码块按其中 <code>// src/...</code>文件标记分别保存到临时目录；不要把 Spring/JPA 聚焦摘录混入 bundle。然后执行：</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>Shell · JDK 21 验收</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-bash">bundle_dir="$(mktemp -d)"
+mkdir -p "$bundle_dir/out"
+# 将页面中的 14 个完整 Java 文件保存到 $bundle_dir/src 对应路径
+find "$bundle_dir/src" -name '*.java' -print0 \
+  | sort -z \
+  | xargs -0 javac --release 21 -d "$bundle_dir/out"
+java -ea -cp "$bundle_dir/out" example.order.testing.OrderWalkthrough</code></pre>
+      </div>
+      <p>预期精确输出：</p>
+      <pre><code>PASS: 8 Java 21 DDD checks</code></pre>
+
+      <h3 id="改变练习">改变练习</h3>
+      <ol>
+        <li><strong>取消不变量：</strong>增加 <code>CANCELLED</code>与 <code>cancel()</code>，先写测试明确哪些状态可取消；增加 <code>OrderCancelled</code>内部事件与独立 <code>OrderCancelledV1</code>，保证 rehydrate 不补发历史事件。</li>
+        <li><strong>幂等键：</strong>给 Command 增加 <code>requestId</code>，设计核心拥有的幂等端口；在同一事务以唯一约束保存 requestId → result。重复请求返回原结果，不能再建订单或再写 Outbox。</li>
+      </ol>
+
+      <h3 id="生产就绪检查单">生产就绪检查单</h3>
+      <ul>
+        <li><label><input type="checkbox" disabled> 用例事务同时覆盖 Order Row 与 Outbox Row，已做真实数据库回滚测试。</label></li>
+        <li><label><input type="checkbox" disabled> Outbox relay 有重试、退避、死信/告警、租约或并发领取策略。</label></li>
+        <li><label><input type="checkbox" disabled> 请求和消费者都有持久化幂等键；重复消息不会重复扣款或预占。</label></li>
+        <li><label><input type="checkbox" disabled> Domain ↔ JPA、Domain Event ↔ Integration Message 映射有契约测试，rehydrate 不重放事件。</label></li>
+        <li><label><input type="checkbox" disabled> 消息有 schema 版本、兼容策略、聚合顺序键和回放方案。</label></li>
+        <li><label><input type="checkbox" disabled> 日志、Trace、指标关联 requestId/orderId/messageId，可观察积压、延迟与失败。</label></li>
+        <li><label><input type="checkbox" disabled> HTTP 身份鉴别、订单创建授权、租户隔离、输入上限与敏感字段审计已落实。</label></li>
+      </ul>
+
+      <h2 id="本篇小结">本篇小结</h2>
+      <p>完整链路不是“Controller 调 JpaRepository 再发消息”，而是：边界 DTO 变成 Command；应用用例驱动 <code>Order</code>守护同步不变量；核心端口隔离存储和投递；同一事务保存聚合与 Outbox；relay 把版本化集成消息异步送出。领域代码只记录事实，不承担网络可靠性。相较<a href="2026-08-11-DDD战术设计与领域模型.html">第 4 篇战术设计</a>的聚焦片段，本篇保留 <code>OrderId</code>、<code>Order</code>、<code>OrderLine</code>、<code>Money</code>、<code>OrderRepository</code>、<code>OrderCreated</code>名称，并把行商品由 String 精化为 <code>ProductId</code>、事件精化为 sealed <code>DomainEvent</code>、仓储精化为用途最小端口、事件列表精化为统一不可变类型，同时新增不发历史事件的 rehydrate。这些差异为完整编译、持久化映射与可靠事件边界服务，不是静默改写前篇模型。</p>
+
+      <h2 id="参考资料">参考资料</h2>
+      <p>以下资料均检索/核验于 <strong>2026-08-11</strong>；框架文档仅用于解释外层适配器和事务机制，不用于重新定义 DDD。</p>
+      <ul>
+        <li><a href="https://www.domainlanguage.com/ddd/reference/" target="_blank" rel="noopener noreferrer">Eric Evans：DDD Reference</a>——Aggregate、Repository、Service、Layered Architecture 与 Domain Event 定义摘要。</li>
+        <li><a href="https://www.dddcommunity.org/wp-content/uploads/files/pdf_articles/Vernon_2011_1.pdf" target="_blank" rel="noopener noreferrer">Vaughn Vernon：Effective Aggregate Design, Part I</a>——真实不变量与小聚合边界。</li>
+        <li><a href="https://martinfowler.com/bliki/ValueObject.html" target="_blank" rel="noopener noreferrer">Martin Fowler：Value Object</a>；<a href="https://martinfowler.com/eaaDev/DomainEvent.html" target="_blank" rel="noopener noreferrer">Domain Event</a>——值相等、事件事实与不可变源数据。</li>
+        <li><a href="https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/microservice-application-layer-web-api-design" target="_blank" rel="noopener noreferrer">Microsoft Learn：Application Layer 与 Web API</a>；<a href="https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/domain-events-design-implementation" target="_blank" rel="noopener noreferrer">Domain Events</a>——用例边界、依赖倒置与内外事件差异。</li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/architecture/databases/guide/transactional-out-box-cosmos" target="_blank" rel="noopener noreferrer">Azure Architecture Center：Transactional Outbox</a>——同事务落盘与异步 relay。</li>
+        <li><a href="https://docs.spring.io/spring-framework/reference/data-access/transaction/event.html" target="_blank" rel="noopener noreferrer">Spring Framework：Transaction-bound Events</a>；<a href="https://docs.spring.io/spring-data/jpa/reference/jpa/entity-persistence.html" target="_blank" rel="noopener noreferrer">Spring Data JPA：Persisting Entities</a>——仅作为外层机制参考。</li>
+        <li><a href="https://docs.oracle.com/en/java/javase/21/language/records.html" target="_blank" rel="noopener noreferrer">Oracle Java 21：Record Classes</a>；<a href="https://docs.oracle.com/en/java/javase/21/language/sealed-classes-and-interfaces.html" target="_blank" rel="noopener noreferrer">Sealed Classes and Interfaces</a>。</li>
+      </ul>
+
+      <h2 id="专题导航">专题导航</h2>
+      <ol>
+        <li><a href="2026-08-11-DDD架构总览与学习路线.html">架构总览与学习路线</a></li>
+        <li><a href="2026-08-11-DDD基础概念与统一语言.html">基础概念与统一语言</a></li>
+        <li><a href="2026-08-11-DDD战略设计与限界上下文.html">战略设计与限界上下文</a></li>
+        <li><a href="2026-08-11-DDD战术设计与领域模型.html">战术设计与领域模型</a></li>
+        <li><a href="2026-08-11-DDD分层架构模式对比.html">分层架构模式对比</a></li>
+        <li aria-current="page">订单领域 Java 实践（本篇）</li>
+        <li><a href="2026-08-11-DDD落地演进与常见误区.html">落地演进与常见误区</a></li>
+      </ol>
+      <nav class="page-nav" aria-label="上一篇和下一篇">
+        <a href="2026-08-11-DDD分层架构模式对比.html"><span>上一篇</span><strong>分层架构模式对比</strong></a>
+        <a href="2026-08-11-DDD落地演进与常见误区.html"><span>下一篇</span><strong>落地演进与常见误区</strong></a>
+      </nav>
+    </article>
+  </main>
+</div>
+</body>
+</html>
