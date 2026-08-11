@@ -103,7 +103,7 @@
       <p>以下六个文件均为<strong>完整可编译 Java 21</strong>，文件边界由注释标明。<code>Money</code>把金额规范化到币种的小数位，拒绝需要隐式舍入的输入；相加要求同币种，乘法要求正数量。</p>
       <div class="code-block">
         <div class="code-toolbar"><span>Java 21 · domain 基础类型 · 完整可编译</span><button class="copy-code" type="button">复制</button></div>
-        <pre><code class="language-java">// src/example/order/domain/OrderId.java
+        <pre><code class="language-java" data-bundle="framework-free">// src/example/order/domain/OrderId.java
 package example.order.domain;
 
 import java.util.Objects;
@@ -204,7 +204,7 @@ public record OrderCreated(OrderId orderId, Instant occurredAt) implements Domai
       <p><code>OrderLine</code>是带身份的内部实体，但被定义为 <code>private static final</code>；外部只拿到不可变 record 快照和不可变列表。修改入口只有聚合行为。<code>rehydrate</code>是持久化适配器专用的显式还原路径：重建并复核状态，但不会把历史 <code>OrderCreated</code>再次加入待发布列表。</p>
       <div class="code-block">
         <div class="code-toolbar"><span>Java 21 · Order.java · 完整可编译</span><button class="copy-code" type="button">复制</button></div>
-        <pre><code class="language-java">package example.order.domain;
+        <pre><code class="language-java" data-bundle="framework-free" data-source="src/example/order/domain/Order.java">package example.order.domain;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -362,7 +362,7 @@ public final class Order {
       <p>Command 是输入边界数据，不是 HTTP DTO，也不是 JPA Entity。它复制行列表并拒绝空列表；每个行请求再次保证商品、金额和数量有效。示例没有加入未被使用的 customer/request 字段；生产系统若要求幂等，应把 <code>requestId</code>加入命令，并在应用/数据库边界用唯一约束持久化请求与稳定结果，而不是只在 Controller 做内存去重。</p>
       <div class="code-block">
         <div class="code-toolbar"><span>Java 21 · application · 完整可编译</span><button class="copy-code" type="button">复制</button></div>
-        <pre><code class="language-java">// src/example/order/application/CreateOrderCommand.java
+        <pre><code class="language-java" data-bundle="framework-free">// src/example/order/application/CreateOrderCommand.java
 package example.order.application;
 
 import example.order.domain.Money;
@@ -477,7 +477,7 @@ public final class CreateOrderService implements CreateOrderUseCase {
       <h3 id="核心拥有的输出端口">核心拥有的输出端口</h3>
       <div class="code-block">
         <div class="code-toolbar"><span>Java 21 · port/out · 完整可编译</span><button class="copy-code" type="button">复制</button></div>
-        <pre><code class="language-java">// src/example/order/port/out/OrderRepository.java
+        <pre><code class="language-java" data-bundle="framework-free">// src/example/order/port/out/OrderRepository.java
 package example.order.port.out;
 
 import example.order.domain.Order;
@@ -632,7 +632,7 @@ final class OutboxDomainEventPublisher implements DomainEventPublisher {
       <p>下面是<strong>完整可运行 Java 21</strong>验证入口。它使用真实内存 Fake，不使用只验证调用次数的 Mock：Repository 实际保存聚合并可按 ID 读取，Publisher 实际收集不可变事件副本。八项检查覆盖成功流、边界输入、聚合状态、币种、ID、一致性封装和无事件重放。</p>
       <div class="code-block">
         <div class="code-toolbar"><span>Java 21 · OrderWalkthrough.java · 完整可运行</span><button class="copy-code" type="button">复制</button></div>
-        <pre><code class="language-java">package example.order.testing;
+        <pre><code class="language-java" data-bundle="framework-free" data-source="src/example/order/testing/OrderWalkthrough.java">package example.order.testing;
 
 import example.order.application.CreateOrderCommand;
 import example.order.application.CreateOrderResult;
@@ -866,7 +866,7 @@ class OrderConfiguration {
     }
 }
 
-final class TransactionalCreateOrderUseCase implements CreateOrderUseCase {
+class TransactionalCreateOrderUseCase implements CreateOrderUseCase {
     private final CreateOrderUseCase delegate;
 
     TransactionalCreateOrderUseCase(CreateOrderUseCase delegate) {
@@ -881,21 +881,86 @@ final class TransactionalCreateOrderUseCase implements CreateOrderUseCase {
 }</code></pre>
       </div>
 
+      <p><a href="https://docs.spring.io/spring-boot/reference/features/aop.html" target="_blank" rel="noopener noreferrer">Spring Boot AOP 官方文档</a>说明自动配置默认使用 CGLIB class-based proxy，而 <a href="https://docs.spring.io/spring-framework/reference/core/aop/proxying.html" target="_blank" rel="noopener noreferrer">Spring Framework 代理机制文档</a>明确指出 final class 无法被子类代理。因此 <code>TransactionalCreateOrderUseCase</code>刻意保持非 final，使代理能覆盖带 <code>@Transactional</code>的方法；若团队显式改用 JDK interface proxy，也应把代理选择写入配置测试，避免事务因配置变化而静默失效。</p>
+
       <h2 id="实践与验收">实践与验收</h2>
       <h3 id="提取编译运行">提取、编译、运行</h3>
-      <p>把五个标为“完整可编译/运行”的代码块按其中 <code>// src/...</code>文件标记分别保存到临时目录；不要把 Spring/JPA 聚焦摘录混入 bundle。然后执行：</p>
+      <p>在仓库根目录直接复制执行下面整段命令。脚本只选择带 <code>data-bundle="framework-free"</code>的五个代码块：三个多文件块按严格的 <code>// src/example/order/...</code>标记拆分，两个单文件块使用显式 <code>data-source</code>；Spring/JPA/Outbox/Composition 聚焦摘录没有该属性，因此不会被提取。实体解码是单次白名单映射，路径经过格式和目录逃逸检查，最终必须恰好得到 14 个 Java 文件才会继续编译。</p>
       <div class="code-block">
-        <div class="code-toolbar"><span>Shell · JDK 21 验收</span><button class="copy-code" type="button">复制</button></div>
-        <pre><code class="language-bash">bundle_dir="$(mktemp -d)"
+        <div class="code-toolbar"><span>Shell + Node.js · 从本页提取并用 JDK 21 验收</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-bash">page="public/notes/architecture/2026-08-11-DDD订单领域Java实践.html"
+bundle_dir="$(mktemp -d)"
+
+PAGE="$page" BUNDLE_DIR="$bundle_dir" node &lt;&lt;'NODE'
+const fs = require("node:fs");
+const path = require("node:path");
+
+const html = fs.readFileSync(process.env.PAGE, "utf8");
+const bundleDir = path.resolve(process.env.BUNDLE_DIR);
+const entity = Object.freeze({
+  lt: "&lt;", gt: "&gt;", amp: "&amp;", quot: '"', apos: "'", "#39": "'",
+});
+const decode = (text) =&gt; text.replace(
+  /&amp;(lt|gt|amp|quot|apos|#39);/g,
+  (_, name) =&gt; entity[name],
+);
+const blockPattern =
+  /&lt;pre&gt;&lt;code class="language-java" data-bundle="framework-free"(?: data-source="([^"]+)")?&gt;([\s\S]*?)&lt;\/code&gt;&lt;\/pre&gt;/g;
+const files = new Map();
+
+const addFile = (sourcePath, source) =&gt; {
+  if (!/^src\/example\/order\/[A-Za-z0-9/]+\.java$/.test(sourcePath)) {
+    throw new Error(`unsafe source path: ${sourcePath}`);
+  }
+  if (files.has(sourcePath)) {
+    throw new Error(`duplicate source path: ${sourcePath}`);
+  }
+  files.set(sourcePath, source.trimEnd() + "\n");
+};
+
+for (const match of html.matchAll(blockPattern)) {
+  const [, singleSourcePath, encodedBody] = match;
+  const body = decode(encodedBody);
+  if (singleSourcePath) {
+    addFile(singleSourcePath, body);
+    continue;
+  }
+  const markers = [...body.matchAll(
+    /^\/\/ (src\/example\/order\/[A-Za-z0-9/]+\.java)\n/gm,
+  )];
+  if (markers.length === 0) {
+    throw new Error("tagged multi-file block has no source markers");
+  }
+  markers.forEach((marker, index) =&gt; {
+    const start = marker.index + marker[0].length;
+    const end = index + 1 &lt; markers.length ? markers[index + 1].index : body.length;
+    addFile(marker[1], body.slice(start, end));
+  });
+}
+
+if (files.size !== 14) {
+  throw new Error(`expected 14 Java files, extracted ${files.size}`);
+}
+for (const [sourcePath, source] of files) {
+  const target = path.resolve(bundleDir, sourcePath);
+  if (!target.startsWith(bundleDir + path.sep)) {
+    throw new Error(`path escapes bundle directory: ${sourcePath}`);
+  }
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, source, "utf8");
+}
+console.log(`EXTRACTED: ${files.size} Java files`);
+NODE
+
 mkdir -p "$bundle_dir/out"
-# 将页面中的 14 个完整 Java 文件保存到 $bundle_dir/src 对应路径
 find "$bundle_dir/src" -name '*.java' -print0 \
   | sort -z \
   | xargs -0 javac --release 21 -d "$bundle_dir/out"
 java -ea -cp "$bundle_dir/out" example.order.testing.OrderWalkthrough</code></pre>
       </div>
       <p>预期精确输出：</p>
-      <pre><code>PASS: 8 Java 21 DDD checks</code></pre>
+      <pre><code>EXTRACTED: 14 Java files
+PASS: 8 Java 21 DDD checks</code></pre>
 
       <h3 id="改变练习">改变练习</h3>
       <ol>
@@ -925,7 +990,7 @@ java -ea -cp "$bundle_dir/out" example.order.testing.OrderWalkthrough</code></pr
         <li><a href="https://martinfowler.com/bliki/ValueObject.html" target="_blank" rel="noopener noreferrer">Martin Fowler：Value Object</a>；<a href="https://martinfowler.com/eaaDev/DomainEvent.html" target="_blank" rel="noopener noreferrer">Domain Event</a>——值相等、事件事实与不可变源数据。</li>
         <li><a href="https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/microservice-application-layer-web-api-design" target="_blank" rel="noopener noreferrer">Microsoft Learn：Application Layer 与 Web API</a>；<a href="https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/domain-events-design-implementation" target="_blank" rel="noopener noreferrer">Domain Events</a>——用例边界、依赖倒置与内外事件差异。</li>
         <li><a href="https://learn.microsoft.com/en-us/azure/architecture/databases/guide/transactional-out-box-cosmos" target="_blank" rel="noopener noreferrer">Azure Architecture Center：Transactional Outbox</a>——同事务落盘与异步 relay。</li>
-        <li><a href="https://docs.spring.io/spring-framework/reference/data-access/transaction/event.html" target="_blank" rel="noopener noreferrer">Spring Framework：Transaction-bound Events</a>；<a href="https://docs.spring.io/spring-data/jpa/reference/jpa/entity-persistence.html" target="_blank" rel="noopener noreferrer">Spring Data JPA：Persisting Entities</a>——仅作为外层机制参考。</li>
+        <li><a href="https://docs.spring.io/spring-framework/reference/data-access/transaction/event.html" target="_blank" rel="noopener noreferrer">Spring Framework：Transaction-bound Events</a>；<a href="https://docs.spring.io/spring-framework/reference/core/aop/proxying.html" target="_blank" rel="noopener noreferrer">Proxying Mechanisms</a>；<a href="https://docs.spring.io/spring-boot/reference/features/aop.html" target="_blank" rel="noopener noreferrer">Spring Boot：AOP</a>；<a href="https://docs.spring.io/spring-data/jpa/reference/jpa/entity-persistence.html" target="_blank" rel="noopener noreferrer">Spring Data JPA：Persisting Entities</a>——仅作为外层机制参考。</li>
         <li><a href="https://docs.oracle.com/en/java/javase/21/language/records.html" target="_blank" rel="noopener noreferrer">Oracle Java 21：Record Classes</a>；<a href="https://docs.oracle.com/en/java/javase/21/language/sealed-classes-and-interfaces.html" target="_blank" rel="noopener noreferrer">Sealed Classes and Interfaces</a>。</li>
       </ul>
 
