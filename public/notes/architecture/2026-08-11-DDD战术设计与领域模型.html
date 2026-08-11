@@ -120,10 +120,10 @@ record Money(BigDecimal amount, Currency currency) {
       <h2 id="聚合与不变量">聚合与不变量</h2>
       <p><strong>Aggregate（聚合）</strong>把必须共同保持业务一致的实体和值对象圈进一个边界；其中一个实体是 <strong>Aggregate Root（聚合根）</strong>，外部只能持有根的引用并通过根发起修改。<strong>Invariant（不变量）</strong>是在一次业务操作完成后必须为真的规则，例如“已提交订单至少包含一个订单行”“只有草稿订单能增加订单行”。</p>
       <figure>
-        <img src="../../assets/ddd/aggregate-consistency-boundary.svg" alt="Order 聚合根包围 OrderLine 实体和 Money 值对象，守护订单不变量，并通过 OrderCreated 事件与外部 Payment 和 Inventory 聚合协作">
-        <figcaption>订单聚合：边界由同步一致性需求决定，外部聚合通过标识和事件协作。</figcaption>
+        <img src="../../assets/ddd/aggregate-consistency-boundary.svg" alt="Order 聚合根包围 OrderLine 实体和 Money 值对象，守护订单不变量并记录内部 OrderCreated 领域事件；应用或集成适配器将其映射为独立集成消息后再与外部 Payment 和 Inventory 协作">
+        <figcaption>订单聚合：内部记录领域事件，边界外协作前由应用或集成适配器映射并可靠发布独立的集成消息。</figcaption>
       </figure>
-      <p>图可用文字等价表达为：<code>Order</code> 是唯一外部修改入口，内部管理 <code>OrderLine</code> 和 <code>Money</code>，同步守住订单总额与状态转换等不变量；Payment 与 Inventory 在聚合边界外，不通过可变对象引用加入订单事务，而是通过标识、命令或事件完成协作。<code>OrderCreated</code> 记录订单领域事实，边界外消费者采用最终一致性。</p>
+      <p>图可用文字等价表达为：<code>Order</code> 是唯一外部修改入口，内部管理 <code>OrderLine</code> 和 <code>Money</code>，同步守住订单总额与状态转换等不变量；Payment 与 Inventory 在聚合边界外，不通过可变对象引用加入订单事务。图中从 <code>OrderCreated</code> 指向外部的虚线只是最终一致性协作的概念简写，不能解释为领域事件对象直接跨越限界上下文：聚合只记录 Order 内部的 <code>OrderCreated</code>，应用或集成适配器在事务边界上把它映射为不同的、版本化的集成事件/消息，并通过 Outbox 或等价可靠发布机制送往外部消费者。</p>
       <p><a href="https://www.dddcommunity.org/library/vernon_2011/" target="_blank" rel="noopener noreferrer">Vaughn Vernon 的 Effective Aggregate Design</a>把重点从对象图导航转向真实一致性约束，并建议设计小聚合、通过标识引用其他聚合、跨聚合使用最终一致性。<strong>实践默认：</strong>“一个事务只修改一个聚合实例”是控制锁竞争、耦合和失败范围的强启发式，不是不可违反的 DDD 法律。若业务确有必须原子成立的跨对象不变量，应先复核聚合边界；若仍决定一次修改多个聚合，要记录并发、恢复与扩展代价，而不是把技术事务能力当作证明。</p>
 
       <h3 id="order聚合示例">Order 聚合聚焦示例（Java 21）</h3>
@@ -208,6 +208,14 @@ public final class Order {
     private final List&lt;OrderCreated&gt; domainEvents = new ArrayList&lt;&gt;();
     private OrderStatus status = OrderStatus.DRAFT;
 
+    // 对外只暴露不可变快照，不泄漏可变的聚合内部实体。
+    public record OrderLineSnapshot(
+            UUID id,
+            String productId,
+            int quantity,
+            Money unitPrice,
+            Money subtotal) {}
+
     private Order(OrderId id) {
         this.id = Objects.requireNonNull(id);
     }
@@ -238,7 +246,16 @@ public final class Order {
 
     public OrderId id() { return id; }
     public OrderStatus status() { return status; }
-    public List&lt;OrderLine&gt; lines() { return List.copyOf(lines); }
+    public List&lt;OrderLineSnapshot&gt; lineSnapshots() {
+        return lines.stream()
+                .map(line -&gt; new OrderLineSnapshot(
+                        line.id(),
+                        line.productId(),
+                        line.quantity(),
+                        line.unitPrice(),
+                        line.subtotal()))
+                .toList();
+    }
 
     public List&lt;OrderCreated&gt; pullEvents() {
         var collected = List.copyOf(domainEvents);
@@ -269,7 +286,7 @@ interface PricingPolicy {
     Money priceFor(String productId, int quantity);
 }</code></pre>
       </div>
-      <p><strong>不变量审查：</strong>构造器不可从外部直接调用；<code>create</code> 建立有效草稿并记录不可变、过去式的 <code>OrderCreated</code>；订单行只能经聚合根加入或改量；<code>submit()</code> 同时拒绝非 Draft 和空订单；没有 public setter。Payment 与 Inventory 没有成为 Order 的直接对象引用。示例故意不让聚合发布网络消息，以免把同步副作用塞进领域状态转换。</p>
+      <p><strong>不变量审查：</strong>构造器不可从外部直接调用；<code>create</code> 建立有效草稿并记录不可变、过去式的 <code>OrderCreated</code>；订单行只能经聚合根加入或改量；<code>submit()</code> 同时拒绝非 Draft 和空订单；没有 public setter。<code>lineSnapshots()</code> 返回新建的不可变 record 列表，调用者拿不到内部 <code>OrderLine</code>，因此不能绕过 <code>Order.requireDraft()</code> 调用其包级变更方法。Payment 与 Inventory 没有成为 Order 的直接对象引用。示例故意不让聚合发布网络消息，以免把同步副作用塞进领域状态转换。</p>
 
       <h2 id="领域服务与事件">领域服务与事件</h2>
       <p>“服务”一词容易把所有行为都吸走。判断顺序应是：先问行为是否自然属于实体或值对象；若它表达领域政策，却涉及多个对象或没有自然拥有者，再命名为领域服务；用例调度、事务和外部 I/O 则属于应用服务。</p>
