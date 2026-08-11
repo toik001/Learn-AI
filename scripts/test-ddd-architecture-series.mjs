@@ -74,12 +74,12 @@ const matchingTags = (html, tagName) =>
   [...html.matchAll(new RegExp(`<${tagName}\\b[^>]*>`, "gi"))].map(([tag]) => tag);
 
 const attribute = (tag, name) => {
-  const match = tag.match(new RegExp(`\\b${name}=["']([^"']*)["']`, "i"));
-  return match?.[1];
+  const match = tag.match(new RegExp(`\\b${name}=(["'])(.*?)\\1`, "i"));
+  return match?.[2];
 };
 
 const attributeValues = (tag, name) =>
-  [...tag.matchAll(new RegExp(`\\b${name}=["']([^"']*)["']`, "gi"))].map(([, value]) => value);
+  [...tag.matchAll(new RegExp(`\\b${name}=(["'])(.*?)\\1`, "gi"))].map(([, , value]) => value);
 
 const isAbsoluteLocalReference = (reference) =>
   reference.startsWith("/")
@@ -88,14 +88,38 @@ const isAbsoluteLocalReference = (reference) =>
   || /^[a-z]:[\\/]/i.test(reference)
   || /^~[\\/]/.test(reference);
 
+const srcsetCandidates = (srcset) =>
+  [...srcset.matchAll(/(?:^|,\s*)(data:[^\s]+|blob:[^\s]+|https?:\/\/[^\s]+|[^\s,]+)(?=\s|,|$)/gi)]
+    .map(([, reference]) => reference);
+
+const styleUrlReferences = (style) =>
+  [...style.matchAll(/url\(\s*(?:"([^"]*)"|'([^']*)'|([^\s)]+))\s*\)/gi)]
+    .map(([, doubleQuoted, singleQuoted, unquoted]) => doubleQuoted ?? singleQuoted ?? unquoted);
+
+const assertAllowedResourceReference = (reference, key, attributeName) => {
+  assert.ok(
+    !isAbsoluteLocalReference(reference),
+    `${key} 页面不得使用本地绝对或根路径资源：${attributeName}="${reference}"`,
+  );
+};
+
 const assertNoAbsoluteLocalResources = (html, key) => {
   for (const tag of [...html.matchAll(/<[a-z][\w:-]*\b[^>]*>/gi)].map(([match]) => match)) {
     for (const name of ["href", "src", "poster", "data"]) {
       for (const reference of attributeValues(tag, name)) {
-        assert.ok(
-          !isAbsoluteLocalReference(reference),
-          `${key} 页面不得使用本地绝对或根路径资源：${name}="${reference}"`,
-        );
+        assertAllowedResourceReference(reference, key, name);
+      }
+    }
+    for (const name of ["srcset", "imagesrcset"]) {
+      for (const srcset of attributeValues(tag, name)) {
+        for (const reference of srcsetCandidates(srcset)) {
+          assertAllowedResourceReference(reference, key, name);
+        }
+      }
+    }
+    for (const style of attributeValues(tag, "style")) {
+      for (const reference of styleUrlReferences(style)) {
+        assertAllowedResourceReference(reference, key, "style url()");
       }
     }
   }
