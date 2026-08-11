@@ -56,12 +56,49 @@ const readRequired = async (filePath, label) => {
   }
 };
 
+const readDirectory = async (directoryPath, label) => {
+  try {
+    return await fs.readdir(directoryPath);
+  } catch (error) {
+    assert.fail(`${label}不存在：${path.relative(rootDir, directoryPath)}（${error.code}）`);
+  }
+};
+
+const assertExactFileSet = (actualFiles, expectedFiles, label) => {
+  const actual = [...actualFiles].sort();
+  const expected = [...expectedFiles].sort();
+  assert.deepEqual(actual, expected, `${label}必须与规划文件集合完全一致`);
+};
+
 const matchingTags = (html, tagName) =>
   [...html.matchAll(new RegExp(`<${tagName}\\b[^>]*>`, "gi"))].map(([tag]) => tag);
 
 const attribute = (tag, name) => {
   const match = tag.match(new RegExp(`\\b${name}=["']([^"']*)["']`, "i"));
   return match?.[1];
+};
+
+const attributeValues = (tag, name) =>
+  [...tag.matchAll(new RegExp(`\\b${name}=["']([^"']*)["']`, "gi"))].map(([, value]) => value);
+
+const isAbsoluteLocalReference = (reference) =>
+  reference.startsWith("/")
+  || reference.startsWith("\\\\")
+  || /^file:/i.test(reference)
+  || /^[a-z]:[\\/]/i.test(reference)
+  || /^~[\\/]/.test(reference);
+
+const assertNoAbsoluteLocalResources = (html, key) => {
+  for (const tag of [...html.matchAll(/<[a-z][\w:-]*\b[^>]*>/gi)].map(([match]) => match)) {
+    for (const name of ["href", "src", "poster", "data"]) {
+      for (const reference of attributeValues(tag, name)) {
+        assert.ok(
+          !isAbsoluteLocalReference(reference),
+          `${key} 页面不得使用本地绝对或根路径资源：${name}="${reference}"`,
+        );
+      }
+    }
+  }
 };
 
 const assertMeta = (html, key, name, expectedValue) => {
@@ -112,6 +149,7 @@ for (const key of keys) {
   assert.match(html, /<h[1-6]\b[^>]*\bid=["']核心结论["'][^>]*>\s*核心结论\s*<\/h[1-6]>/i, `${key} 页面缺少“核心结论”结构锚点`);
   assert.match(html, /<h[1-6]\b[^>]*\bid=["']参考资料["'][^>]*>\s*参考资料\s*<\/h[1-6]>/i, `${key} 页面缺少“参考资料”结构锚点`);
   assert.match(html, /<figure\b/i, `${key} 页面至少需要一个 <figure>`);
+  assertNoAbsoluteLocalResources(html, key);
 
   for (const image of page.images) {
     assertExpectedImage(html, key, image);
@@ -131,6 +169,13 @@ for (const key of keys) {
 }
 
 if (!requestedKey) {
+  const expectedPageFiles = Object.values(pages).map((page) => page.file);
+  const expectedAssetFiles = Object.values(pages).flatMap((page) => page.images);
+  const pageFiles = (await readDirectory(notesDir, "DDD 页面目录")).filter((file) => file.endsWith(".html"));
+  const assetFiles = (await readDirectory(assetsDir, "DDD SVG 目录")).filter((file) => file.endsWith(".svg"));
+  assertExactFileSet(pageFiles, expectedPageFiles, "DDD 学习页面");
+  assertExactFileSet(assetFiles, expectedAssetFiles, "DDD SVG 资源");
+
   for (const [key, page] of Object.entries(pages)) {
     const html = documents.get(key);
     for (const [otherKey, otherPage] of Object.entries(pages)) {
