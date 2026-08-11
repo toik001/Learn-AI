@@ -25,15 +25,16 @@
       <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
       <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
     </div>
-    <div class="sidebar-category-summary"><span class="eyebrow">专题</span><strong>软件架构与 DDD</strong><small>七篇学习系列</small></div>
-    <nav class="doc-nav" aria-label="DDD 专题文档">
-      <a class="doc-nav-item" href="2026-08-11-DDD架构总览与学习路线.html"><span>1. 架构总览与学习路线</span></a>
-      <a class="doc-nav-item" href="2026-08-11-DDD基础概念与统一语言.html"><span>2. 基础概念与统一语言</span></a>
-      <a class="doc-nav-item" href="2026-08-11-DDD战略设计与限界上下文.html"><span>3. 战略设计与限界上下文</span></a>
-      <a class="doc-nav-item" href="2026-08-11-DDD战术设计与领域模型.html"><span>4. 战术设计与领域模型</span></a>
-      <a class="doc-nav-item" href="2026-08-11-DDD分层架构模式对比.html"><span>5. 分层架构模式对比</span></a>
-      <a class="doc-nav-item is-active" href="2026-08-11-DDD订单领域Java实践.html" aria-current="page"><span>6. 订单领域 Java 实践</span></a>
-      <a class="doc-nav-item" href="2026-08-11-DDD落地演进与常见误区.html"><span>7. 落地演进与常见误区</span></a>
+    <div class="sidebar-category-summary">
+      <span class="eyebrow">当前分类</span>
+      <a class="sidebar-category-link" href="../../../index.html#category-软件架构与-ddd-1amvq1k">
+        <strong>软件架构与 DDD</strong>
+        <small>7 篇文档</small>
+      </a>
+      <a class="sidebar-featured-link" href="2026-08-11-DDD架构总览与学习路线.html">分类主目录<span>DDD 架构总览与学习路线</span></a>
+    </div>
+    <nav class="doc-nav" aria-label="当前分类文档">
+      <a class="doc-nav-item is-active" href="2026-08-11-DDD订单领域Java实践.html" aria-current="page"><span>DDD 订单领域 Java 21 完整实践</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD分层架构模式对比.html"><span>DDD 分层架构模式对比</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD基础概念与统一语言.html"><span>DDD 基础概念与统一语言</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD架构总览与学习路线.html"><span>DDD 架构总览与学习路线</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD落地演进与常见误区.html"><span>DDD 落地演进与常见误区</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD战略设计与限界上下文.html"><span>DDD 战略设计与限界上下文</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD战术设计与领域模型.html"><span>DDD 战术设计与领域模型</span><small>2026-08-11</small></a>
     </nav>
   </aside>
   <main class="article-column">
@@ -1009,7 +1010,21 @@ PASS: 8 Java 21 DDD checks</code></pre>
         <a href="2026-08-11-DDD落地演进与常见误区.html"><span>下一篇</span><strong>落地演进与常见误区</strong></a>
       </nav>
     </article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/architecture/2026-08-11-DDD订单领域Java实践.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <span class="pager-spacer"></span>
+        <a class="pager-link next" href="2026-08-11-DDD分层架构模式对比.html"><small>下一篇</small><span>DDD 分层架构模式对比</span></a>
+      </nav>
+    </footer>
   </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#目录与依赖">目录与依赖</a></li><li class="toc-level-2"><a href="#订单聚合">订单聚合</a></li><li class="toc-level-3"><a href="#领域基础类型">领域基础类型</a></li><li class="toc-level-3"><a href="#order聚合完整代码">Order 聚合完整代码</a></li><li class="toc-level-2"><a href="#创建订单用例">创建订单用例</a></li><li class="toc-level-2"><a href="#端口与适配器">端口与适配器</a></li><li class="toc-level-3"><a href="#核心拥有的输出端口">核心拥有的输出端口</a></li><li class="toc-level-3"><a href="#http输入适配器">HTTP 输入适配器</a></li><li class="toc-level-3"><a href="#jpa持久化适配器">JPA 持久化适配器</a></li><li class="toc-level-3"><a href="#outbox事件适配器">Outbox 事件适配器</a></li><li class="toc-level-2"><a href="#领域事件">领域事件</a></li><li class="toc-level-2"><a href="#测试">测试</a></li><li class="toc-level-2"><a href="#spring-boot组合">Spring Boot 组合</a></li><li class="toc-level-2"><a href="#实践与验收">实践与验收</a></li><li class="toc-level-3"><a href="#提取编译运行">提取、编译、运行</a></li><li class="toc-level-3"><a href="#改变练习">改变练习</a></li><li class="toc-level-3"><a href="#生产就绪检查单">生产就绪检查单</a></li><li class="toc-level-2"><a href="#本篇小结">本篇小结</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li><li class="toc-level-2"><a href="#专题导航">专题导航</a></li></ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
 </div>
 </body>
 </html>

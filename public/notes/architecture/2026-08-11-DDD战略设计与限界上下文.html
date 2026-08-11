@@ -25,15 +25,16 @@
       <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
       <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
     </div>
-    <div class="sidebar-category-summary"><span class="eyebrow">专题</span><strong>软件架构与 DDD</strong><small>七篇学习系列</small></div>
-    <nav class="doc-nav" aria-label="DDD 专题文档">
-      <a class="doc-nav-item" href="2026-08-11-DDD架构总览与学习路线.html"><span>1. 架构总览与学习路线</span></a>
-      <a class="doc-nav-item" href="2026-08-11-DDD基础概念与统一语言.html"><span>2. 基础概念与统一语言</span></a>
-      <a class="doc-nav-item is-active" href="2026-08-11-DDD战略设计与限界上下文.html" aria-current="page"><span>3. 战略设计与限界上下文</span></a>
-      <a class="doc-nav-item" href="2026-08-11-DDD战术设计与领域模型.html"><span>4. 战术设计与领域模型</span></a>
-      <a class="doc-nav-item" href="2026-08-11-DDD分层架构模式对比.html"><span>5. 分层架构模式对比</span></a>
-      <a class="doc-nav-item" href="2026-08-11-DDD订单领域Java实践.html"><span>6. 订单领域 Java 实践</span></a>
-      <a class="doc-nav-item" href="2026-08-11-DDD落地演进与常见误区.html"><span>7. 落地演进与常见误区</span></a>
+    <div class="sidebar-category-summary">
+      <span class="eyebrow">当前分类</span>
+      <a class="sidebar-category-link" href="../../../index.html#category-软件架构与-ddd-1amvq1k">
+        <strong>软件架构与 DDD</strong>
+        <small>7 篇文档</small>
+      </a>
+      <a class="sidebar-featured-link" href="2026-08-11-DDD架构总览与学习路线.html">分类主目录<span>DDD 架构总览与学习路线</span></a>
+    </div>
+    <nav class="doc-nav" aria-label="当前分类文档">
+      <a class="doc-nav-item" href="2026-08-11-DDD订单领域Java实践.html"><span>DDD 订单领域 Java 21 完整实践</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD分层架构模式对比.html"><span>DDD 分层架构模式对比</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD基础概念与统一语言.html"><span>DDD 基础概念与统一语言</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD架构总览与学习路线.html"><span>DDD 架构总览与学习路线</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD落地演进与常见误区.html"><span>DDD 落地演进与常见误区</span><small>2026-08-11</small></a><a class="doc-nav-item is-active" href="2026-08-11-DDD战略设计与限界上下文.html" aria-current="page"><span>DDD 战略设计与限界上下文</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD战术设计与领域模型.html"><span>DDD 战术设计与领域模型</span><small>2026-08-11</small></a>
     </nav>
   </aside>
   <main class="article-column">
@@ -270,13 +271,19 @@ final class CatalogAclAdapter implements ProductCatalogPort {
         <li><a href="2026-08-11-DDD落地演进与常见误区.html">DDD 落地演进与常见误区</a></li>
       </ol>
     </article>
-    <footer class="article-footer"><div class="source-path">HTML 页面：<code>notes/architecture/2026-08-11-DDD战略设计与限界上下文.html</code></div></footer>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/architecture/2026-08-11-DDD战略设计与限界上下文.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="2026-08-11-DDD落地演进与常见误区.html"><small>上一篇</small><span>DDD 落地演进与常见误区</span></a>
+        <a class="pager-link next" href="2026-08-11-DDD战术设计与领域模型.html"><small>下一篇</small><span>DDD 战术设计与领域模型</span></a>
+      </nav>
+    </footer>
   </main>
   <aside class="toc-sidebar">
     <div class="toc-title">本页目录</div>
-    <nav aria-label="本页目录侧栏"><ol class="toc-list">
-      <li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#子域分类">子域分类</a></li><li class="toc-level-2"><a href="#限界上下文">限界上下文</a></li><li class="toc-level-2"><a href="#识别边界">识别边界</a></li><li class="toc-level-2"><a href="#上下文映射">上下文映射</a></li><li class="toc-level-2"><a href="#订单案例">订单案例</a></li><li class="toc-level-2"><a href="#java工程映射">Java 工程映射</a></li><li class="toc-level-2"><a href="#决策练习">决策练习</a></li><li class="toc-level-2"><a href="#本篇小结">本篇小结</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li><li class="toc-level-2"><a href="#专题导航">专题导航</a></li>
-    </ol></nav>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#子域分类">子域分类</a></li><li class="toc-level-2"><a href="#限界上下文">限界上下文</a></li><li class="toc-level-2"><a href="#识别边界">识别边界</a></li><li class="toc-level-2"><a href="#上下文映射">上下文映射</a></li><li class="toc-level-2"><a href="#订单案例">订单案例</a></li><li class="toc-level-3"><a href="#订单上下文现状图">四个上下文与权威模型</a></li><li class="toc-level-3"><a href="#下单协作场景">从目录到订单再到下游</a></li><li class="toc-level-2"><a href="#java工程映射">Java 工程映射</a></li><li class="toc-level-3"><a href="#acl适配器示例">聚焦 ACL 适配器示例（Java 21）</a></li><li class="toc-level-2"><a href="#决策练习">决策练习</a></li><li class="toc-level-2"><a href="#本篇小结">本篇小结</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li><li class="toc-level-2"><a href="#专题导航">DDD 七篇专题导航</a></li></ol>
+    </nav>
     <a class="back-to-top" href="#">返回顶部 ↑</a>
   </aside>
 </div>
