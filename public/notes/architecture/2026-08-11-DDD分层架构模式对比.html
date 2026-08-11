@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="面向 Java 开发者统一比较传统三层、DDD 经典四层、六边形、洋葱与整洁架构，聚焦依赖方向、边界与演进选择。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="软件架构与 DDD">
+  <meta name="study-date" content="2026-08-11">
+  <title>DDD 分层架构模式对比｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <div class="sidebar-category-summary"><span class="eyebrow">专题</span><strong>软件架构与 DDD</strong><small>七篇学习系列</small></div>
+    <nav class="doc-nav" aria-label="DDD 专题文档">
+      <a class="doc-nav-item" href="2026-08-11-DDD架构总览与学习路线.html"><span>1. 架构总览与学习路线</span></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD基础概念与统一语言.html"><span>2. 基础概念与统一语言</span></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD战略设计与限界上下文.html"><span>3. 战略设计与限界上下文</span></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD战术设计与领域模型.html"><span>4. 战术设计与领域模型</span></a>
+      <a class="doc-nav-item is-active" href="2026-08-11-DDD分层架构模式对比.html" aria-current="page"><span>5. 分层架构模式对比</span></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD订单领域Java实践.html"><span>6. 订单领域 Java 实践</span></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD落地演进与常见误区.html"><span>7. 落地演进与常见误区</span></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta"><a href="../../../index.html">知识库首页</a><span>·</span><span>软件架构与 DDD</span><span>·</span><time datetime="2026-08-11">2026-08-11</time></div>
+    <article class="markdown-body">
+      <h1 id="ddd分层架构模式对比">DDD 分层架构模式对比</h1>
+      <blockquote><p>整理日期：2026-08-11；资料检索日期：2026-08-11<br>比较的不是五套互斥产品，而是五种组织职责、保护业务规则和管理技术依赖的视角。</p></blockquote>
+
+      <nav aria-label="本页目录">
+        <strong>本页目录</strong>
+        <ol>
+          <li><a href="#核心结论">核心结论</a></li>
+          <li><a href="#先看共同问题">先看共同问题</a></li>
+          <li><a href="#传统三层">传统三层</a></li>
+          <li><a href="#经典四层">经典四层</a></li>
+          <li><a href="#六边形架构">六边形架构</a></li>
+          <li><a href="#洋葱与整洁架构">洋葱与整洁架构</a></li>
+          <li><a href="#统一比较矩阵">统一比较矩阵</a></li>
+          <li><a href="#术语映射">术语映射</a></li>
+          <li><a href="#java21目录与依赖示例">Java 21 目录与依赖示例</a></li>
+          <li><a href="#选择建议">选择建议</a></li>
+          <li><a href="#练习与验收">练习与验收</a></li>
+          <li><a href="#本篇小结">本篇小结</a></li>
+          <li><a href="#参考资料">参考资料</a></li>
+          <li><a href="#专题导航">专题导航</a></li>
+        </ol>
+      </nav>
+
+      <h2 id="核心结论">核心结论</h2>
+      <ul>
+        <li><strong>DDD 没有规定唯一必选架构。</strong>Eric Evans 的 DDD Reference 收录经典分层架构，同时明确其关键目标是隔离领域表达，并指出六边形等模式同样可以实现这一目标。因此“做 DDD”不等于必须套某一种图。</li>
+        <li>经典四层、六边形、洋葱与整洁架构的形状和术语不同，却都倾向于让稳定的业务规则免受可替换数据库、Web 框架和消息设施支配。</li>
+        <li>传统三层对简单 CRUD、内部管理工具和稳定流程可能已经足够；当复杂不变量散落在 SQL、Controller 或框架回调中时，它才暴露出模型难演进和测试依赖基础设施的问题。</li>
+        <li>架构质量不由层数、圆圈数或目录数衡量。更有意义的问题是：<strong>源码依赖指向谁、模型能否独立表达和测试、边界是否对应真实变化原因</strong>。</li>
+      </ul>
+      <p><strong>来源定义：</strong><a href="https://www.domainlanguage.com/ddd/reference/" target="_blank" rel="noopener noreferrer">Eric Evans / Domain Language 的 DDD Reference</a>是原著模式摘要的官方入口；其<a href="https://www.domainlanguage.com/wp-content/uploads/2016/05/DDD_Reference_2015-03.pdf" target="_blank" rel="noopener noreferrer">参考手册 PDF</a>把 Layered Architecture 的目标归结为隔离领域模型，也认可其他能保持这种隔离的架构。<strong>本文判断：</strong>DDD 关注模型与边界，下面五种结构是实现选择，不是 DDD 成熟度等级。</p>
+
+      <h2 id="先看共同问题">先看共同问题：让 Order 依赖什么</h2>
+      <p>想象一个订单提交规则：“草稿订单至少有一行才能提交，提交后不能再改数量。”最危险的写法不是包名少，而是 <code>Order</code> 为了完成规则直接依赖 JPA 实体生命周期、Spring 事务、HTTP 请求或消息 SDK：<code>Order → JPA / Spring / Web</code>。此时改变数据库映射或接口协议，可能迫使业务核心一起修改。</p>
+      <p>更稳健的拆分是：<strong>领域模型</strong>决定订单是否合法；<strong>应用用例</strong>协调加载、调用、事务和保存；<strong>输入/输出适配器</strong>翻译 HTTP、CLI、消息、JPA 与外部 API。这样规则仍是普通 Java，技术变化停在边缘。</p>
+      <figure>
+        <img src="../../assets/ddd/dependency-rule.svg" alt="Web、消息、命令行、数据库和框架经适配器依赖应用用例与领域模型，禁止领域模型反向引用 Spring、JPA 或 Web">
+        <figcaption>依赖规则描述源码中的 import 与类型引用；运行时调用可以跨边界往返。</figcaption>
+      </figure>
+      <p>图的文字等价说明是：输入边缘依次依赖输入适配器、应用用例和领域模型；输出适配器实现由内层拥有的所需能力接口，因此编译期仍是“外层实现 → 内层接口”。运行时由用例编排形成两条调用：<code>HTTP Adapter → Use Case → Order</code>执行领域决策，<code>Use Case → OrderRepository Port → JPA Adapter</code>完成持久化；不是 Order 调用仓储。控制流确实可以从内层用例对象流向外层适配器对象。二者并不矛盾：Java 的多态和依赖倒置使<strong>运行控制流</strong>可以向外，而<strong>源码依赖</strong>仍指向内层拥有的抽象。Robert C. Martin 的<a href="https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html" target="_blank" rel="noopener noreferrer">整洁架构原文</a>正用 output port 解释这种边界穿越。</p>
+      <p><strong>图示限制：</strong>圆环只是便于教学的简化，不表示所有系统必须有三圈，也不表示领域模型会逐层发起每次调用。依赖倒置也不等于“每个方法都造接口”；只有跨边界、存在替换/测试/政策所有权价值的目的性契约，才值得成为端口。</p>
+
+      <h2 id="传统三层">传统三层：Presentation–Business–Data</h2>
+      <p>传统三层把系统分为表现层、业务层和数据访问层，常见调用方向是 <code>Presentation → Business → Data</code>。表现层处理协议和展示，业务层执行校验与流程，数据层访问数据库或远端数据源。<a href="https://martinfowler.com/bliki/PresentationDomainDataLayering.html" target="_blank" rel="noopener noreferrer">Martin Fowler 的 Presentation–Domain–Data Layering</a>指出，这种分离能缩小每次思考范围、复用业务逻辑并提供测试接缝。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>方面</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td>优势</td><td>概念直观、团队熟悉、CRUD 数据流短；对小型后台、报表和稳定流程，开发与排障成本低。</td></tr>
+            <tr><td>常见代价</td><td>业务层通常直接依赖 Data 层；技术类型容易沿调用链上泄，横向层变大后一次功能变更可能跨越所有层。</td></tr>
+            <tr><td>适用</td><td>业务规则少、以数据维护为主、外部集成少、生命周期短或变化可预测的系统。</td></tr>
+            <tr><td>失效信号</td><td>同一不变量分散在 Controller、Service、SQL/触发器；没有数据库就无法测试关键决策；业务类被 ORM 生命周期牵制。</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>不要把“层”与“部署层级”混为一谈。</strong>Layer 是源码中的逻辑职责，Tier 是进程、服务器或网络上的物理部署。三层代码完全可以部署在一个 JVM；也可跨多个物理层。Fowler 明确区分两者，Microsoft Learn 的<a href="https://learn.microsoft.com/en-us/dotnet/architecture/modern-web-apps-azure/common-web-application-architectures" target="_blank" rel="noopener noreferrer">常见 Web 架构官方指南</a>也给出相同区分。</p>
+      <p><strong>Transaction Script 不是天然错误。</strong>一个 <code>OrderBusinessService</code>按用例读取数据、校验并更新，若规则简单、短小且稳定，就是诚实而低成本的设计。问题出现在规则复杂且持续变化时：服务方法越来越长、状态转换可被任意路径绕过，业务语言无法落在一个自治模型中。此时应提升领域模型，而不是因为类名叫 Service 就判错。</p>
+
+      <h2 id="经典四层">经典四层：UI、Application、Domain、Infrastructure</h2>
+      <p>Evans 的经典分层将业务层进一步区分为应用层与领域层：</p>
+      <ul>
+        <li><strong>User Interface：</strong>展示信息、解释用户命令或外部消息，不决定领域规则。</li>
+        <li><strong>Application：</strong>定义软件可执行的用例，协调领域对象、授权、事务边界和对外协作；保持薄意味着不吞掉领域知识，不意味着每个方法都只能机械转发一行。</li>
+        <li><strong>Domain：</strong>表达业务概念、状态、规则和不变量，是模型自治的核心。</li>
+        <li><strong>Infrastructure：</strong>提供持久化、消息、时钟、邮件、外部服务等技术实现，也可承载支持上层的通用机制。</li>
+      </ul>
+      <p>应用服务可以包含重要的<strong>用例编排</strong>：幂等检查、事务起止、调用多个领域对象、保存聚合和把领域事件交给发布机制；它不应复制“订单何时允许提交”这类领域决策。Microsoft Learn 的<a href="https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/ddd-oriented-microservice" target="_blank" rel="noopener noreferrer">DDD-oriented microservice 指南</a>展示了应用层、领域层与基础设施层的工程实现，但这是 .NET 微服务语境下的实现指导，不是 DDD 的唯一定义，也不意味着 Java 项目必须照搬项目拆分。</p>
+      <p><strong>基础设施依赖的细节：</strong>若 Domain/Application 直接 import 某个 JPA Repository 实现，依赖仍向外。更稳妥的做法是让需要能力的内层拥有接口，基础设施实现它。仓储端口可以由 Domain 拥有（当它表达聚合集合语义），也可以由 Application 拥有（当它只服务某个用例的读取/保存需求）；接口所有权由模型责任和依赖方向决定，不存在“所有接口一律放 domain”的普遍规则。实现始终留在外层。</p>
+
+      <h2 id="六边形架构">六边形架构：Ports &amp; Adapters</h2>
+      <p>Alistair Cockburn 的原始模式把<strong>应用放在里面、外部设备放在外面</strong>。Port 是一次有目的的会话/能力边界，同一端口可接多个技术 Adapter。其目标是让应用既可被用户、自动化测试、批处理或其他程序驱动，也可在不连接最终数据库时开发和回归测试。详见<a href="https://alistair.cockburn.us/hexagonal-architecture" target="_blank" rel="noopener noreferrer">2005 年 Hexagonal Architecture 原文</a>。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>一侧</th><th>谁发起</th><th>订单例子</th><th>可替换测试替身</th></tr></thead>
+          <tbody>
+            <tr><td>Driving（驱动）</td><td>外部参与者调用应用</td><td>HTTP Controller、CLI、消息消费者、定时任务 → <code>CreateOrderUseCase</code></td><td>用例级测试驱动器</td></tr>
+            <tr><td>Driven（被驱动）</td><td>应用需要外部能力</td><td><code>OrderRepository</code> → JPA/SQL，或支付端口 → HTTP Client</td><td>内存仓储、Fake Gateway</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Cockburn 原文先使用 application-controlling/data-retrieval，又把两类实现称为 primary/secondary ports and adapters，并明确说明也可叫 driving/driven adapters。因此本文使用 Driving/Driven 有原文依据，但不把这些称呼扩大成每个团队都必须采用的包名。无论怎样命名，端口应按目的设计，例如“创建订单”或“保存订单聚合”，而不是为每个类机械复制一个接口。</p>
+      <p><strong>六边形不是六层。</strong>六边形只是为多个端口留出画图空间，数字六没有架构含义。原文中的 <em>application</em> 指整个内部应用，可包含业务核心；它不能机械映射为 DDD 工程里的 <code>application</code> package。六边形首先回答“内外如何交互”，内部仍可采用领域层与应用层。</p>
+
+      <h2 id="洋葱与整洁架构">洋葱与整洁架构：共同向内，但不是同一套词</h2>
+      <h3 id="洋葱架构">洋葱架构</h3>
+      <p>Jeffrey Palermo 在<a href="https://jeffreypalermo.com/2008/07/the-onion-architecture-part-1/" target="_blank" rel="noopener noreferrer">Onion Architecture 原始系列第一篇</a>提出：领域模型位于中心，代码只可依赖更中心的层，基础设施被外置。其<a href="https://jeffreypalermo.com/2008/07/the-onion-architecture-part-2/" target="_blank" rel="noopener noreferrer">第二篇</a>进一步把 Domain Model 置于中心，并在外圈组织领域/应用服务与接口。对 Java 项目可理解为：实体和值对象不认识 Spring/JPA；用例服务围绕领域工作；Web、持久化和消息在外圈实现内层契约。</p>
+      <p>Palermo 明确把这种结构定位于复杂行为和长寿命业务应用，并认为小网站未必值得付出成本。因此洋葱不是“比四层更高级”，而是用同心方向更强地控制耦合。</p>
+
+      <h3 id="整洁架构">整洁架构</h3>
+      <p>Robert C. Martin 的 Clean Architecture 区分 <strong>Entities、Use Cases、Interface Adapters、Frameworks &amp; Drivers</strong>。其核心 Dependency Rule 是：跨圆环的<strong>源码依赖只能向内</strong>，外圈名称与框架数据格式不能渗入内圈。Controller 可以调用 Use Case，Use Case 也能在运行时经 output port 调用 Presenter/Repository 实现，但 Java 接口放在内侧，由外侧实现。</p>
+      <p>跨边界数据应使用内层方便的简单数据结构或专用 DTO；不要把 HTTP Request、JPA Entity、数据库 Row 或框架生成类型传进 Use Case/Entity。最外层出现 <code>@RestController</code>、<code>@Repository</code>、<code>@Entity</code>并没有问题，目标不是“零框架代码”，而是让框架代码停在可替换边缘。</p>
+
+      <h3 id="共同点与边界">共同点、差异与图示边界</h3>
+      <figure>
+        <img src="../../assets/ddd/architecture-comparison.svg" alt="经典四层、六边形、洋葱和整洁架构分别用层叠、内外边界与同心圆表达业务核心和外部技术依赖">
+        <figcaption>四种 DDD 友好结构的主视觉：形状不同，共同关注业务规则隔离；传统三层另在比较矩阵中纳入基线。</figcaption>
+      </figure>
+      <p>图的文字等价说明是：经典四层以 UI/Application/Domain/Infrastructure 分配职责；六边形以应用内外、端口和适配器组织交互；洋葱把 Domain Model 放在中心并让耦合向内；整洁架构按 Entity、Use Case、Interface Adapter、Framework/Driver 的政策层级向内依赖。它们可以组合：一个限界上下文内部采用领域/应用分层，同时用输入输出端口隔离边缘。</p>
+      <p><strong>图示限制：</strong>图只画了四种 DDD 友好模式，没有把传统三层画成第五栏；圆环和层块是概念示意，不能据此认定术语一一相等，也不能认为每个请求必须逐圈经过。Onion 强调以 Domain Model 为中心的对象与耦合，Clean 给出 Entities/Use Cases 等政策层级和明确的边界数据规则；二者共享向内依赖思想，但不是同一架构，更都不是 DDD 本身。</p>
+
+      <h2 id="统一比较矩阵">统一比较矩阵</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>架构</th><th>核心隐喻 / 首要问题</th><th>业务规则位置</th><th>编译期依赖方向</th><th>输入 / 输出边界</th><th>数据库 / 框架位置</th><th>测试含义</th><th>主要收益</th><th>成本 / 风险</th><th>适合复杂度 / 情境</th><th>常见误用</th></tr></thead>
+          <tbody>
+            <tr><td>传统三层</td><td>上下堆叠；展示、业务、数据怎样分工？</td><td>Business Layer，可为 Transaction Script 或 Domain Model</td><td>通常 Presentation → Business → Data</td><td>UI 在上，Data 在下；常无显式端口</td><td>Data 层；框架可能贯穿各层</td><td>可分层测，但业务测试常需替换 Data</td><td>简单、熟悉、交付快</td><td>业务对数据层的直接耦合可能累积；横向层膨胀</td><td>简单 CRUD、稳定流程、小团队</td><td>把逻辑层/物理 tier 混同；任何规模都按技术层顶级分包</td></tr>
+            <tr><td>经典四层</td><td>职责分层；用例编排与领域决策如何分开？</td><td>Domain；Application 协调用例</td><td>概念上向 Domain；技术实现通过内层接口倒置</td><td>UI 进入 Application；Infrastructure 提供技术能力</td><td>Infrastructure；UI 框架在 UI</td><td>领域可脱离 UI/DB 测，用例可用替身测</td><td>显式保护领域模型与用例职责</td><td>团队可能争论接口归属或做贫血领域</td><td>规则中等到复杂、需要清晰事务/用例边界</td><td>把 Application 误做空壳；或让 Domain 直接依赖 Infrastructure</td></tr>
+            <tr><td>六边形</td><td>内外与插座；谁驱动应用、应用驱动谁？</td><td>内部 application/business core</td><td>Adapter → core-owned Port；核心不依赖设备</td><td>按目的定义 driving/driven ports</td><td>外部设备，由 Adapter 翻译</td><td>可用测试适配器驱动，用内存实现替代数据库</td><td>多入口、多外部系统替换与隔离清晰</td><td>端口过度设计、映射代码增加</td><td>集成较多、协议变化、要求隔离测试</td><td>把六边形理解为六层；每个类配一个接口</td></tr>
+            <tr><td>洋葱</td><td>同心圆；怎样让耦合指向 Domain Model？</td><td>中心 Domain Model；应用服务在外围环</td><td>外圈 → 更内圈</td><td>接口向内归属，UI/Infrastructure 在外</td><td>最外圈</td><td>中心可独立测试，外圈做集成测试</td><td>长期控制技术耦合，突出模型中心</td><td>对小系统可能仪式过重；环定义会因团队而异</td><td>长寿命、复杂行为的业务应用</td><td>只画圆圈却保留反向 import；把所有接口堆进中心</td></tr>
+            <tr><td>整洁</td><td>政策层级；高层规则怎样不认识低层机制？</td><td>Entities 与 Use Cases</td><td>跨边界源码依赖只向内</td><td>Controller/Presenter/Gateway 经边界模型和接口转换</td><td>Frameworks &amp; Drivers 最外层</td><td>用例/实体无需 Web、DB，边界另做契约与集成测试</td><td>依赖规则和边界数据约束最显式</td><td>DTO/Mapper 与项目拆分成本；可能机械套四圈</td><td>长寿命核心、严格替换性/合规/测试要求</td><td>把运行调用当依赖箭头；强制正好四圈</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>矩阵没有分数和冠军，因为适用性取决于业务复杂度、变化与寿命。Fowler 还提醒：当系统变大时，顶层按 presentation/domain/data 横切会失去聚合力，应优先按业务域模块化，再在模块内部合理分层。</p>
+
+      <h2 id="术语映射">术语映射：相近不等于相同</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>DDD / 分层概念</th><th>在其他图中的近似对应</th><th>为什么只是近似</th></tr></thead>
+          <tbody>
+            <tr><td>Domain Layer / Domain Model</td><td>Onion 中心；Clean 的核心 Entity/业务规则；Hexagonal 内部的一部分</td><td>Clean 的 Entity 指企业级规则，DDD Entity 主要按身份定义；语义范围不完全相同。</td></tr>
+            <tr><td>Application Layer</td><td>Use Case / Application Service 环</td><td>Cockburn 原文的 application 可包含整个业务核心，不等于 DDD application package。</td></tr>
+            <tr><td>Port</td><td>核心拥有的输入契约或所需能力接口</td><td>Port 表达目的性会话，不是“任意 Java interface”的同义词。</td></tr>
+            <tr><td>Adapter</td><td>边缘的 Controller、Presenter、Mapper、Repository/Gateway 实现</td><td>职责是协议与模型翻译；只有加上 Adapter 后缀并不会自动形成边界。</td></tr>
+            <tr><td>Infrastructure</td><td>Onion 外圈；Clean Frameworks &amp; Drivers；Hexagonal 外部设备及适配器实现</td><td>不同模式对 Adapter 与框架是否拆圈、基础设施包含什么的划分不同。</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>这些映射用于帮助 Java 开发者读图，不能用于机械改包名。DDD、Hexagonal、Onion、Clean、CQRS 与微服务也不是同义词或强制组合：一个简单微服务可以用三层 CRUD；一个模块化单体也可以在复杂上下文中采用 DDD 与端口适配器；CQRS 是否引入取决于读写模型差异，不由圆圈决定。</p>
+
+      <h2 id="java21目录与依赖示例">Java 21 目录与依赖示例</h2>
+      <h3 id="按层组织的小上下文">结构一：小限界上下文按层组织</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>目录结构 · 聚焦示意</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code>com.example.order
+├── ui
+│   └── HttpCreateOrderController.java
+├── application
+│   ├── CreateOrderUseCase.java
+│   └── CreateOrderService.java
+├── domain
+│   ├── Order.java
+│   └── OrderRepository.java
+└── infrastructure
+    └── JpaOrderRepository.java</code></pre>
+      </div>
+      <p>这种结构对单一且较小的上下文容易理解。依赖约束应由 module/test/ArchUnit 等机制守住：<code>domain</code>不依赖其他三层，<code>application</code>依赖领域，UI 与 Infrastructure 依赖内层契约。若顶层各层持续膨胀，应转向按业务特性切分。</p>
+
+      <h3 id="按特性优先的模块">结构二：Feature / Context First</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>目录结构 · 聚焦示意</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code>com.example.sales
+└── order
+    ├── domain
+    │   └── Order.java
+    ├── application
+    │   ├── CreateOrderUseCase.java
+    │   └── OrderRepository.java
+    └── adapter
+        ├── in
+        │   └── HttpCreateOrderAdapter.java
+        └── out
+            └── JpaOrderRepositoryAdapter.java</code></pre>
+      </div>
+      <p>业务模块先聚合变化，再在模块内分 domain/application/adapter。它更适合模块化单体或多上下文工程，避免“所有 Controller 一个巨包、所有 Repository 一个巨包”。这里把 <code>OrderRepository</code>放 Application，是因为示例把“保存本用例产生的 Order”视为用例所需能力；若仓储表达聚合的集合语义并服务多个领域协作者，放 Domain 也合理。所有接口的位置都由<strong>谁拥有语义、谁需要能力、源码依赖指向哪里</strong>决定。</p>
+
+      <h3 id="可编译的端口适配器示例">可编译的端口与适配器示例</h3>
+      <p>下面是一个完整、仅依赖 JDK 的 Java 21 文件。为了能单文件编译并聚焦依赖方向，<code>HttpRequest/HttpResponse</code>和 <code>JpaRowStore</code>是边缘技术的最小替身，不声称实现真实 HTTP/JPA；生产代码可在同样的两个 Adapter 类中换成 Spring MVC 与 Jakarta Persistence。核心的 <code>Order</code>、<code>CreateOrderUseCase</code>、<code>OrderRepository</code>签名始终没有 Spring、JPA 或 Web 类型。</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>Java 21 · ArchitectureExample.java · 完整可编译</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-java">import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+
+public final class ArchitectureExample {
+    // domain：只表达订单身份与创建规则。
+    public record OrderId(UUID value) {
+        public OrderId {
+            Objects.requireNonNull(value, "value");
+        }
+    }
+
+    public static final class Order {
+        private final OrderId id;
+        private final String customerId;
+
+        private Order(OrderId id, String customerId) {
+            this.id = Objects.requireNonNull(id, "id");
+            if (customerId == null || customerId.isBlank()) {
+                throw new IllegalArgumentException("customerId 不能为空");
+            }
+            this.customerId = customerId;
+        }
+
+        public static Order create(OrderId id, String customerId) {
+            return new Order(id, customerId);
+        }
+
+        public OrderId id() { return id; }
+        public String customerId() { return customerId; }
+    }
+
+    // application：输入端口与命令/结果由核心拥有。
+    public record CreateOrderCommand(String customerId) {}
+    public record CreateOrderResult(String orderId) {}
+
+    public interface CreateOrderUseCase {
+        CreateOrderResult create(CreateOrderCommand command);
+    }
+
+    // application：用例需要的输出端口；实现位于外层。
+    public interface OrderRepository {
+        void save(Order order);
+    }
+
+    public static final class CreateOrderService implements CreateOrderUseCase {
+        private final OrderRepository orders;
+
+        public CreateOrderService(OrderRepository orders) {
+            this.orders = Objects.requireNonNull(orders, "orders");
+        }
+
+        @Override
+        public CreateOrderResult create(CreateOrderCommand command) {
+            Objects.requireNonNull(command, "command");
+            var order = Order.create(new OrderId(UUID.randomUUID()), command.customerId());
+            orders.save(order);
+            return new CreateOrderResult(order.id().value().toString());
+        }
+    }
+
+    // adapter/in：HTTP 形状只停留在输入边缘。
+    public record HttpRequest(String customerId) {}
+    public record HttpResponse(int status, String body) {}
+
+    public static final class HttpCreateOrderAdapter {
+        private final CreateOrderUseCase useCase;
+
+        public HttpCreateOrderAdapter(CreateOrderUseCase useCase) {
+            this.useCase = Objects.requireNonNull(useCase, "useCase");
+        }
+
+        public HttpResponse post(HttpRequest request) {
+            var result = useCase.create(new CreateOrderCommand(request.customerId()));
+            return new HttpResponse(201, result.orderId());
+        }
+    }
+
+    // adapter/out：行模型与存储 API 都留在持久化边缘。
+    public record OrderRow(String id, String customerId) {}
+
+    @FunctionalInterface
+    public interface JpaRowStore {
+        void persist(OrderRow row);
+    }
+
+    public static final class JpaOrderRepositoryAdapter implements OrderRepository {
+        private final JpaRowStore rowStore;
+
+        public JpaOrderRepositoryAdapter(JpaRowStore rowStore) {
+            this.rowStore = Objects.requireNonNull(rowStore, "rowStore");
+        }
+
+        @Override
+        public void save(Order order) {
+            rowStore.persist(new OrderRow(
+                    order.id().value().toString(),
+                    order.customerId()));
+        }
+    }
+
+    public static void main(String[] args) {
+        Map&lt;String, OrderRow&gt; table = new LinkedHashMap&lt;&gt;();
+        OrderRepository repository = new JpaOrderRepositoryAdapter(
+                row -&gt; table.put(row.id(), row));
+        CreateOrderUseCase useCase = new CreateOrderService(repository);
+        var http = new HttpCreateOrderAdapter(useCase);
+
+        var response = http.post(new HttpRequest("customer-42"));
+        if (response.status() != 201 || !table.containsKey(response.body())) {
+            throw new AssertionError("订单应经输出端口保存");
+        }
+        System.out.println("created=" + response.body());
+    }
+}</code></pre>
+      </div>
+      <p>源码依赖是：<code>HttpCreateOrderAdapter → CreateOrderUseCase</code>，<code>CreateOrderService → Order + OrderRepository</code>，<code>JpaOrderRepositoryAdapter → OrderRepository + Order</code>。运行时保存调用从 Service 流向 JPA Adapter，但 Service 只认识自己拥有的 <code>OrderRepository</code>接口。真实 Spring/JPA 注解可放外层适配器；追求的不是消灭框架，而是阻止框架所拥有的类型进入内层边界。</p>
+
+      <h2 id="选择建议">选择建议：从需要保护的变化出发</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>场景</th><th>复杂度与变化信号</th><th>推荐起点</th><th>保留的边界</th></tr></thead>
+          <tbody>
+            <tr><td>CRUD / 内部管理工具</td><td>规则少、外部系统少、小团队、寿命短或流程稳定</td><td>传统三层或 feature-first 的简单分层</td><td>至少隔离 Web 与数据访问；不要提前制造大量端口</td></tr>
+            <tr><td>复杂模块化单体</td><td>不变量多、业务频繁变化、多团队共享单体</td><td>按限界上下文/特性优先，内部经典四层或 Onion</td><td>模块 API、领域自治、用例事务边界</td></tr>
+            <tr><td>集成密集的限界上下文</td><td>多入口、多数据库/外部 API/消息，协议常变</td><td>Hexagonal Ports &amp; Adapters</td><td>每个目的性会话有稳定 Port，边缘承担翻译与失败处理</td></tr>
+            <tr><td>长寿命或受监管核心</td><td>规则复杂、技术生命周期长、审计与隔离测试要求高</td><td>Onion 或 Clean，并显式模块化</td><td>向内依赖、边界数据、框架隔离、架构测试</td></tr>
+            <tr><td>领域简单的微服务</td><td>部署独立但业务只是 CRUD，团队规模有限</td><td>简单三层/单层加清晰模块，不强上富模型</td><td>API 契约、数据所有权、可观测性；微服务不自动需要 DDD</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>决策顺序：</strong>先问业务规则复杂度和变化频率；再问外部系统数量与替换频率；再问关键规则是否必须脱离数据库做隔离测试；最后结合团队规模、技术寿命和合规要求决定边界强度。规则简单且稳定时保持三层；规则复杂时显式 Domain/Application；入口与外设变多时引入 Port/Adapter；长期核心才值得强化同心依赖和边界模型。</p>
+      <p><strong>YAGNI 与演进：</strong>选择能守住当前必要边界的最小结构。可以先把 HTTP 映射与 SQL 移出业务方法，再抽出一个真正需要替换的 Repository Port，随后按变化热点拆特性模块；不必一天内把整个遗留系统改成四圈。Microsoft Learn 的<a href="https://learn.microsoft.com/en-us/dotnet/architecture/microservices/multi-container-microservice-net-applications/microservice-application-design" target="_blank" rel="noopener noreferrer">多架构微服务设计指南</a>也强调不同服务可以按自身需要混合简单 CRUD 与更高级 DDD 模式；这是工程建议，不是 DDD 定义。</p>
+
+      <h2 id="练习与验收">练习与验收：订单服务依赖审计</h2>
+      <p><strong>输入清单：</strong><code>OrderController → OrderService</code>；<code>OrderService → OrderJpaEntity</code>；<code>Order → JpaRepository</code>；<code>Order → TransactionTemplate</code>；<code>KafkaOrderListener → OrderService</code>；<code>OrderService → PaymentHttpClient</code>；<code>JpaOrderRepositoryAdapter → OrderRepository</code>。</p>
+      <ol>
+        <li>逐个分类为 Domain、Use Case、Driving Adapter、Driven Adapter 或 Framework Detail；先按责任而非现有包名。</li>
+        <li>圈出进入核心的框架类型：<code>OrderJpaEntity</code>、<code>JpaRepository</code>、<code>TransactionTemplate</code>、HTTP Client 请求/响应。</li>
+        <li>为“创建/提交订单”定义输入端口，为“保存订单”和“发起支付”定义目的性输出端口；不要给每个类都配接口。</li>
+        <li>把 HTTP/Kafka 请求映射为用例命令，把 Domain Order 映射为 JPA Entity，把支付结果映射为核心认可的结果类型。</li>
+        <li>用编译依赖或架构测试验证 Domain 不引用 adapter/framework，Application 只依赖 Domain 与自身端口。</li>
+      </ol>
+      <p><strong>期望修正箭头：</strong><code>OrderController / KafkaOrderListener → SubmitOrderUseCase → Order</code>；<code>SubmitOrderService → OrderRepository / PaymentPort</code>（内层接口）；<code>JpaOrderRepositoryAdapter → OrderRepository</code>；<code>PaymentHttpAdapter → PaymentPort</code>。运行时 Service 可以调用后两个适配器对象，编译时适配器依赖内层接口。事务可由应用层边界或外层拦截器实现，但 <code>Order</code>不认识 <code>TransactionTemplate</code>。</p>
+      <p><strong>自检：</strong>核心能否只用 JDK 编译并测试？端口是否对应明确用例/能力，而非重复每个类？Repository 接口所有权是否有责任理由？JPA/HTTP 类型是否在 Adapter 完成转换？有没有把运行时调用箭头误画成源码依赖？是否仍为简单读取保留了不必领域化的路径？全部说清楚后，再讨论包名和框架注解。</p>
+
+      <h2 id="本篇小结">本篇小结</h2>
+      <p>传统三层以低成本分离展示、业务与数据；经典四层把用例编排和领域决策分开；六边形围绕目的性 Port 管理内外；洋葱以 Domain Model 为中心控制耦合；整洁架构把政策层级、源码依赖和边界数据规则说得最明确。它们不是互斥标签，更不是 DDD、CQRS 或微服务的同义词。真正要守住的是：业务规则有自治模型，源码依赖指向拥有政策与契约的一侧，框架细节留在边缘，并以当前复杂度能承受的最小结构持续演进。</p>
+
+      <h2 id="参考资料">参考资料</h2>
+      <p>资料检索于 <strong>2026-08-11</strong>。以下均为作者原站或官方技术资料；正文为自行归纳，Microsoft Learn 条目标为工程实现指导而非 DDD 定义。</p>
+      <ul>
+        <li><a href="https://www.domainlanguage.com/ddd/reference/" target="_blank" rel="noopener noreferrer">Eric Evans / Domain Language：DDD Reference</a> — DDD 原著模式摘要的官方入口。</li>
+        <li><a href="https://www.domainlanguage.com/wp-content/uploads/2016/05/DDD_Reference_2015-03.pdf" target="_blank" rel="noopener noreferrer">Eric Evans：Domain-Driven Design Reference（PDF）</a> — Layered Architecture、Application/Domain/Infrastructure 职责与领域隔离。</li>
+        <li><a href="https://alistair.cockburn.us/hexagonal-architecture" target="_blank" rel="noopener noreferrer">Alistair Cockburn：Hexagonal Architecture（2005 原文）</a> — Port、Adapter、内外边界、驱动者和可替换测试设备。</li>
+        <li><a href="https://jeffreypalermo.com/2008/07/the-onion-architecture-part-1/" target="_blank" rel="noopener noreferrer">Jeffrey Palermo：The Onion Architecture, Part 1</a> — 向中心耦合、外置基础设施和适用语境。</li>
+        <li><a href="https://jeffreypalermo.com/2008/07/the-onion-architecture-part-2/" target="_blank" rel="noopener noreferrer">Jeffrey Palermo：The Onion Architecture, Part 2</a> — Domain Model 中心及外环职责。</li>
+        <li><a href="https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html" target="_blank" rel="noopener noreferrer">Robert C. Martin：The Clean Architecture</a> — 四类区域、Dependency Rule、边界穿越与数据结构。</li>
+        <li><a href="https://martinfowler.com/bliki/PresentationDomainDataLayering.html" target="_blank" rel="noopener noreferrer">Martin Fowler：Presentation Domain Data Layering</a> — 三层职责、依赖、测试、逻辑 layer 与物理 tier。</li>
+        <li><a href="https://martinfowler.com/eaaCatalog/" target="_blank" rel="noopener noreferrer">Martin Fowler：Patterns of Enterprise Application Architecture Catalog</a> — Transaction Script、Domain Model、Service Layer、Repository 等原始模式索引。</li>
+        <li><a href="https://learn.microsoft.com/en-us/dotnet/architecture/modern-web-apps-azure/common-web-application-architectures" target="_blank" rel="noopener noreferrer">Microsoft Learn：Common web application architectures</a> — N-Layer 与 Clean Architecture 的官方工程指导。</li>
+        <li><a href="https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/ddd-oriented-microservice" target="_blank" rel="noopener noreferrer">Microsoft Learn：Designing a DDD-oriented microservice</a> — Application/Domain/Infrastructure 的实现示例与依赖说明。</li>
+        <li><a href="https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/infrastructure-persistence-layer-design" target="_blank" rel="noopener noreferrer">Microsoft Learn：Design the infrastructure persistence layer</a> — 仓储接口与基础设施实现、隔离测试的工程指导。</li>
+      </ul>
+
+      <h2 id="专题导航">DDD 七篇专题导航</h2>
+      <ol>
+        <li><a href="2026-08-11-DDD架构总览与学习路线.html">DDD 架构总览与学习路线</a></li>
+        <li><a href="2026-08-11-DDD基础概念与统一语言.html">DDD 基础概念与统一语言</a></li>
+        <li><a href="2026-08-11-DDD战略设计与限界上下文.html">DDD 战略设计与限界上下文</a></li>
+        <li><a href="2026-08-11-DDD战术设计与领域模型.html">DDD 战术设计与领域模型</a></li>
+        <li><span aria-current="page">DDD 分层架构模式对比（本篇）</span></li>
+        <li><a href="2026-08-11-DDD订单领域Java实践.html">DDD 订单领域 Java 实践</a></li>
+        <li><a href="2026-08-11-DDD落地演进与常见误区.html">DDD 落地演进与常见误区</a></li>
+      </ol>
+    </article>
+    <footer class="article-footer"><div class="source-path">HTML 页面：<code>notes/architecture/2026-08-11-DDD分层架构模式对比.html</code></div></footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录侧栏"><ol class="toc-list">
+      <li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#先看共同问题">先看共同问题</a></li><li class="toc-level-2"><a href="#传统三层">传统三层</a></li><li class="toc-level-2"><a href="#经典四层">经典四层</a></li><li class="toc-level-2"><a href="#六边形架构">六边形架构</a></li><li class="toc-level-2"><a href="#洋葱与整洁架构">洋葱与整洁架构</a></li><li class="toc-level-2"><a href="#统一比较矩阵">统一比较矩阵</a></li><li class="toc-level-2"><a href="#术语映射">术语映射</a></li><li class="toc-level-2"><a href="#java21目录与依赖示例">Java 21 目录与依赖示例</a></li><li class="toc-level-2"><a href="#选择建议">选择建议</a></li><li class="toc-level-2"><a href="#练习与验收">练习与验收</a></li><li class="toc-level-2"><a href="#本篇小结">本篇小结</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li><li class="toc-level-2"><a href="#专题导航">专题导航</a></li>
+    </ol></nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+<div class="mobile-backdrop" hidden></div>
+</body>
+</html>
