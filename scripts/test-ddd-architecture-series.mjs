@@ -157,9 +157,10 @@ const assertExpectedImage = (html, key, image) => {
 };
 
 const assertNonEmptySvgTextElement = (svg, key, image, tagName) => {
-  const match = svg.match(new RegExp(`<${tagName}\\b[^>]*>([\\s\\S]*?)<\\/${tagName}\\s*>`, "i"));
+  const svgWithoutComments = svg.replace(/<!--[\s\S]*?-->/g, "");
+  const match = svgWithoutComments.match(new RegExp(`<${tagName}\\b[^>]*>([\\s\\S]*?)<\\/${tagName}\\s*>`, "i"));
   assert.ok(match, `${key} SVG 缺少可访问结构：${image} -> <${tagName}>`);
-  const text = match[1].replace(/<!--[\s\S]*?-->/g, "").replace(/<[^>]*>/g, "").trim();
+  const text = match[1].replace(/<[^>]*>/g, "").trim();
   assert.ok(text, `${key} SVG 可访问文本不能为空：${image} -> <${tagName}>`);
 };
 
