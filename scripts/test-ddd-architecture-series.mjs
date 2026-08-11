@@ -156,6 +156,13 @@ const assertExpectedImage = (html, key, image) => {
   assert.ok(hasCaptionedFigure, `${key} 页面图片缺少对应图注：${assetUrl}`);
 };
 
+const assertNonEmptySvgTextElement = (svg, key, image, tagName) => {
+  const match = svg.match(new RegExp(`<${tagName}\\b[^>]*>([\\s\\S]*?)<\\/${tagName}\\s*>`, "i"));
+  assert.ok(match, `${key} SVG 缺少可访问结构：${image} -> <${tagName}>`);
+  const text = match[1].replace(/<!--[\s\S]*?-->/g, "").replace(/<[^>]*>/g, "").trim();
+  assert.ok(text, `${key} SVG 可访问文本不能为空：${image} -> <${tagName}>`);
+};
+
 const keys = requestedKey ? [requestedKey] : Object.keys(pages);
 const documents = new Map();
 
@@ -183,9 +190,11 @@ for (const key of keys) {
   for (const image of page.images) {
     assertExpectedImage(html, key, image);
     const svg = await readRequired(path.join(assetsDir, image), `${key} 页面 SVG 资源 ${image}`);
-    for (const marker of ["<svg", "<title>", "<desc>", "viewBox="]) {
+    for (const marker of ["<svg", "viewBox="]) {
       assert.ok(svg.includes(marker), `${key} SVG 缺少可访问结构：${image} -> ${marker}`);
     }
+    assertNonEmptySvgTextElement(svg, key, image, "title");
+    assertNonEmptySvgTextElement(svg, key, image, "desc");
   }
 
   assert.ok(html.includes("2026-08-11"), `${key} 页面缺少可见或机器可读的检索日期 2026-08-11`);
