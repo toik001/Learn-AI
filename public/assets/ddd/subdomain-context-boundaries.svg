@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 820" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="boundary-title boundary-desc">
+  <title id="boundary-title">电商子域与限界上下文边界对照</title>
+  <desc id="boundary-desc">问题空间包含订单履约核心域、库存支撑域与通知通用域；解决方案空间划分订单、支付、库存和商品目录限界上下文，二者相关但并不天然一一对应。</desc>
+  <defs><marker id="boundary-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 10 5 0 10Z" class="arrow-fill"/></marker></defs>
+  <style>
+    .bg{fill:#f4f8fc}.heading{font:700 36px system-ui,sans-serif;fill:#102a43}.paneltitle{font:700 28px system-ui,sans-serif;fill:#102a43}.label{font:700 23px system-ui,sans-serif;fill:#102a43}.small{font:600 20px system-ui,sans-serif;fill:#486581}.panel{fill:#fff;stroke:#1d4e89;stroke-width:3}.core{fill:#fff2cf;stroke:#b7791f;stroke-width:3}.support{fill:#e4f5f3;stroke:#147d74;stroke-width:3}.generic{fill:#edf2f7;stroke:#64748b;stroke-width:3;stroke-dasharray:9 6}.context{fill:#e9f2fb;stroke:#1d4e89;stroke-width:3}.line{fill:none;stroke:#1d4e89;stroke-width:4;stroke-dasharray:10 7;marker-end:url(#boundary-arrow)}.arrow-fill{fill:#1d4e89}.note{fill:#fff;stroke:#b7791f;stroke-width:3}@media(prefers-color-scheme:dark){.bg{fill:#071827}.heading,.paneltitle,.label{fill:#edf6ff}.small{fill:#b9cce0}.panel,.note{fill:#0d253a}.panel{stroke:#78aee8}.core{fill:#3a2b0d;stroke:#e9b75c}.support{fill:#0b302f;stroke:#55c7b8}.generic{fill:#16283a;stroke:#9eb3c7}.context{fill:#102d48;stroke:#78aee8}.line{stroke:#82b7ee}.arrow-fill{fill:#82b7ee}}
+  </style>
+  <rect class="bg" width="1200" height="820" rx="24"/><text class="heading" x="60" y="66">问题空间的子域 ≠ 解决方案的限界上下文</text><text class="small" x="60" y="103">两者互相启发，但最终映射取决于模型、团队、数据与演进约束</text>
+  <rect class="panel" x="55" y="145" width="470" height="510" rx="24"/><text class="paneltitle" x="290" y="194" text-anchor="middle">问题空间 · Subdomain</text>
+  <rect class="core" x="95" y="230" width="390" height="105" rx="18"/><text class="label" x="290" y="274" text-anchor="middle">核心域：订单履约</text><text class="small" x="290" y="308" text-anchor="middle">竞争优势与关键业务复杂度</text>
+  <rect class="support" x="95" y="375" width="390" height="105" rx="18"/><text class="label" x="290" y="419" text-anchor="middle">支撑域：库存</text><text class="small" x="290" y="453" text-anchor="middle">支撑核心流程的专有能力</text>
+  <rect class="generic" x="95" y="520" width="390" height="105" rx="18"/><text class="label" x="290" y="564" text-anchor="middle">通用域：通知</text><text class="small" x="290" y="598" text-anchor="middle">可复用或可采购的通用能力</text>
+  <rect class="panel" x="675" y="145" width="470" height="510" rx="24"/><text class="paneltitle" x="910" y="194" text-anchor="middle">解决方案空间 · Bounded Context</text>
+  <rect class="context" x="715" y="230" width="180" height="145" rx="18"/><text class="label" x="805" y="294" text-anchor="middle">订单</text><text class="small" x="805" y="331" text-anchor="middle">订单生命周期</text>
+  <rect class="context" x="925" y="230" width="180" height="145" rx="18"/><text class="label" x="1015" y="294" text-anchor="middle">支付</text><text class="small" x="1015" y="331" text-anchor="middle">支付交易</text>
+  <rect class="context" x="715" y="425" width="180" height="145" rx="18"/><text class="label" x="805" y="489" text-anchor="middle">库存</text><text class="small" x="805" y="526" text-anchor="middle">可售与预占</text>
+  <rect class="context" x="925" y="425" width="180" height="145" rx="18"/><text class="label" x="1015" y="489" text-anchor="middle">商品目录</text><text class="small" x="1015" y="526" text-anchor="middle">展示与检索</text>
+  <path class="line" d="M525 292C590 292 610 250 667 250"/><path class="line" d="M525 427C590 427 610 470 667 470"/>
+  <rect class="note" x="190" y="700" width="820" height="82" rx="18"/><text class="label" x="600" y="735" text-anchor="middle">关系：子域帮助发现边界；限界上下文承载一致的模型语言</text><text class="small" x="600" y="766" text-anchor="middle">不是自动一对一：一个子域可拆成多个上下文，多个简单子域也可能暂时合并</text>
+</svg>

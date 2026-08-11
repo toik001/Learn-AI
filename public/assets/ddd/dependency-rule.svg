@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 880" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="dependency-title dependency-desc">
+  <title id="dependency-title">业务核心的向内依赖规则</title>
+  <desc id="dependency-desc">Web、消息、命令行、数据库、HTTP 客户端和框架位于边缘，通过适配器和应用用例向领域模型依赖；领域模型反向依赖 Spring、JPA 或 Web 被明确禁止。</desc>
+  <defs>
+    <marker id="dependency-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 10 5 0 10Z" class="arrow-fill"/></marker>
+    <marker id="dependency-red-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 10 5 0 10Z" class="red-fill"/></marker>
+  </defs>
+  <style>
+    .bg{fill:#f4f8fc}.heading{font:700 36px system-ui,sans-serif;fill:#102a43}.label{font:700 23px system-ui,sans-serif;fill:#102a43}.small{font:600 20px system-ui,sans-serif;fill:#486581}.edge{fill:#edf2f7;stroke:#64748b;stroke-width:3}.adapter{fill:#e9f2fb;stroke:#1d4e89;stroke-width:4}.app{fill:#fff2cf;stroke:#b7791f;stroke-width:4}.domain{fill:#e4f5f3;stroke:#147d74;stroke-width:5}.line{fill:none;stroke:#1d4e89;stroke-width:4;marker-end:url(#dependency-arrow)}.bad{fill:none;stroke:#c53030;stroke-width:5;stroke-dasharray:10 7;marker-end:url(#dependency-red-arrow)}.cross{stroke:#c53030;stroke-width:8;stroke-linecap:round}.arrow-fill{fill:#1d4e89}.red-fill{fill:#c53030}.warning{fill:#fff5f5;stroke:#c53030;stroke-width:3}.warntext{font:700 20px system-ui,sans-serif;fill:#9b2c2c}@media(prefers-color-scheme:dark){.bg{fill:#071827}.heading,.label{fill:#edf6ff}.small{fill:#b9cce0}.edge{fill:#16283a;stroke:#9eb3c7}.adapter{fill:#102d48;stroke:#78aee8}.app{fill:#3a2b0d;stroke:#e9b75c}.domain{fill:#0b302f;stroke:#55c7b8}.line{stroke:#82b7ee}.arrow-fill{fill:#82b7ee}.warning{fill:#38181c;stroke:#ff8585}.warntext{fill:#ffabab}.bad,.cross{stroke:#ff6767}.red-fill{fill:#ff6767}}
+  </style>
+  <rect class="bg" width="1200" height="880" rx="24"/><text class="heading" x="60" y="66">依赖规则：源代码依赖只能指向更内层的策略</text><text class="small" x="60" y="104">控制流可以向外执行，但领域代码的 import / 类型引用必须保持向内</text>
+  <rect class="edge" x="55" y="150" width="250" height="170" rx="22"/><text class="label" x="180" y="198" text-anchor="middle">输入边缘</text><text class="small" x="180" y="239" text-anchor="middle">Web / Message / CLI</text><text class="small" x="180" y="277" text-anchor="middle">协议与框架入口</text>
+  <rect class="edge" x="895" y="150" width="250" height="170" rx="22"/><text class="label" x="1020" y="198" text-anchor="middle">输出边缘</text><text class="small" x="1020" y="239" text-anchor="middle">DB / HTTP Client</text><text class="small" x="1020" y="277" text-anchor="middle">Framework</text>
+  <rect class="adapter" x="190" y="385" width="820" height="330" rx="40"/><text class="label" x="600" y="425" text-anchor="middle">适配器层</text>
+  <rect class="app" x="335" y="465" width="530" height="190" rx="38"/><text class="label" x="600" y="507" text-anchor="middle">应用用例层</text>
+  <rect class="domain" x="455" y="535" width="290" height="95" rx="47"/><text class="label" x="600" y="592" text-anchor="middle">Domain Model</text>
+  <path class="line" d="M180 320C180 365 245 368 270 405"/><path class="line" d="M1020 320C1020 365 955 368 930 405"/><path class="line" d="M300 500L327 520"/><path class="line" d="M900 500L873 520"/><path class="line" d="M420 570H447"/><path class="line" d="M780 570H753"/>
+  <path class="bad" d="M650 535C760 390 865 300 950 270"/><path class="cross" d="M785 405l38 38M823 405l-38 38"/>
+  <rect class="warning" x="385" y="175" width="430" height="82" rx="16"/><text class="warntext" x="600" y="209" text-anchor="middle">禁止：Domain → Spring / JPA / Web</text><text class="small" x="600" y="239" text-anchor="middle">业务规则不认识外部框架</text>
+  <text class="small" x="600" y="780" text-anchor="middle">允许：边缘 → 适配器 → 应用用例 → 领域模型（箭头向内）</text><text class="small" x="600" y="818" text-anchor="middle">端口由内层定义，外层实现；依赖倒置让运行控制流跨越边界</text>
+</svg>

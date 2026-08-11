@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="landscape-title landscape-desc">
+  <title id="landscape-title">DDD 从业务问题到实现架构的全景蓝图</title>
+  <desc id="landscape-desc">业务目标和问题空间依次经过子域、限界上下文、统一语言与领域模型、聚合与领域事件，最后连接应用层以及端口与适配器。</desc>
+  <defs>
+    <marker id="landscape-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 10 5 0 10Z" class="arrow-fill"/></marker>
+  </defs>
+  <style>
+    :root{color-scheme:light dark}.bg{fill:#f4f8fc}.grid{stroke:#d7e3ef;stroke-width:1}.heading{font:700 36px system-ui,sans-serif;fill:#102a43}.sub{font:600 22px system-ui,sans-serif;fill:#486581}.label{font:700 22px system-ui,sans-serif;fill:#102a43}.small{font:600 20px system-ui,sans-serif;fill:#486581}.stage{fill:#fff;stroke:#1d4e89;stroke-width:3}.domain{fill:#e4f5f3;stroke:#147d74;stroke-width:3}.decision{fill:#fff2cf;stroke:#b7791f;stroke-width:3}.line{fill:none;stroke:#1d4e89;stroke-width:4;marker-end:url(#landscape-arrow)}.arrow-fill{fill:#1d4e89}.caution{fill:#fff5f5;stroke:#c53030;stroke-width:2;stroke-dasharray:8 6}.warn{fill:#9b2c2c;font:700 20px system-ui,sans-serif}@media(prefers-color-scheme:dark){.bg{fill:#071827}.grid{stroke:#15344f}.heading,.label{fill:#edf6ff}.sub,.small{fill:#b9cce0}.stage{fill:#0d253a;stroke:#78aee8}.domain{fill:#0b302f;stroke:#55c7b8}.decision{fill:#3a2b0d;stroke:#e9b75c}.caution{fill:#38181c;stroke:#ff8585}.warn{fill:#ffabab}.line{stroke:#82b7ee}.arrow-fill{fill:#82b7ee}}
+  </style>
+  <rect class="bg" width="1200" height="760" rx="24"/>
+  <path class="grid" d="M0 80H1200M0 160H1200M0 240H1200M0 320H1200M0 400H1200M0 480H1200M0 560H1200M0 640H1200M80 0V760M160 0V760M240 0V760M320 0V760M400 0V760M480 0V760M560 0V760M640 0V760M720 0V760M800 0V760M880 0V760M960 0V760M1040 0V760M1120 0V760" opacity=".45"/>
+  <text class="heading" x="60" y="66">DDD 工程全景：从业务问题到可执行设计</text>
+  <text class="sub" x="60" y="104">先理解业务与边界，再选择模型和实现架构</text>
+  <text class="small" x="75" y="162">问题空间</text><text class="small" x="410" y="162">战略设计</text><text class="small" x="720" y="162">战术设计</text><text class="small" x="1000" y="162">实现</text>
+  <g>
+    <rect class="decision" x="55" y="200" width="160" height="118" rx="18"/><text class="label" x="135" y="246" text-anchor="middle">业务目标</text><text class="small" x="135" y="281" text-anchor="middle">问题空间</text>
+    <rect class="stage" x="255" y="200" width="130" height="118" rx="18"/><text class="label" x="320" y="269" text-anchor="middle">子域</text>
+    <rect class="stage" x="425" y="200" width="170" height="118" rx="18"/><text class="label" x="510" y="246" text-anchor="middle">限界上下文</text><text class="small" x="510" y="281" text-anchor="middle">明确模型边界</text>
+    <rect class="domain" x="635" y="190" width="190" height="138" rx="18"/><text class="label" x="730" y="240" text-anchor="middle">统一语言</text><text class="label" x="730" y="278" text-anchor="middle">领域模型</text>
+    <rect class="domain" x="865" y="190" width="170" height="138" rx="18"/><text class="label" x="950" y="240" text-anchor="middle">聚合</text><text class="label" x="950" y="278" text-anchor="middle">领域事件</text>
+    <rect class="stage" x="1075" y="180" width="90" height="158" rx="18"/><text class="label" x="1120" y="224" text-anchor="middle">应用层</text><text class="small" x="1120" y="264" text-anchor="middle">端口与</text><text class="small" x="1120" y="296" text-anchor="middle">适配器</text>
+    <path class="line" d="M215 259H247"/><path class="line" d="M385 259H417"/><path class="line" d="M595 259H627"/><path class="line" d="M825 259H857"/><path class="line" d="M1035 259H1067"/>
+  </g>
+  <g transform="translate(80 410)">
+    <rect class="stage" width="1040" height="188" rx="22"/>
+    <text class="label" x="36" y="48">设计层次不是流水线：每一层都用业务反馈校准前一层</text>
+    <path class="line" d="M125 126H850"/><path class="line" d="M850 126C930 126 930 72 850 72H160C95 72 82 98 100 116"/>
+    <text class="small" x="215" y="111">实现暴露模型缺口</text><text class="small" x="610" y="111">领域知识持续回流</text>
+  </g>
+  <g><rect class="caution" x="385" y="642" width="430" height="72" rx="16"/><text class="warn" x="600" y="687" text-anchor="middle">⚠ DDD 不是分层模板，而是业务建模方法</text></g>
+</svg>

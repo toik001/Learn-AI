@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="blocks-title blocks-desc">
+  <title id="blocks-title">DDD 战术设计构件与职责分层</title>
+  <desc id="blocks-desc">领域层包含实体、值对象、聚合根、领域服务、领域事件、仓储接口、工厂和规约；应用层负责编排，基础设施层实现外部技术细节。</desc>
+  <style>
+    .bg{fill:#f4f8fc}.heading{font:700 36px system-ui,sans-serif;fill:#102a43}.section{font:700 28px system-ui,sans-serif;fill:#102a43}.label{font:700 22px system-ui,sans-serif;fill:#102a43}.small{font:600 20px system-ui,sans-serif;fill:#486581}.domainbox{fill:#edf9f7;stroke:#147d74;stroke-width:4}.card{fill:#fff;stroke:#1d4e89;stroke-width:3}.event{fill:#fff2cf;stroke:#b7791f;stroke-width:3}.app{fill:#e9f2fb;stroke:#1d4e89;stroke-width:3}.infra{fill:#edf2f7;stroke:#64748b;stroke-width:3;stroke-dasharray:9 6}@media(prefers-color-scheme:dark){.bg{fill:#071827}.heading,.section,.label{fill:#edf6ff}.small{fill:#b9cce0}.domainbox{fill:#082b2b;stroke:#55c7b8}.card{fill:#0d253a;stroke:#78aee8}.event{fill:#3a2b0d;stroke:#e9b75c}.app{fill:#102d48;stroke:#78aee8}.infra{fill:#16283a;stroke:#9eb3c7}}
+  </style>
+  <rect class="bg" width="1200" height="900" rx="24"/><text class="heading" x="60" y="66">战术构件：让模型表达业务，而不是框架结构</text><text class="small" x="60" y="104">选择构件看职责与约束；名称相似不代表需要全部使用</text>
+  <rect class="domainbox" x="55" y="145" width="1090" height="515" rx="26"/><text class="section" x="85" y="192">领域模型构件</text>
+  <g transform="translate(85 225)">
+    <rect class="card" width="230" height="105" rx="17"/><text class="label" x="115" y="42" text-anchor="middle">Entity · 实体</text><text class="small" x="115" y="76" text-anchor="middle">以标识延续生命周期</text>
+    <rect class="card" x="260" width="230" height="105" rx="17"/><text class="label" x="375" y="42" text-anchor="middle">Value Object</text><text class="small" x="375" y="76" text-anchor="middle">以属性定义且不可变</text>
+    <rect class="card" x="520" width="230" height="105" rx="17"/><text class="label" x="635" y="42" text-anchor="middle">Aggregate / Root</text><text class="small" x="635" y="76" text-anchor="middle">守护一致性与入口</text>
+    <rect class="card" x="780" width="230" height="105" rx="17"/><text class="label" x="895" y="42" text-anchor="middle">Domain Service</text><text class="small" x="895" y="76" text-anchor="middle">无自然归属的领域行为</text>
+    <rect class="event" y="150" width="230" height="105" rx="17"/><text class="label" x="115" y="192" text-anchor="middle">Domain Event</text><text class="small" x="115" y="226" text-anchor="middle">已发生的业务事实</text>
+    <rect class="card" x="260" y="150" width="230" height="105" rx="17"/><text class="label" x="375" y="192" text-anchor="middle">Repository</text><text class="small" x="375" y="226" text-anchor="middle">聚合持久化抽象</text>
+    <rect class="card" x="520" y="150" width="230" height="105" rx="17"/><text class="label" x="635" y="192" text-anchor="middle">Factory</text><text class="small" x="635" y="226" text-anchor="middle">封装复杂有效创建</text>
+    <rect class="card" x="780" y="150" width="230" height="105" rx="17"/><text class="label" x="895" y="192" text-anchor="middle">Specification</text><text class="small" x="895" y="226" text-anchor="middle">可组合的业务谓词</text>
+    <text class="small" x="505" y="312" text-anchor="middle">这些构件共同表达业务规则；Repository 是领域端口，技术实现留在边界之外</text>
+  </g>
+  <rect class="app" x="55" y="700" width="520" height="145" rx="22"/><text class="section" x="315" y="748" text-anchor="middle">应用层 · 用例编排</text><text class="small" x="315" y="786" text-anchor="middle">事务、权限、流程协调、调用领域模型</text><text class="small" x="315" y="817" text-anchor="middle">不承载核心业务规则</text>
+  <rect class="infra" x="625" y="700" width="520" height="145" rx="22"/><text class="section" x="885" y="748" text-anchor="middle">基础设施层 · 技术实现</text><text class="small" x="885" y="786" text-anchor="middle">数据库、消息、HTTP、框架适配</text><text class="small" x="885" y="817" text-anchor="middle">实现端口，不反向污染领域模型</text>
+</svg>

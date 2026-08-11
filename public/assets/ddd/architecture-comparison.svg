@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 900" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="architecture-title architecture-desc">
+  <title id="architecture-title">四种领域架构模式对比</title>
+  <desc id="architecture-desc">经典四层、六边形、洋葱和整洁架构用不同图形组织业务核心与外部关注点，但共同强调依赖指向业务规则，且可组合使用。</desc>
+  <defs><marker id="architecture-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10Z" class="arrow-fill"/></marker></defs>
+  <style>
+    .bg{fill:#f4f8fc}.heading{font:700 36px system-ui,sans-serif;fill:#102a43}.title{font:700 26px system-ui,sans-serif;fill:#102a43}.label{font:700 20px system-ui,sans-serif;fill:#102a43}.small{font:600 20px system-ui,sans-serif;fill:#486581}.panel{fill:#fff;stroke:#1d4e89;stroke-width:3}.outer{fill:#edf2f7;stroke:#64748b;stroke-width:2}.middle{fill:#e9f2fb;stroke:#1d4e89;stroke-width:2}.core{fill:#e4f5f3;stroke:#147d74;stroke-width:3}.accent{fill:#fff2cf;stroke:#b7791f;stroke-width:2}.line{fill:none;stroke:#1d4e89;stroke-width:3;marker-end:url(#architecture-arrow)}.arrow-fill{fill:#1d4e89}.caption{fill:#fff;stroke:#147d74;stroke-width:3}@media(prefers-color-scheme:dark){.bg{fill:#071827}.heading,.title,.label{fill:#edf6ff}.small{fill:#b9cce0}.panel,.caption{fill:#0d253a}.panel{stroke:#78aee8}.outer{fill:#16283a;stroke:#9eb3c7}.middle{fill:#102d48;stroke:#78aee8}.core{fill:#0b302f;stroke:#55c7b8}.accent{fill:#3a2b0d;stroke:#e9b75c}.line{stroke:#82b7ee}.arrow-fill{fill:#82b7ee}.caption{stroke:#55c7b8}}
+  </style>
+  <rect class="bg" width="1400" height="900" rx="24"/><text class="heading" x="60" y="66">架构模式对比：四种视角，一个依赖原则</text><text class="small" x="60" y="104">它们不是互斥产品；可按系统约束组合表达边界、端口和依赖方向</text>
+  <g transform="translate(35 145)"><rect class="panel" width="315" height="560" rx="22"/><text class="title" x="158" y="47" text-anchor="middle">经典四层</text>
+    <rect class="outer" x="35" y="82" width="245" height="82" rx="12"/><text class="label" x="158" y="131" text-anchor="middle">用户界面层</text>
+    <rect class="middle" x="35" y="187" width="245" height="82" rx="12"/><text class="label" x="158" y="236" text-anchor="middle">应用层</text>
+    <rect class="core" x="35" y="292" width="245" height="82" rx="12"/><text class="label" x="158" y="341" text-anchor="middle">领域层 · 业务核心</text>
+    <rect class="outer" x="35" y="397" width="245" height="82" rx="12"/><text class="label" x="158" y="446" text-anchor="middle">基础设施层</text>
+    <path class="line" d="M158 164V179M158 269V284M158 397V382"/><text class="small" x="158" y="523" text-anchor="middle">重点：职责分层</text></g>
+  <g transform="translate(370 145)"><rect class="panel" width="315" height="560" rx="22"/><text class="title" x="158" y="47" text-anchor="middle">六边形架构</text>
+    <path class="outer" d="M158 90L265 150V280L158 340 51 280V150Z"/><path class="middle" d="M158 135L225 174V256L158 295 91 256V174Z"/><circle class="core" cx="158" cy="215" r="48"/>
+    <text class="label" x="158" y="221" text-anchor="middle">领域核心</text><text class="small" x="158" y="378" text-anchor="middle">端口在边界</text><text class="small" x="158" y="412" text-anchor="middle">适配器连接外部</text>
+    <rect class="accent" x="55" y="449" width="205" height="52" rx="12"/><text class="label" x="158" y="482" text-anchor="middle">Ports &amp; Adapters</text><text class="small" x="158" y="536" text-anchor="middle">重点：内外隔离</text></g>
+  <g transform="translate(705 145)"><rect class="panel" width="315" height="560" rx="22"/><text class="title" x="158" y="47" text-anchor="middle">洋葱架构</text>
+    <circle class="outer" cx="158" cy="220" r="132"/><circle class="middle" cx="158" cy="220" r="94"/><circle class="core" cx="158" cy="220" r="54"/>
+    <text class="label" x="158" y="226" text-anchor="middle">领域模型</text><text class="small" x="158" y="357" text-anchor="middle">基础设施 / UI</text><text class="small" x="158" y="391" text-anchor="middle">应用服务围绕核心</text>
+    <path class="line" d="M158 340V282M158 166V176"/><text class="small" x="158" y="536" text-anchor="middle">重点：同心依赖</text></g>
+  <g transform="translate(1040 145)"><rect class="panel" width="325" height="560" rx="22"/><text class="title" x="163" y="47" text-anchor="middle">整洁架构</text>
+    <circle class="outer" cx="163" cy="220" r="132"/><circle class="middle" cx="163" cy="220" r="96"/><circle class="accent" cx="163" cy="220" r="65"/><circle class="core" cx="163" cy="220" r="39"/>
+    <text class="label" x="163" y="226" text-anchor="middle">实体</text><text class="small" x="163" y="333" text-anchor="middle">接口适配器</text><text class="small" x="163" y="369" text-anchor="middle">用例围绕实体</text><text class="small" x="163" y="403" text-anchor="middle">框架在最外圈</text>
+    <path class="line" d="M163 344V318M163 155V171"/><text class="small" x="163" y="536" text-anchor="middle">重点：策略层级</text></g>
+  <rect class="caption" x="175" y="760" width="1050" height="95" rx="20"/><text class="title" x="700" y="800" text-anchor="middle">共同原则：依赖指向业务规则</text><text class="small" x="700" y="834" text-anchor="middle">外部机制可替换，业务核心不依赖数据库、Web 框架或消息中间件</text>
+</svg>
