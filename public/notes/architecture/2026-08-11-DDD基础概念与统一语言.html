@@ -7,6 +7,7 @@
   <meta name="color-scheme" content="light dark">
   <meta name="study-category" content="软件架构与 DDD">
   <meta name="study-date" content="2026-08-11">
+  <meta name="study-order" content="2">
   <title>DDD 基础概念与统一语言｜Java 全栈 AI 学习库</title>
   <link rel="stylesheet" href="../../assets/style.css">
   <script defer src="../../assets/app.js"></script>
@@ -34,7 +35,7 @@
       <a class="sidebar-featured-link" href="2026-08-11-DDD架构总览与学习路线.html">分类主目录<span>DDD 架构总览与学习路线</span></a>
     </div>
     <nav class="doc-nav" aria-label="当前分类文档">
-      <a class="doc-nav-item" href="2026-08-11-DDD订单领域Java实践.html"><span>DDD 订单领域 Java 21 完整实践</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD分层架构模式对比.html"><span>DDD 分层架构模式对比</span><small>2026-08-11</small></a><a class="doc-nav-item is-active" href="2026-08-11-DDD基础概念与统一语言.html" aria-current="page"><span>DDD 基础概念与统一语言</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD架构总览与学习路线.html"><span>DDD 架构总览与学习路线</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD落地演进与常见误区.html"><span>DDD 落地演进与常见误区</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD战略设计与限界上下文.html"><span>DDD 战略设计与限界上下文</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD战术设计与领域模型.html"><span>DDD 战术设计与领域模型</span><small>2026-08-11</small></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD架构总览与学习路线.html"><span>DDD 架构总览与学习路线</span><small>2026-08-11</small></a><a class="doc-nav-item is-active" href="2026-08-11-DDD基础概念与统一语言.html" aria-current="page"><span>DDD 基础概念与统一语言</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD战略设计与限界上下文.html"><span>DDD 战略设计与限界上下文</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD战术设计与领域模型.html"><span>DDD 战术设计与领域模型</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD分层架构模式对比.html"><span>DDD 分层架构模式对比</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD订单领域Java实践.html"><span>DDD 订单领域 Java 21 完整实践</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD落地演进与常见误区.html"><span>DDD 落地演进与常见误区</span><small>2026-08-11</small></a>
     </nav>
   </aside>
   <main class="article-column">
@@ -78,7 +79,7 @@
 
       <h2 id="统一语言">统一语言</h2>
       <p><strong>来源定义：</strong>Ubiquitous Language 是开发者和领域专家围绕模型共同建立的严格语言。<a href="https://martinfowler.com/bliki/UbiquitousLanguage.html" target="_blank" rel="noopener noreferrer">Fowler 的原文说明</a>强调语言要在与领域专家的对话中接受检验，并随理解增长而演化。它“无处不在”的范围包括日常讨论、场景示例、需求规则、测试名、类与方法，而不只是 Wiki 中的一张词汇表。</p>
-      <figure>
+      <figure class="diagram-figure" tabindex="0" aria-label="图示；窄屏可横向滚动查看完整内容">
         <img src="../../assets/ddd/ubiquitous-language-loop.svg" alt="业务对话、具体示例与不变量、领域模型、测试与代码、运行反馈依次循环并修订统一语言的反馈闭环图">
         <figcaption>统一语言反馈闭环：语言用于表达模型，也在对话、代码和反馈中被持续检验。</figcaption>
       </figure>
@@ -193,7 +194,7 @@ final class OrderCannotBeSubmitted extends IllegalStateException {
         <li>方法使用业务动作：<code>submit()</code>、<code>confirmPrice()</code>、<code>cancel(reason)</code>，避免用 <code>update()</code> 掩盖多种规则。</li>
         <li>状态和失败使用领域词：<code>DRAFT</code>、<code>OrderCannotBeSubmitted</code>；失败应告诉调用者违反了哪条业务前置条件。</li>
         <li>同一词在不同上下文含义不同时，用边界隔离模型，不用一个“超级枚举”统一全部含义。</li>
-        <li>领域类型保持普通 Java，不在其中放 Spring MVC、JPA 或消息框架注解；适配器负责技术转换。</li>
+        <li><strong>本系列架构/实践建议：</strong>领域类型保持普通 Java，不在其中放 Spring MVC、JPA 或消息框架注解；适配器负责技术转换。这是本系列为可测试性与依赖隔离选择的工程策略，不是 DDD 的通用定义。</li>
       </ul>
       <h3 id="最小规则测试">最小规则测试（Java 21）</h3>
       <div class="code-block">
@@ -275,8 +276,8 @@ void 只有草稿订单可以提交() {
     <footer class="article-footer">
       <div class="source-path">HTML 页面：<code>notes/architecture/2026-08-11-DDD基础概念与统一语言.html</code></div>
       <nav class="pager" aria-label="上一篇和下一篇">
-        <a class="pager-link previous" href="2026-08-11-DDD分层架构模式对比.html"><small>上一篇</small><span>DDD 分层架构模式对比</span></a>
-        <a class="pager-link next" href="2026-08-11-DDD架构总览与学习路线.html"><small>下一篇</small><span>DDD 架构总览与学习路线</span></a>
+        <a class="pager-link previous" href="2026-08-11-DDD架构总览与学习路线.html"><small>上一篇</small><span>DDD 架构总览与学习路线</span></a>
+        <a class="pager-link next" href="2026-08-11-DDD战略设计与限界上下文.html"><small>下一篇</small><span>DDD 战略设计与限界上下文</span></a>
       </nav>
     </footer>
   </main>
@@ -288,6 +289,6 @@ void 只有草稿订单可以提交() {
     <a class="back-to-top" href="#">返回顶部 ↑</a>
   </aside>
 </div>
-<div class="mobile-backdrop" hidden></div>
+<div class="sidebar-scrim" aria-hidden="true"></div>
 </body>
 </html>

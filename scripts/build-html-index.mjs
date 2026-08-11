@@ -171,6 +171,11 @@ function extractDocument(outputPath, html) {
   const description =
     metaContent(html, "description") ||
     stripHtml(article).slice(0, 160);
+  const rawStudyOrder = metaContent(html, "study-order").trim();
+  const parsedStudyOrder = rawStudyOrder === "" ? null : Number(rawStudyOrder);
+  const studyOrder = Number.isFinite(parsedStudyOrder) && parsedStudyOrder > 0
+    ? parsedStudyOrder
+    : null;
   const characters = stripHtml(article).replace(/\s/g, "").length;
 
   return {
@@ -180,12 +185,48 @@ function extractDocument(outputPath, html) {
     title,
     category,
     date,
+    studyOrder,
     description,
     headings,
     sectionCount: headings.length,
     characters,
     readingMinutes: Math.max(1, Math.ceil(characters / 500)),
   };
+}
+
+function compareCategoryDocuments(left, right) {
+  if (left.studyOrder !== null && right.studyOrder !== null) {
+    const orderDifference = left.studyOrder - right.studyOrder;
+    if (orderDifference !== 0) return orderDifference;
+  } else if (left.studyOrder !== null) {
+    return -1;
+  } else if (right.studyOrder !== null) {
+    return 1;
+  }
+
+  return left.relativePath.localeCompare(right.relativePath, "zh-CN", {
+    numeric: true,
+  });
+}
+
+function applyCategoryStudyOrder(documents) {
+  const categoryDocuments = new Map();
+  for (const document of documents) {
+    if (!categoryDocuments.has(document.category)) {
+      categoryDocuments.set(document.category, []);
+    }
+    categoryDocuments.get(document.category).push(document);
+  }
+  for (const members of categoryDocuments.values()) {
+    members.sort(compareCategoryDocuments);
+  }
+
+  const categoryIndexes = new Map();
+  return documents.map((document) => {
+    const index = categoryIndexes.get(document.category) ?? 0;
+    categoryIndexes.set(document.category, index + 1);
+    return categoryDocuments.get(document.category)[index];
+  });
 }
 
 function categoryId(category) {
@@ -206,7 +247,9 @@ function categoryId(category) {
 }
 
 function documentsInCategory(documents, category) {
-  return documents.filter((document) => document.category === category);
+  return documents
+    .filter((document) => document.category === category)
+    .sort(compareCategoryDocuments);
 }
 
 function categoryMainDocument(documents) {
@@ -424,6 +467,9 @@ function renderIndex(documents) {
     if (!categories.has(document.category)) categories.set(document.category, []);
     categories.get(document.category).push(document);
   }
+  for (const categoryDocuments of categories.values()) {
+    categoryDocuments.sort(compareCategoryDocuments);
+  }
 
   const totalCharacters = documents.reduce(
     (sum, document) => sum + document.characters,
@@ -556,22 +602,23 @@ async function main() {
     const html = ensureHeadingIds(await fs.readFile(outputPath, "utf8"));
     documents.push(extractDocument(outputPath, html));
   }
+  const orderedDocuments = applyCategoryStudyOrder(documents);
 
-  for (const document of documents) {
+  for (const document of orderedDocuments) {
     await fs.writeFile(
       document.outputPath,
-      updateDocumentHtml(document, documents),
+      updateDocumentHtml(document, orderedDocuments),
       "utf8",
     );
   }
 
   await fs.writeFile(
     indexPath,
-    renderIndex(documents),
+    renderIndex(orderedDocuments),
     "utf8",
   );
 
-  const latestStudyDate = documents
+  const latestStudyDate = orderedDocuments
     .map((document) => document.date)
     .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date))
     .sort()
@@ -580,12 +627,15 @@ async function main() {
     generatedAt: latestStudyDate
       ? `${latestStudyDate}T00:00:00.000Z`
       : "1970-01-01T00:00:00.000Z",
-    documentCount: documents.length,
-    documents: documents.map((document) => ({
+    documentCount: orderedDocuments.length,
+    documents: orderedDocuments.map((document) => ({
       output: document.relativePath,
       title: document.title,
       category: document.category,
       date: document.date,
+      ...(document.studyOrder === null
+        ? {}
+        : { studyOrder: document.studyOrder }),
       sections: document.sectionCount,
     })),
   };
@@ -595,7 +645,7 @@ async function main() {
     "utf8",
   );
 
-  console.log(`已索引 ${documents.length} 篇 HTML 文档。`);
+  console.log(`已索引 ${orderedDocuments.length} 篇 HTML 文档。`);
   console.log(`入口：${indexPath}`);
 }
 

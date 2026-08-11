@@ -1,21 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 860" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="aggregate-title aggregate-desc">
   <title id="aggregate-title">订单聚合的一致性边界</title>
-  <desc id="aggregate-desc">订单聚合边界包含订单根、订单行实体、金额值对象和业务不变量；支付和库存位于边界之外，并通过订单已创建事件异步协作。</desc>
+  <desc id="aggregate-desc">订单聚合边界包含订单根、订单行实体、金额值对象和业务不变量；成功提交后记录内部 OrderSubmitted，应用与集成适配器将其映射为 OrderSubmittedV1 Outbox 消息，再异步投递给 Payment 和 Inventory。</desc>
   <defs><marker id="aggregate-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 10 5 0 10Z" class="arrow-fill"/></marker></defs>
   <style>
     .bg{fill:#f4f8fc}.heading{font:700 36px system-ui,sans-serif;fill:#102a43}.label{font:700 24px system-ui,sans-serif;fill:#102a43}.small{font:600 20px system-ui,sans-serif;fill:#486581}.boundary{fill:#edf9f7;stroke:#147d74;stroke-width:5;stroke-dasharray:14 8}.root{fill:#fff2cf;stroke:#b7791f;stroke-width:4}.entity{fill:#fff;stroke:#1d4e89;stroke-width:3}.value{fill:#e9f2fb;stroke:#1d4e89;stroke-width:3}.outside{fill:#fff;stroke:#64748b;stroke-width:3}.event{fill:#fff2cf;stroke:#b7791f;stroke-width:3}.rule{fill:#fff;stroke:#147d74;stroke-width:3}.line{fill:none;stroke:#1d4e89;stroke-width:4;marker-end:url(#aggregate-arrow)}.async{fill:none;stroke:#b7791f;stroke-width:4;stroke-dasharray:11 8;marker-end:url(#aggregate-arrow)}.arrow-fill{fill:#1d4e89}@media(prefers-color-scheme:dark){.bg{fill:#071827}.heading,.label{fill:#edf6ff}.small{fill:#b9cce0}.boundary{fill:#082b2b;stroke:#55c7b8}.root,.event{fill:#3a2b0d;stroke:#e9b75c}.entity,.rule,.outside{fill:#0d253a}.entity{stroke:#78aee8}.value{fill:#102d48;stroke:#78aee8}.outside{stroke:#9eb3c7}.rule{stroke:#55c7b8}.line{stroke:#82b7ee}.async{stroke:#e9b75c}.arrow-fill{fill:#82b7ee}}
   </style>
-  <rect class="bg" width="1200" height="860" rx="24"/><text class="heading" x="60" y="66">聚合 = 事务一致性边界，而不是对象集合</text><text class="small" x="60" y="104">外部只能通过聚合根发起修改；跨聚合协作优先使用事件和最终一致性</text>
+  <rect class="bg" width="1200" height="860" rx="24"/><text class="heading" x="60" y="66">聚合 = 事务一致性边界，而不是对象集合</text><text class="small" x="60" y="104">聚合只记录内部事实；外部契约由应用/集成边界映射并可靠投递</text>
   <rect class="boundary" x="70" y="150" width="730" height="535" rx="30"/><text class="label" x="105" y="195">Order 聚合边界</text>
   <rect class="root" x="285" y="225" width="300" height="110" rx="20"/><text class="label" x="435" y="269" text-anchor="middle">Order · Aggregate Root</text><text class="small" x="435" y="305" text-anchor="middle">唯一外部修改入口</text>
   <rect class="entity" x="115" y="410" width="260" height="120" rx="18"/><text class="label" x="245" y="458" text-anchor="middle">OrderLine 实体</text><text class="small" x="245" y="494" text-anchor="middle">标识 + 数量行为</text>
   <rect class="value" x="495" y="410" width="250" height="120" rx="18"/><text class="label" x="620" y="458" text-anchor="middle">Money 值对象</text><text class="small" x="620" y="494" text-anchor="middle">金额 + 币种</text>
   <path class="line" d="M360 335L275 402"/><path class="line" d="M510 335L590 402"/>
   <rect class="rule" x="125" y="575" width="620" height="72" rx="16"/><text class="label" x="435" y="607" text-anchor="middle">聚合内不变量</text><text class="small" x="435" y="635" text-anchor="middle">订单总额 = 明细金额之和；已提交订单不能任意改价</text>
-  <rect class="event" x="845" y="305" width="285" height="108" rx="54"/><text class="label" x="987" y="351" text-anchor="middle">OrderCreated</text><text class="small" x="987" y="384" text-anchor="middle">领域事件 · 异步</text>
-  <path class="async" d="M585 280H835"/>
-  <rect class="outside" x="835" y="500" width="150" height="105" rx="18"/><text class="label" x="910" y="548" text-anchor="middle">Payment</text><text class="small" x="910" y="580" text-anchor="middle">外部聚合</text>
-  <rect class="outside" x="1015" y="500" width="150" height="105" rx="18"/><text class="label" x="1090" y="548" text-anchor="middle">Inventory</text><text class="small" x="1090" y="580" text-anchor="middle">外部聚合</text>
-  <path class="async" d="M930 413L914 492"/><path class="async" d="M1040 413L1082 492"/>
+  <rect class="event" x="825" y="180" width="330" height="92" rx="46"/><text class="label" x="990" y="218" text-anchor="middle">OrderSubmitted</text><text class="small" x="990" y="249" text-anchor="middle">内部领域事件 · 提交后记录</text>
+  <path class="line" d="M585 265L815 232"/>
+  <rect class="value" x="825" y="315" width="330" height="92" rx="18"/><text class="label" x="990" y="353" text-anchor="middle">Application / Integration</text><text class="small" x="990" y="384" text-anchor="middle">映射 + 同事务写 Outbox</text>
+  <path class="line" d="M990 272V305"/>
+  <rect class="event" x="825" y="450" width="330" height="92" rx="24"/><text class="label" x="990" y="488" text-anchor="middle">OrderSubmittedV1</text><text class="small" x="990" y="519" text-anchor="middle">外部版本化消息 · 不可变快照</text>
+  <path class="line" d="M990 407V440"/>
+  <rect class="outside" x="825" y="590" width="150" height="92" rx="18"/><text class="label" x="900" y="629" text-anchor="middle">Payment</text><text class="small" x="900" y="660" text-anchor="middle">幂等消费</text>
+  <rect class="outside" x="1005" y="590" width="150" height="92" rx="18"/><text class="label" x="1080" y="629" text-anchor="middle">Inventory</text><text class="small" x="1080" y="660" text-anchor="middle">幂等消费</text>
+  <path class="async" d="M940 542L905 580"/><path class="async" d="M1040 542L1075 580"/>
   <rect class="rule" x="140" y="735" width="920" height="82" rx="18"/><text class="label" x="600" y="770" text-anchor="middle">默认规则：一个事务只修改一个聚合</text><text class="small" x="600" y="800" text-anchor="middle">这是控制耦合与并发冲突的设计启发，不是不可违反的绝对定律</text>
 </svg>

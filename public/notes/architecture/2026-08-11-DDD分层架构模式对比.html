@@ -7,6 +7,7 @@
   <meta name="color-scheme" content="light dark">
   <meta name="study-category" content="软件架构与 DDD">
   <meta name="study-date" content="2026-08-11">
+  <meta name="study-order" content="5">
   <title>DDD 分层架构模式对比｜Java 全栈 AI 学习库</title>
   <link rel="stylesheet" href="../../assets/style.css">
   <script defer src="../../assets/app.js"></script>
@@ -34,7 +35,7 @@
       <a class="sidebar-featured-link" href="2026-08-11-DDD架构总览与学习路线.html">分类主目录<span>DDD 架构总览与学习路线</span></a>
     </div>
     <nav class="doc-nav" aria-label="当前分类文档">
-      <a class="doc-nav-item" href="2026-08-11-DDD订单领域Java实践.html"><span>DDD 订单领域 Java 21 完整实践</span><small>2026-08-11</small></a><a class="doc-nav-item is-active" href="2026-08-11-DDD分层架构模式对比.html" aria-current="page"><span>DDD 分层架构模式对比</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD基础概念与统一语言.html"><span>DDD 基础概念与统一语言</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD架构总览与学习路线.html"><span>DDD 架构总览与学习路线</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD落地演进与常见误区.html"><span>DDD 落地演进与常见误区</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD战略设计与限界上下文.html"><span>DDD 战略设计与限界上下文</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD战术设计与领域模型.html"><span>DDD 战术设计与领域模型</span><small>2026-08-11</small></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD架构总览与学习路线.html"><span>DDD 架构总览与学习路线</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD基础概念与统一语言.html"><span>DDD 基础概念与统一语言</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD战略设计与限界上下文.html"><span>DDD 战略设计与限界上下文</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD战术设计与领域模型.html"><span>DDD 战术设计与领域模型</span><small>2026-08-11</small></a><a class="doc-nav-item is-active" href="2026-08-11-DDD分层架构模式对比.html" aria-current="page"><span>DDD 分层架构模式对比</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD订单领域Java实践.html"><span>DDD 订单领域 Java 21 完整实践</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD落地演进与常见误区.html"><span>DDD 落地演进与常见误区</span><small>2026-08-11</small></a>
     </nav>
   </aside>
   <main class="article-column">
@@ -75,7 +76,7 @@
       <h2 id="先看共同问题">先看共同问题：让 Order 依赖什么</h2>
       <p>想象一个订单提交规则：“草稿订单至少有一行才能提交，提交后不能再改数量。”最危险的写法不是包名少，而是 <code>Order</code> 为了完成规则直接依赖 JPA 实体生命周期、Spring 事务、HTTP 请求或消息 SDK：<code>Order → JPA / Spring / Web</code>。此时改变数据库映射或接口协议，可能迫使业务核心一起修改。</p>
       <p>更稳健的拆分是：<strong>领域模型</strong>决定订单是否合法；<strong>应用用例</strong>协调加载、调用、事务和保存；<strong>输入/输出适配器</strong>翻译 HTTP、CLI、消息、JPA 与外部 API。这样规则仍是普通 Java，技术变化停在边缘。</p>
-      <figure>
+      <figure class="diagram-figure" tabindex="0" aria-label="图示；窄屏可横向滚动查看完整内容">
         <img src="../../assets/ddd/dependency-rule.svg" alt="Web、消息、命令行、数据库和框架经适配器依赖应用用例与领域模型，禁止领域模型反向引用 Spring、JPA 或 Web">
         <figcaption>依赖规则描述源码中的 import 与类型引用；运行时调用可以跨边界往返。</figcaption>
       </figure>
@@ -133,7 +134,7 @@
       <p>跨边界数据应使用内层方便的简单数据结构或专用 DTO；不要把 HTTP Request、JPA Entity、数据库 Row 或框架生成类型传进 Use Case/Entity。最外层出现 <code>@RestController</code>、<code>@Repository</code>、<code>@Entity</code>并没有问题，目标不是“零框架代码”，而是让框架代码停在可替换边缘。</p>
 
       <h3 id="共同点与边界">共同点、差异与图示边界</h3>
-      <figure>
+      <figure class="diagram-figure" tabindex="0" aria-label="图示；窄屏可横向滚动查看完整内容">
         <img src="../../assets/ddd/architecture-comparison.svg" alt="经典四层、六边形、洋葱和整洁架构分别用层叠、内外边界与同心圆表达业务核心和外部技术依赖">
         <figcaption>四种 DDD 友好结构的主视觉：形状不同，共同关注业务规则隔离；传统三层另在比较矩阵中纳入基线。</figcaption>
       </figure>
@@ -390,8 +391,8 @@ public final class ArchitectureExample {
     <footer class="article-footer">
       <div class="source-path">HTML 页面：<code>notes/architecture/2026-08-11-DDD分层架构模式对比.html</code></div>
       <nav class="pager" aria-label="上一篇和下一篇">
-        <a class="pager-link previous" href="2026-08-11-DDD订单领域Java实践.html"><small>上一篇</small><span>DDD 订单领域 Java 21 完整实践</span></a>
-        <a class="pager-link next" href="2026-08-11-DDD基础概念与统一语言.html"><small>下一篇</small><span>DDD 基础概念与统一语言</span></a>
+        <a class="pager-link previous" href="2026-08-11-DDD战术设计与领域模型.html"><small>上一篇</small><span>DDD 战术设计与领域模型</span></a>
+        <a class="pager-link next" href="2026-08-11-DDD订单领域Java实践.html"><small>下一篇</small><span>DDD 订单领域 Java 21 完整实践</span></a>
       </nav>
     </footer>
   </main>
@@ -403,6 +404,6 @@ public final class ArchitectureExample {
     <a class="back-to-top" href="#">返回顶部 ↑</a>
   </aside>
 </div>
-<div class="mobile-backdrop" hidden></div>
+<div class="sidebar-scrim" aria-hidden="true"></div>
 </body>
 </html>

@@ -7,6 +7,7 @@
   <meta name="color-scheme" content="light dark">
   <meta name="study-category" content="软件架构与 DDD">
   <meta name="study-date" content="2026-08-11">
+  <meta name="study-order" content="3">
   <title>DDD 战略设计与限界上下文｜Java 全栈 AI 学习库</title>
   <link rel="stylesheet" href="../../assets/style.css">
   <script defer src="../../assets/app.js"></script>
@@ -34,7 +35,7 @@
       <a class="sidebar-featured-link" href="2026-08-11-DDD架构总览与学习路线.html">分类主目录<span>DDD 架构总览与学习路线</span></a>
     </div>
     <nav class="doc-nav" aria-label="当前分类文档">
-      <a class="doc-nav-item" href="2026-08-11-DDD订单领域Java实践.html"><span>DDD 订单领域 Java 21 完整实践</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD分层架构模式对比.html"><span>DDD 分层架构模式对比</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD基础概念与统一语言.html"><span>DDD 基础概念与统一语言</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD架构总览与学习路线.html"><span>DDD 架构总览与学习路线</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD落地演进与常见误区.html"><span>DDD 落地演进与常见误区</span><small>2026-08-11</small></a><a class="doc-nav-item is-active" href="2026-08-11-DDD战略设计与限界上下文.html" aria-current="page"><span>DDD 战略设计与限界上下文</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD战术设计与领域模型.html"><span>DDD 战术设计与领域模型</span><small>2026-08-11</small></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD架构总览与学习路线.html"><span>DDD 架构总览与学习路线</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD基础概念与统一语言.html"><span>DDD 基础概念与统一语言</span><small>2026-08-11</small></a><a class="doc-nav-item is-active" href="2026-08-11-DDD战略设计与限界上下文.html" aria-current="page"><span>DDD 战略设计与限界上下文</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD战术设计与领域模型.html"><span>DDD 战术设计与领域模型</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD分层架构模式对比.html"><span>DDD 分层架构模式对比</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD订单领域Java实践.html"><span>DDD 订单领域 Java 21 完整实践</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD落地演进与常见误区.html"><span>DDD 落地演进与常见误区</span><small>2026-08-11</small></a>
     </nav>
   </aside>
   <main class="article-column">
@@ -87,7 +88,7 @@
       <h2 id="限界上下文">限界上下文</h2>
       <p><strong>来源定义：</strong>限界上下文明确规定一套模型在哪里被定义和适用。边界内，术语、规则和代码表达应保持一致；跨出边界，同名概念可以拥有另一套属性、生命周期与约束。比如订单上下文的“商品”是下单时锁定的名称和成交价快照，商品目录上下文的“商品”则关心分类、展示素材与搜索属性。二者映射的是同一现实商品，却不是同一个模型对象。</p>
       <p>边界通常在语言转义、业务不变量、数据责任或变化原因发生明显改变时出现。试图让订单、目录、仓储和财务共用一个企业级 <code>Product</code>，会积累大量可空字段、条件分支与跨团队发布协调。Fowler 指出，大型领域维持一个统一模型通常既不可行也不经济；合理目标是在每个显式边界内保持一致，并让边界间翻译可见。</p>
-      <figure>
+      <figure class="diagram-figure" tabindex="0" aria-label="图示；窄屏可横向滚动查看完整内容">
         <img src="../../assets/ddd/subdomain-context-boundaries.svg" alt="问题空间中的核心订单履约、支撑库存和通用通知子域，与解决方案中的订单、支付、库存和商品目录限界上下文之间的非一一对应关系">
         <figcaption>子域与限界上下文：前者分析业务问题，后者承载一套可实现的模型与语言。</figcaption>
       </figure>
@@ -129,7 +130,7 @@
         </table>
       </div>
       <p><strong>来源定义与边界：</strong>Evans 的 DDD Reference 将 Partnership 定义为双方共同成败的协作，将 Shared Kernel 限定为小而共同治理的模型子集，并区分下游的 Conformist/ACL 与上游的 OHS/PL。<a href="https://contextmapper.org/docs/language-model/" target="_blank" rel="noopener noreferrer">Context Mapper 官方语义规则</a>进一步校验了角色方向：ACL 与 Conformist 是替代性的下游选择，OHS 与 Published Language 是上游角色。OHS 定义“怎样以服务协议开放能力”，Published Language 定义“交换信息用哪套文档化语言”；二者常组合，却不是同一个模式。</p>
-      <figure>
+      <figure class="diagram-figure" tabindex="0" aria-label="图示；窄屏可横向滚动查看完整内容">
         <img src="../../assets/ddd/context-map.svg" alt="订单、支付、库存与商品目录限界上下文的上下游关系，以及客户供应商、防腐层、遵奉者、开放主机服务和发布语言模式">
         <figcaption>订单上下文映射：箭头从上游指向下游，关系标签记录治理与翻译策略。</figcaption>
       </figure>
@@ -153,10 +154,11 @@
       <ol>
         <li>Order 需要商品信息时，调用 Product Catalog 的开放服务；目录发布语言里可能叫 <code>listedPrice</code> 与 <code>displayName</code>。</li>
         <li>Order 下游的 ACL 检验商品是否可下单，并翻译为订单语言里的商品标识、下单名称和单位价格快照。ACL 保护的是订单模型和决策，不只是机械复制 DTO 字段。</li>
-        <li>订单聚合在自己的边界内创建并记录 <code>OrderCreated</code> 领域事件。它是订单模型中已经发生的事实，不要求此刻已经发送到消息代理。</li>
-        <li>事务提交后，应用/集成适配器把必要信息转换为版本化的集成消息，再交给 Inventory 等下游。外部消息要处理序列化、兼容、重试与幂等，不应直接泄漏内部领域对象。</li>
+        <li><code>Order.create</code>只建立 Draft；聚合验证非空、金额/币种等不变量并成功进入 Submitted 后，才在自己的边界内记录内部 <code>OrderSubmitted</code>。</li>
+        <li>应用层保存聚合并拉取事件；集成适配器将其不可变快照映射为 <code>OrderSubmittedV1</code>（订单 ID、发生时间、总额/币种、商品与数量），与业务状态同事务写入 Outbox。</li>
+        <li>事务提交后 relay 以至少一次语义向 Payment、Inventory 等下游投递；消费者按消息 ID 幂等。聚合不发送网络消息，rehydrate 也不补发历史事件。</li>
       </ol>
-      <p><strong>关键区别：</strong><code>OrderCreated</code> 领域事件服务于 Order 上下文内部模型；跨边界发布的消息服务于上下文之间的契约。二者可以来源于同一业务事实，却可能有不同名称、字段、版本和发布时间。把领域事件对象直接序列化到消息总线，会把内部演进权交给所有消费者。</p>
+      <p><strong>关键区别：</strong><code>OrderSubmitted</code>服务于 Order 上下文内部模型；<code>OrderSubmittedV1</code>服务于上下文之间的版本化契约。二者来源于同一次成功提交，但不是同一对象，也有不同字段、生命周期和兼容责任。把领域事件对象直接序列化到消息总线，会把内部演进权交给所有消费者。</p>
 
       <h2 id="java工程映射">Java 工程映射</h2>
       <p>下面是可选的工程翻译，不是 DDD 定义。一个限界上下文可以对应 Maven module、Java module 或受架构测试约束的 package；公共 API/事件承载 Published Language；调用上游的端口和适配器可实现 ACL。团队和部署可以与模型边界对齐，但没有“一上下文一微服务一数据库”的强制公式。</p>
@@ -274,7 +276,7 @@ final class CatalogAclAdapter implements ProductCatalogPort {
     <footer class="article-footer">
       <div class="source-path">HTML 页面：<code>notes/architecture/2026-08-11-DDD战略设计与限界上下文.html</code></div>
       <nav class="pager" aria-label="上一篇和下一篇">
-        <a class="pager-link previous" href="2026-08-11-DDD落地演进与常见误区.html"><small>上一篇</small><span>DDD 落地演进与常见误区</span></a>
+        <a class="pager-link previous" href="2026-08-11-DDD基础概念与统一语言.html"><small>上一篇</small><span>DDD 基础概念与统一语言</span></a>
         <a class="pager-link next" href="2026-08-11-DDD战术设计与领域模型.html"><small>下一篇</small><span>DDD 战术设计与领域模型</span></a>
       </nav>
     </footer>
@@ -287,6 +289,6 @@ final class CatalogAclAdapter implements ProductCatalogPort {
     <a class="back-to-top" href="#">返回顶部 ↑</a>
   </aside>
 </div>
-<div class="mobile-backdrop" hidden></div>
+<div class="sidebar-scrim" aria-hidden="true"></div>
 </body>
 </html>

@@ -108,45 +108,27 @@
       "sections": 13
     },
     {
-      "output": "notes/architecture/2026-08-11-DDD订单领域Java实践.html",
-      "title": "DDD 订单领域 Java 21 完整实践",
+      "output": "notes/architecture/2026-08-11-DDD架构总览与学习路线.html",
+      "title": "DDD 架构总览与学习路线",
       "category": "软件架构与 DDD",
       "date": "2026-08-11",
-      "sections": 21
-    },
-    {
-      "output": "notes/architecture/2026-08-11-DDD分层架构模式对比.html",
-      "title": "DDD 分层架构模式对比",
-      "category": "软件架构与 DDD",
-      "date": "2026-08-11",
-      "sections": 20
+      "studyOrder": 1,
+      "sections": 12
     },
     {
       "output": "notes/architecture/2026-08-11-DDD基础概念与统一语言.html",
       "title": "DDD 基础概念与统一语言",
       "category": "软件架构与 DDD",
       "date": "2026-08-11",
+      "studyOrder": 2,
       "sections": 15
-    },
-    {
-      "output": "notes/architecture/2026-08-11-DDD架构总览与学习路线.html",
-      "title": "DDD 架构总览与学习路线",
-      "category": "软件架构与 DDD",
-      "date": "2026-08-11",
-      "sections": 12
-    },
-    {
-      "output": "notes/architecture/2026-08-11-DDD落地演进与常见误区.html",
-      "title": "DDD 落地演进与常见误区",
-      "category": "软件架构与 DDD",
-      "date": "2026-08-11",
-      "sections": 22
     },
     {
       "output": "notes/architecture/2026-08-11-DDD战略设计与限界上下文.html",
       "title": "DDD 战略设计与限界上下文",
       "category": "软件架构与 DDD",
       "date": "2026-08-11",
+      "studyOrder": 3,
       "sections": 14
     },
     {
@@ -154,7 +136,32 @@
       "title": "DDD 战术设计与领域模型",
       "category": "软件架构与 DDD",
       "date": "2026-08-11",
+      "studyOrder": 4,
       "sections": 13
+    },
+    {
+      "output": "notes/architecture/2026-08-11-DDD分层架构模式对比.html",
+      "title": "DDD 分层架构模式对比",
+      "category": "软件架构与 DDD",
+      "date": "2026-08-11",
+      "studyOrder": 5,
+      "sections": 20
+    },
+    {
+      "output": "notes/architecture/2026-08-11-DDD订单领域Java实践.html",
+      "title": "DDD 订单领域 Java 21 完整实践",
+      "category": "软件架构与 DDD",
+      "date": "2026-08-11",
+      "studyOrder": 6,
+      "sections": 21
+    },
+    {
+      "output": "notes/architecture/2026-08-11-DDD落地演进与常见误区.html",
+      "title": "DDD 落地演进与常见误区",
+      "category": "软件架构与 DDD",
+      "date": "2026-08-11",
+      "studyOrder": 7,
+      "sections": 22
     },
     {
       "output": "notes/codex/2026-07-24-AI开发工作流选型与小团队沉淀指南.html",

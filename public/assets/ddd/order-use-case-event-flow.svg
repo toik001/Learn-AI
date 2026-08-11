@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 860" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="orderflow-title orderflow-desc">
-  <title id="orderflow-title">创建订单用例与领域事件流</title>
-  <desc id="orderflow-desc">同步命令从 HTTP 适配器进入创建订单用例，调用订单聚合和仓储端口，再由持久化适配器保存；订单已创建事件通过事件发布端口异步通知支付和库存消费者。</desc>
+  <title id="orderflow-title">提交订单用例、内部事件与集成消息流</title>
+  <desc id="orderflow-desc">同步命令从 HTTP 适配器进入创建订单用例，订单聚合通过不变量后提交并由仓储保存；内部 OrderSubmitted 经应用与集成适配器映射为带快照的 OrderSubmittedV1 Outbox 意图，事务提交后至少一次投递给 Payment 与 Inventory 幂等消费者。</desc>
   <defs>
     <marker id="orderflow-sync-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 10 5 0 10Z" class="arrow-fill"/></marker>
     <marker id="orderflow-async-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 10 5 0 10Z" class="amber-fill"/></marker>
@@ -8,19 +8,20 @@
   <style>
     .bg{fill:#f4f8fc}.heading{font:700 36px system-ui,sans-serif;fill:#102a43}.section{font:700 26px system-ui,sans-serif;fill:#102a43}.label{font:700 21px system-ui,sans-serif;fill:#102a43}.small{font:600 20px system-ui,sans-serif;fill:#486581}.adapter{fill:#edf2f7;stroke:#64748b;stroke-width:3}.app{fill:#e9f2fb;stroke:#1d4e89;stroke-width:3}.domain{fill:#e4f5f3;stroke:#147d74;stroke-width:4}.port{fill:#fff;stroke:#1d4e89;stroke-width:3;stroke-dasharray:9 6}.event{fill:#fff2cf;stroke:#b7791f;stroke-width:3}.sync{fill:none;stroke:#1d4e89;stroke-width:4;marker-end:url(#orderflow-sync-arrow)}.async{fill:none;stroke:#b7791f;stroke-width:4;stroke-dasharray:11 8;marker-end:url(#orderflow-async-arrow)}.arrow-fill{fill:#1d4e89}.amber-fill{fill:#b7791f}.lane{fill:#fff;stroke:#829ab1;stroke-width:2}@media(prefers-color-scheme:dark){.bg{fill:#071827}.heading,.section,.label{fill:#edf6ff}.small{fill:#b9cce0}.adapter{fill:#16283a;stroke:#9eb3c7}.app{fill:#102d48;stroke:#78aee8}.domain{fill:#0b302f;stroke:#55c7b8}.port,.lane{fill:#0d253a;stroke:#78aee8}.event{fill:#3a2b0d;stroke:#e9b75c}.sync{stroke:#82b7ee}.async{stroke:#e9b75c}.arrow-fill{fill:#82b7ee}.amber-fill{fill:#e9b75c}}
   </style>
-  <rect class="bg" width="1400" height="860" rx="24"/><text class="heading" x="60" y="66">创建订单：同步命令完成一个聚合事务，事件异步扩散</text><text class="small" x="60" y="104">端口属于内层契约；适配器负责把具体协议和基础设施接到用例</text>
+  <rect class="bg" width="1400" height="860" rx="24"/><text class="heading" x="60" y="66">提交订单：内部事实映射为独立的外部契约</text><text class="small" x="60" y="104">聚合不联网；应用层保存状态并在同一事务写 Outbox，relay 至少一次投递</text>
   <rect class="lane" x="45" y="145" width="1310" height="250" rx="24"/><text class="section" x="72" y="185">同步命令处理</text>
   <g transform="translate(70 225)"><rect class="adapter" width="200" height="105" rx="18"/><text class="label" x="100" y="45" text-anchor="middle">HTTP Adapter</text><text class="small" x="100" y="77" text-anchor="middle">DTO / 校验</text>
     <rect class="app" x="255" width="230" height="105" rx="18"/><text class="label" x="370" y="45" text-anchor="middle">CreateOrderUseCase</text><text class="small" x="370" y="77" text-anchor="middle">事务与流程编排</text>
-    <rect class="domain" x="540" width="210" height="105" rx="18"/><text class="label" x="645" y="45" text-anchor="middle">Order 聚合</text><text class="small" x="645" y="77" text-anchor="middle">规则与不变量</text>
+    <rect class="domain" x="540" width="210" height="105" rx="18"/><text class="label" x="645" y="45" text-anchor="middle">Order.submit</text><text class="small" x="645" y="77" text-anchor="middle">校验 → SUBMITTED</text>
     <rect class="port" x="805" width="210" height="105" rx="18"/><text class="label" x="910" y="43" text-anchor="middle">OrderRepository</text><text class="small" x="910" y="77" text-anchor="middle">输出端口</text>
     <rect class="adapter" x="1070" width="210" height="105" rx="18"/><text class="label" x="1175" y="43" text-anchor="middle">Persistence</text><text class="small" x="1175" y="77" text-anchor="middle">Adapter</text>
     <path class="sync" d="M200 52H247"/><path class="sync" d="M485 52H532"/><path class="sync" d="M750 52H797"/><path class="sync" d="M1015 52H1062"/></g>
-  <rect class="lane" x="45" y="440" width="1310" height="280" rx="24"/><text class="section" x="72" y="480">异步事件反应</text>
-  <rect class="event" x="285" y="530" width="220" height="105" rx="52"/><text class="label" x="395" y="574" text-anchor="middle">OrderCreated</text><text class="small" x="395" y="607" text-anchor="middle">业务事实</text>
-  <rect class="port" x="585" y="530" width="230" height="105" rx="18"/><text class="label" x="700" y="574" text-anchor="middle">Event Publisher</text><text class="small" x="700" y="607" text-anchor="middle">输出端口</text>
-  <rect class="adapter" x="900" y="500" width="205" height="95" rx="18"/><text class="label" x="1002" y="542" text-anchor="middle">支付消费者</text><text class="small" x="1002" y="574" text-anchor="middle">启动支付</text>
-  <rect class="adapter" x="900" y="625" width="205" height="95" rx="18"/><text class="label" x="1002" y="667" text-anchor="middle">库存消费者</text><text class="small" x="1002" y="699" text-anchor="middle">预占库存</text>
-  <path class="async" d="M610 330C610 430 395 435 395 522"/><path class="async" d="M505 582H577"/><path class="async" d="M815 565L892 548"/><path class="async" d="M815 600L892 670"/>
-  <g transform="translate(240 770)"><path class="sync" d="M0 0H95"/><text class="small" x="110" y="7">实线：同步调用 / 当前事务</text><path class="async" d="M505 0H600"/><text class="small" x="615" y="7">虚线：异步事件 / 独立事务</text></g>
+  <rect class="lane" x="45" y="440" width="1310" height="300" rx="24"/><text class="section" x="72" y="480">内部事件 → 映射 / Outbox → 外部消息 → 幂等消费者</text>
+  <rect class="event" x="145" y="545" width="220" height="110" rx="52"/><text class="label" x="255" y="589" text-anchor="middle">OrderSubmitted</text><text class="small" x="255" y="622" text-anchor="middle">内部事实 · 不可变快照</text>
+  <rect class="app" x="435" y="545" width="245" height="110" rx="18"/><text class="label" x="557" y="587" text-anchor="middle">Application / Integration</text><text class="small" x="557" y="620" text-anchor="middle">映射 + 同事务写入</text>
+  <rect class="event" x="750" y="545" width="260" height="110" rx="22"/><text class="label" x="880" y="589" text-anchor="middle">OrderSubmittedV1</text><text class="small" x="880" y="622" text-anchor="middle">版本化消息 · Outbox 意图</text>
+  <rect class="adapter" x="1100" y="500" width="205" height="95" rx="18"/><text class="label" x="1202" y="542" text-anchor="middle">Payment</text><text class="small" x="1202" y="574" text-anchor="middle">按 messageId 幂等</text>
+  <rect class="adapter" x="1100" y="625" width="205" height="95" rx="18"/><text class="label" x="1202" y="667" text-anchor="middle">Inventory</text><text class="small" x="1202" y="699" text-anchor="middle">按 messageId 幂等</text>
+  <path class="sync" d="M715 330C715 430 255 435 255 537"/><path class="sync" d="M365 600H427"/><path class="sync" d="M680 600H742"/><path class="async" d="M1010 579L1092 550"/><path class="async" d="M1010 621L1092 672"/>
+  <g transform="translate(220 790)"><path class="sync" d="M0 0H95"/><text class="small" x="110" y="7">实线：当前事务内提交、映射与 Outbox 写入</text><path class="async" d="M650 0H745"/><text class="small" x="760" y="7">虚线：提交后至少一次投递</text></g>
 </svg>

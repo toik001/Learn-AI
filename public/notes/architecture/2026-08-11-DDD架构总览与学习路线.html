@@ -7,6 +7,7 @@
   <meta name="color-scheme" content="light dark">
   <meta name="study-category" content="软件架构与 DDD">
   <meta name="study-date" content="2026-08-11">
+  <meta name="study-order" content="1">
   <title>DDD 架构总览与学习路线｜Java 全栈 AI 学习库</title>
   <link rel="stylesheet" href="../../assets/style.css">
   <script defer src="../../assets/app.js"></script>
@@ -34,7 +35,7 @@
       <a class="sidebar-featured-link" href="2026-08-11-DDD架构总览与学习路线.html">分类主目录<span>DDD 架构总览与学习路线</span></a>
     </div>
     <nav class="doc-nav" aria-label="当前分类文档">
-      <a class="doc-nav-item" href="2026-08-11-DDD订单领域Java实践.html"><span>DDD 订单领域 Java 21 完整实践</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD分层架构模式对比.html"><span>DDD 分层架构模式对比</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD基础概念与统一语言.html"><span>DDD 基础概念与统一语言</span><small>2026-08-11</small></a><a class="doc-nav-item is-active" href="2026-08-11-DDD架构总览与学习路线.html" aria-current="page"><span>DDD 架构总览与学习路线</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD落地演进与常见误区.html"><span>DDD 落地演进与常见误区</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD战略设计与限界上下文.html"><span>DDD 战略设计与限界上下文</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD战术设计与领域模型.html"><span>DDD 战术设计与领域模型</span><small>2026-08-11</small></a>
+      <a class="doc-nav-item is-active" href="2026-08-11-DDD架构总览与学习路线.html" aria-current="page"><span>DDD 架构总览与学习路线</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD基础概念与统一语言.html"><span>DDD 基础概念与统一语言</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD战略设计与限界上下文.html"><span>DDD 战略设计与限界上下文</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD战术设计与领域模型.html"><span>DDD 战术设计与领域模型</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD分层架构模式对比.html"><span>DDD 分层架构模式对比</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD订单领域Java实践.html"><span>DDD 订单领域 Java 21 完整实践</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD落地演进与常见误区.html"><span>DDD 落地演进与常见误区</span><small>2026-08-11</small></a>
     </nav>
   </aside>
   <main class="article-column">
@@ -69,10 +70,10 @@
         <li>统一语言连接业务对话、示例、测试和代码；语言一旦含混，模型与实现通常也会含混。</li>
         <li>DDD 应按业务复杂度选择性使用。简单 CRUD 可以保持简单，复杂且持续变化的规则才更能体现领域模型的收益。</li>
       </ul>
-      <p><strong>来源定义：</strong>Eric Evans 的 <a href="https://www.domainlanguage.com/ddd/reference/" target="_blank" rel="noopener noreferrer">DDD Reference</a>汇总了原著中的定义与模式；Martin Fowler 将 DDD 的核心概括为复杂领域中的统一语言、可演化的软件模型与战略边界。<strong>工程解释：</strong>对 Java 开发者而言，重点不是先建多少包，而是先让代码中的名词、动作和规则能够接受业务人员检验。</p>
+      <p><strong>来源定义：</strong>Eric Evans 的 <a href="https://www.domainlanguage.com/ddd/reference/" target="_blank" rel="noopener noreferrer">DDD Reference</a>汇总了原著中的定义与模式；<a href="https://martinfowler.com/bliki/DomainDrivenDesign.html" target="_blank" rel="noopener noreferrer">Martin Fowler 的 DDD 概览</a>将其核心概括为复杂领域中的统一语言、可演化的软件模型与战略边界。<strong>工程解释：</strong>对 Java 开发者而言，重点不是先建多少包，而是先让代码中的名词、动作和规则能够接受业务人员检验。</p>
 
       <h2 id="ddd全景">DDD 全景</h2>
-      <figure>
+      <figure class="diagram-figure" tabindex="0" aria-label="图示；窄屏可横向滚动查看完整内容">
         <img src="../../assets/ddd/ddd-landscape.svg" alt="DDD 从问题空间、子域和限界上下文，到统一语言、领域模型、战术构件以及应用与适配器实现的全景图">
         <figcaption>DDD 全景：先理解业务问题，再划定模型边界，最后选择实现结构。</figcaption>
       </figure>
@@ -109,7 +110,7 @@
       <p><strong>实践建议：</strong>上表是工程翻译而非来源定义。Alistair Cockburn 的<a href="https://alistair.cockburn.us/hexagonal-architecture" target="_blank" rel="noopener noreferrer">六边形架构原文</a>把端口描述为有目的的交互边界、把适配器描述为技术转换；团队可以用它隔离技术细节，也可以选择其他同样能保护领域模型的结构。</p>
 
       <h2 id="七篇学习路线">七篇学习路线</h2>
-      <figure>
+      <figure class="diagram-figure" tabindex="0" aria-label="图示；窄屏可横向滚动查看完整内容">
         <img src="../../assets/ddd/ddd-learning-roadmap.svg" alt="从 DDD 总览、基础语言、战略设计、战术设计、架构对比、Java 订单实践到落地演进的七步学习路线图">
         <figcaption>七篇路线：概念与语言奠基，战略到战术，再进入架构和 Java 实践。</figcaption>
       </figure>
@@ -198,8 +199,8 @@
     <footer class="article-footer">
       <div class="source-path">HTML 页面：<code>notes/architecture/2026-08-11-DDD架构总览与学习路线.html</code></div>
       <nav class="pager" aria-label="上一篇和下一篇">
-        <a class="pager-link previous" href="2026-08-11-DDD基础概念与统一语言.html"><small>上一篇</small><span>DDD 基础概念与统一语言</span></a>
-        <a class="pager-link next" href="2026-08-11-DDD落地演进与常见误区.html"><small>下一篇</small><span>DDD 落地演进与常见误区</span></a>
+        <span class="pager-spacer"></span>
+        <a class="pager-link next" href="2026-08-11-DDD基础概念与统一语言.html"><small>下一篇</small><span>DDD 基础概念与统一语言</span></a>
       </nav>
     </footer>
   </main>
@@ -211,6 +212,6 @@
     <a class="back-to-top" href="#">返回顶部 ↑</a>
   </aside>
 </div>
-<div class="mobile-backdrop" hidden></div>
+<div class="sidebar-scrim" aria-hidden="true"></div>
 </body>
 </html>

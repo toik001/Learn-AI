@@ -7,6 +7,7 @@
   <meta name="color-scheme" content="light dark">
   <meta name="study-category" content="软件架构与 DDD">
   <meta name="study-date" content="2026-08-11">
+  <meta name="study-order" content="7">
   <title>DDD 落地演进与常见误区｜Java 全栈 AI 学习库</title>
   <link rel="stylesheet" href="../../assets/style.css">
   <script defer src="../../assets/app.js"></script>
@@ -34,7 +35,7 @@
       <a class="sidebar-featured-link" href="2026-08-11-DDD架构总览与学习路线.html">分类主目录<span>DDD 架构总览与学习路线</span></a>
     </div>
     <nav class="doc-nav" aria-label="当前分类文档">
-      <a class="doc-nav-item" href="2026-08-11-DDD订单领域Java实践.html"><span>DDD 订单领域 Java 21 完整实践</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD分层架构模式对比.html"><span>DDD 分层架构模式对比</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD基础概念与统一语言.html"><span>DDD 基础概念与统一语言</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD架构总览与学习路线.html"><span>DDD 架构总览与学习路线</span><small>2026-08-11</small></a><a class="doc-nav-item is-active" href="2026-08-11-DDD落地演进与常见误区.html" aria-current="page"><span>DDD 落地演进与常见误区</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD战略设计与限界上下文.html"><span>DDD 战略设计与限界上下文</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD战术设计与领域模型.html"><span>DDD 战术设计与领域模型</span><small>2026-08-11</small></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD架构总览与学习路线.html"><span>DDD 架构总览与学习路线</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD基础概念与统一语言.html"><span>DDD 基础概念与统一语言</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD战略设计与限界上下文.html"><span>DDD 战略设计与限界上下文</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD战术设计与领域模型.html"><span>DDD 战术设计与领域模型</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD分层架构模式对比.html"><span>DDD 分层架构模式对比</span><small>2026-08-11</small></a><a class="doc-nav-item" href="2026-08-11-DDD订单领域Java实践.html"><span>DDD 订单领域 Java 21 完整实践</span><small>2026-08-11</small></a><a class="doc-nav-item is-active" href="2026-08-11-DDD落地演进与常见误区.html" aria-current="page"><span>DDD 落地演进与常见误区</span><small>2026-08-11</small></a>
     </nav>
   </aside>
   <main class="article-column">
@@ -118,7 +119,7 @@
         <pre><code>com.example.shop/
   order/
     OrderFacade.java              // 对其他模块公开的同步契约
-    OrderSubmitted.java           // 明确的应用事件契约
+    OrderSubmittedV1.java         // 由内部 OrderSubmitted 映射的版本化边界契约
     internal/                     // 聚合、用例、仓储实现
   payment/
     PaymentFacade.java
@@ -197,7 +198,7 @@
         <li><strong>Saga / Process Manager：</strong><a href="https://microservices.io/patterns/data/saga.html" target="_blank" rel="noopener noreferrer">Richardson 的 Saga 模式</a>把跨服务业务事务组织为一系列本地事务，可用事件编舞或编排器协调，失败时执行显式补偿。补偿是新的业务动作，不是数据库自动回滚；它也不能替代合理的聚合边界。</li>
         <li><strong>Event Sourcing：</strong><a href="https://martinfowler.com/eaaDev/EventSourcing.html" target="_blank" rel="noopener noreferrer">Fowler 的原始模式说明</a>把应用状态变化保存为事件序列并可由序列重建状态。它不是“保存每条 Kafka 集成消息”，也不等于审计日志；事件存储是所应用区域的事实源。</li>
         <li><strong>独立选择：</strong>可以用 CQRS + 当前状态存储，也可以使用事件溯源而不把每个查询拆成独立服务；Event Sourcing <strong>不是 DDD 必需品</strong>。Microsoft 的 <a href="https://learn.microsoft.com/en-us/azure/architecture/patterns/event-sourcing" target="_blank" rel="noopener noreferrer">Event Sourcing 模式指南</a>明确提醒，事件版本/坏历史迁移、长流重建、幂等投影和不可变事件中的个人数据删除都需要提前设计。</li>
-        <li><strong>事件边界：</strong>领域事件是模型内部对已发生业务事实的表达；跨上下文发布前，应由拥有者翻译为稳定、版本化的集成消息。两者可能相关但不是同一对象，外部契约不应直接序列化内部聚合类型。</li>
+        <li><strong>事件边界：</strong>Draft 构造本身不必产生外发事实；订单通过不变量并成功提交后，聚合记录内部不可变 <code>OrderSubmitted</code>。应用层保存聚合并拉取事件，集成适配器映射为独立的 <code>OrderSubmittedV1</code>，携带订单 ID、发生时间、总额/币种及商品/数量不可变快照，与业务状态同事务写入 Outbox。relay 至少一次投递，Payment/Inventory 按消息 ID 幂等；rehydrate 不补发历史事件。</li>
       </ul>
 
       <h2 id="常见误区">常见误区</h2>
@@ -223,7 +224,7 @@
       <p><strong>诊断原则：</strong>不要只看类形状，而要从一次真实变更和一次真实故障追踪决策所在、事实所有者、事务边界和语言转义。如果复杂规则可被绕过、一个变更触碰所有模块或出错后没人能解释状态，模型边界还没有成为可执行约束。</p>
 
       <h2 id="演进路线">演进路线</h2>
-      <figure>
+      <figure class="diagram-figure" tabindex="0" aria-label="图示；窄屏可横向滚动查看完整内容">
         <img src="../../assets/ddd/adoption-evolution.svg" alt="DDD 证据驱动演进：从事务脚本识别业务热点，先形成模块化单体边界，在复杂处使用富领域模型，仅在独立变更、数据所有权、团队自治和部署需求充分时拆微服务，CQRS 与事件溯源是可选分支">
         <figcaption>证据驱动的演进主路与可选分支：团队可在任何已满足业务和质量目标的稳定阶段停止。</figcaption>
       </figure>
@@ -258,7 +259,7 @@
         <li>选“提交订单至获得确认”范围，画成功、库存不足、支付超时、重复回调和取消五条事件时间线；记录术语争议和失败代价。</li>
         <li>把“成交价能否改变、同一订单能否重复授权、库存预占何时释放”标为热点；分别确认规则权威人和必须同步成立的范围。</li>
         <li>提出模块地图：<strong>Order</strong>拥有订单状态和成交快照，<strong>Payment</strong>拥有支付尝试与渠道结果，<strong>Inventory</strong>拥有预占/释放，<strong>Catalog</strong>拥有展示资料；Notification 先作为简单通用能力。</li>
-        <li>在单体内先约束 API、内部包和表写入权；Order 提交在本地事务内守住聚合不变量，Payment/Inventory 结果通过显式应用事件协作，界面展示处理中状态。</li>
+        <li>在单体内先约束 API、内部包和表写入权；Order 提交在本地事务内守住聚合不变量，内部 <code>OrderSubmitted</code>经适配器映射为显式 <code>OrderSubmittedV1</code>与 Payment/Inventory 协作，界面展示处理中状态。</li>
         <li><strong>可选抽取决策：</strong>只有当 Payment 确有独立合规发布、敏感数据隔离、独立团队与可用性目标，并已消除共享写和细粒度调用，才试抽 Payment；否则继续作为模块。</li>
         <li>若抽取，业务状态与 Outbox 意图同事务写入，消费者按事件 ID 幂等；观测 Outbox lag、重复率、状态停留时间，准备切回模块 API 的退出路径。</li>
       </ol>
@@ -328,8 +329,8 @@
     <footer class="article-footer">
       <div class="source-path">HTML 页面：<code>notes/architecture/2026-08-11-DDD落地演进与常见误区.html</code></div>
       <nav class="pager" aria-label="上一篇和下一篇">
-        <a class="pager-link previous" href="2026-08-11-DDD架构总览与学习路线.html"><small>上一篇</small><span>DDD 架构总览与学习路线</span></a>
-        <a class="pager-link next" href="2026-08-11-DDD战略设计与限界上下文.html"><small>下一篇</small><span>DDD 战略设计与限界上下文</span></a>
+        <a class="pager-link previous" href="2026-08-11-DDD订单领域Java实践.html"><small>上一篇</small><span>DDD 订单领域 Java 21 完整实践</span></a>
+        <span class="pager-spacer"></span>
       </nav>
     </footer>
   </main>
@@ -341,6 +342,6 @@
     <a class="back-to-top" href="#">返回顶部 ↑</a>
   </aside>
 </div>
-<div class="mobile-backdrop" hidden></div>
+<div class="sidebar-scrim" aria-hidden="true"></div>
 </body>
 </html>
