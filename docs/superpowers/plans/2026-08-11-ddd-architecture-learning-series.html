@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DDD 架构七篇学习专题实施计划</title>
+</head>
+<body>
+<main>
+<article>
+  <h1>DDD 架构七篇学习专题实施计划</h1>
+  <blockquote>
+    <p><strong>供执行者：</strong>按任务逐项实施；执行时必须使用 <code>superpowers:executing-plans</code>，或在用户明确要求多代理执行时使用 <code>superpowers:subagent-driven-development</code>。每个步骤用复选项跟踪。</p>
+  </blockquote>
+
+  <p><strong>目标：</strong>发布一套面向 Java 开发者的七篇 DDD 架构专题，以订单领域贯穿基础概念、战略设计、战术设计、分层方式、Java 实践与演进决策。</p>
+  <p><strong>架构：</strong>七篇语义化 HTML 写入独立的“软件架构与 DDD”分类，通过专题导航和现有全站生成器互联。精确标注的本地 SVG 负责主要图解，Node.js 契约测试负责页面职责、图片、互链和来源结构，现有站点验证器负责通用 HTML 契约。</p>
+  <p><strong>技术栈：</strong>HTML5、SVG 1.1/2、现有 CSS 与原生 JavaScript、Node.js 24 测试脚本、Java 21 与 Spring Boot 工程语境。</p>
+
+  <h2>全局约束</h2>
+  <ul>
+    <li>恰好创建七篇页面，日期固定为 <code>2026-08-11</code>，分类固定为“软件架构与 DDD”。</li>
+    <li>Java 示例固定使用 Java 21；领域模型不得依赖 Spring、JPA 或 Web 类型。</li>
+    <li>七篇每篇至少一个 <code>&lt;figure&gt;</code>，合计至少九张本地 SVG；每张图片具有非空 <code>alt</code>、<code>&lt;figcaption&gt;</code> 和正文等价说明。</li>
+    <li>资料检索截面为 2026-08-11；优先使用原作者、模式作者、官方文档与权威架构资料，关键结论在正文附近标注来源。</li>
+    <li>每页包含“核心结论”和“参考资料”、稳定唯一标题 ID、专题导航及至少一个 Java 对照、练习或验收项。</li>
+    <li>站内资源使用相对路径；所有外链包含 <code>target="_blank"</code> 与 <code>rel="noopener noreferrer"</code>。</li>
+    <li>不创建 Markdown 学习笔记，不创建独立 Spring Boot 工程，不引入前端依赖，不复制外部受版权保护图片。</li>
+  </ul>
+
+  <h2>文件结构</h2>
+  <ul>
+    <li><code>public/notes/architecture/2026-08-11-DDD架构总览与学习路线.html</code>：专题入口和全景。</li>
+    <li><code>public/notes/architecture/2026-08-11-DDD基础概念与统一语言.html</code>：模型与语言基础。</li>
+    <li><code>public/notes/architecture/2026-08-11-DDD战略设计与限界上下文.html</code>：边界与上下文关系。</li>
+    <li><code>public/notes/architecture/2026-08-11-DDD战术设计与领域模型.html</code>：边界内建模构件。</li>
+    <li><code>public/notes/architecture/2026-08-11-DDD分层架构模式对比.html</code>：五种分层组织的统一比较。</li>
+    <li><code>public/notes/architecture/2026-08-11-DDD订单领域Java实践.html</code>：Java 21 订单主用例。</li>
+    <li><code>public/notes/architecture/2026-08-11-DDD落地演进与常见误区.html</code>：团队与系统演进。</li>
+    <li><code>public/assets/ddd/*.svg</code>：十一张工程蓝图。</li>
+    <li><code>scripts/test-ddd-architecture-series.mjs</code>：专题内容和图片契约。</li>
+    <li><code>index.html</code>、<code>public/manifest.json</code> 与七篇生成式侧栏/页脚：由 <code>scripts/build-html-index.mjs</code> 更新。</li>
+  </ul>
+
+  <h2>任务 1：建立失败的专题契约</h2>
+  <p><strong>文件：</strong>创建 <code>scripts/test-ddd-architecture-series.mjs</code>。</p>
+  <p><strong>接口：</strong>脚本无参数时验证七篇全部内容；接受 <code>--page overview|foundation|strategic|tactical|layers|java|adoption</code> 只验证单页。页面定义同时声明文件名、章节 ID、必讲短语和所需图片；图片路径相对 <code>public/assets/ddd/</code>。</p>
+  <ul>
+    <li><input type="checkbox" disabled>创建 <code>pages</code> 映射，固定七个键和七个文件名。</li>
+    <li><input type="checkbox" disabled>为每页断言 <code>header</code>、<code>nav</code>、<code>main</code>、<code>article</code>、日期、分类、共享资源、“核心结论”和“参考资料”。</li>
+    <li><input type="checkbox" disabled>为每页断言至少一个 figure、本地 SVG、非空 alt、figcaption、资料检索日期和至少四个安全外链。</li>
+    <li><input type="checkbox" disabled>无参数执行时断言每页链接其余六篇；读取所有图片路径并断言文件存在且含 <code>&lt;svg</code>、<code>&lt;title&gt;</code> 和 <code>&lt;desc&gt;</code>。</li>
+  </ul>
+  <pre><code>const pages = {
+  overview: {
+    file: "2026-08-11-DDD架构总览与学习路线.html",
+    sections: ["核心结论", "ddd全景", "七篇学习路线", "前置知识", "验收标准", "参考资料"],
+    phrases: ["战略设计", "战术设计", "统一语言", "限界上下文", "Java 21"],
+    images: ["ddd-landscape.svg", "ddd-learning-roadmap.svg"],
+  },
+  foundation: {
+    file: "2026-08-11-DDD基础概念与统一语言.html",
+    sections: ["核心结论", "领域与模型", "统一语言", "问题空间与解决方案空间", "订单示例", "参考资料"],
+    phrases: ["Ubiquitous Language", "领域模型", "模型驱动设计", "不是数据库表"],
+    images: ["ubiquitous-language-loop.svg"],
+  },
+  strategic: {
+    file: "2026-08-11-DDD战略设计与限界上下文.html",
+    sections: ["核心结论", "子域分类", "限界上下文", "上下文映射", "订单案例", "参考资料"],
+    phrases: ["Core Domain", "Supporting Subdomain", "Generic Subdomain", "Anti-Corruption Layer", "Open Host Service"],
+    images: ["subdomain-context-boundaries.svg", "context-map.svg"],
+  },
+  tactical: {
+    file: "2026-08-11-DDD战术设计与领域模型.html",
+    sections: ["核心结论", "实体与值对象", "聚合与不变量", "领域服务与事件", "仓储工厂与规约", "参考资料"],
+    phrases: ["聚合根", "一致性边界", "事务边界", "领域事件", "Specification"],
+    images: ["aggregate-consistency-boundary.svg", "tactical-building-blocks.svg"],
+  },
+  layers: {
+    file: "2026-08-11-DDD分层架构模式对比.html",
+    sections: ["核心结论", "传统三层", "经典四层", "六边形架构", "洋葱与整洁架构", "选择建议", "参考资料"],
+    phrases: ["依赖规则", "Ports and Adapters", "Onion Architecture", "Clean Architecture", "领域层"],
+    images: ["architecture-comparison.svg", "dependency-rule.svg"],
+  },
+  java: {
+    file: "2026-08-11-DDD订单领域Java实践.html",
+    sections: ["核心结论", "目录与依赖", "订单聚合", "创建订单用例", "端口与适配器", "领域事件", "测试", "参考资料"],
+    phrases: ["Java 21", "record Money", "CreateOrderUseCase", "OrderRepository", "OrderCreated"],
+    images: ["order-use-case-event-flow.svg"],
+  },
+  adoption: {
+    file: "2026-08-11-DDD落地演进与常见误区.html",
+    sections: ["核心结论", "事件风暴", "模块化单体", "微服务边界", "cqrs与一致性", "常见误区", "演进路线", "参考资料"],
+    phrases: ["EventStorming", "CQRS", "事件溯源不是必选项", "贫血模型", "按数据库表拆服务"],
+    images: ["adoption-evolution.svg"],
+  },
+};</code></pre>
+  <ul>
+    <li><input type="checkbox" disabled>运行 <code>node scripts/test-ddd-architecture-series.mjs</code>，预期因总览页不存在而失败。</li>
+    <li><input type="checkbox" disabled>提交：<code>git add scripts/test-ddd-architecture-series.mjs &amp;&amp; git commit -m "test: define DDD architecture series contract"</code>。</li>
+  </ul>
+
+  <h2>任务 2：检索一手资料并绘制十一张蓝图</h2>
+  <p><strong>文件：</strong>创建 <code>public/assets/ddd/ddd-landscape.svg</code>、<code>ddd-learning-roadmap.svg</code>、<code>ubiquitous-language-loop.svg</code>、<code>subdomain-context-boundaries.svg</code>、<code>context-map.svg</code>、<code>aggregate-consistency-boundary.svg</code>、<code>tactical-building-blocks.svg</code>、<code>architecture-comparison.svg</code>、<code>dependency-rule.svg</code>、<code>order-use-case-event-flow.svg</code>、<code>adoption-evolution.svg</code>。</p>
+  <p><strong>来源输入：</strong>检索 DDD Community、Eric Evans / Domain Language、Martin Fowler 的 Bounded Context 与 CQRS 资料、Alistair Cockburn 的 Hexagonal Architecture、Jeffrey Palermo 的 Onion Architecture、Robert C. Martin 的 Clean Architecture、Microsoft Architecture Center 的 DDD 与微服务资料，以及 EventStorming 官方资料。只把已核验来源写入页面；每篇最终至少四个相关一手或权威外链。</p>
+  <p><strong>产出接口：</strong>每个 SVG 具有唯一 <code>&lt;title&gt;</code>、<code>&lt;desc&gt;</code>、响应式 <code>viewBox</code>、工程蓝图风格和准确中文标签。页面使用 <code>../../assets/ddd/&lt;name&gt;.svg</code> 引用。</p>
+  <ul>
+    <li><input type="checkbox" disabled>先用在线资料核验术语、模式作者和依赖原则，将最终引用直接写入对应页面，不创建临时 Markdown 笔记。</li>
+    <li><input type="checkbox" disabled>绘制全景、路线、语言反馈、上下文边界、上下文映射、聚合边界、战术构件、架构比较、依赖规则、订单事件流和演进决策十一张图。</li>
+    <li><input type="checkbox" disabled>使用 <code>rg -L '&lt;title&gt;|&lt;desc&gt;|viewBox=' public/assets/ddd/*.svg</code> 检查可访问元数据；预期无输出。</li>
+    <li><input type="checkbox" disabled>将 SVG 渲染或在浏览器中检查至少 1200px 与 360px 宽度，确认文字不重叠、箭头不截断、浅色与深色均可辨识。</li>
+    <li><input type="checkbox" disabled>提交：<code>git add public/assets/ddd &amp;&amp; git commit -m "docs: add DDD architecture diagrams"</code>。</li>
+  </ul>
+
+  <h2>任务 3：发布总览与基础概念</h2>
+  <p><strong>文件：</strong>创建总览页和基础概念页。</p>
+  <p><strong>内容接口：</strong>总览负责全景和七篇导航；基础页负责领域、模型、统一语言和问题/解决方案空间。两页均使用订单术语，但不提前展开上下文映射或聚合实现。</p>
+  <ul>
+    <li><input type="checkbox" disabled>编写总览页，嵌入 <code>ddd-landscape.svg</code> 与 <code>ddd-learning-roadmap.svg</code>，包含前置知识、阅读顺序、练习和验收标准。</li>
+    <li><input type="checkbox" disabled>运行 <code>node scripts/test-ddd-architecture-series.mjs --page overview</code>，预期通过。</li>
+    <li><input type="checkbox" disabled>编写基础页，嵌入 <code>ubiquitous-language-loop.svg</code>，用“订单已提交/已创建”等语言差异说明统一语言如何反向约束代码命名。</li>
+    <li><input type="checkbox" disabled>运行 <code>node scripts/test-ddd-architecture-series.mjs --page foundation</code>，预期通过。</li>
+    <li><input type="checkbox" disabled>提交：<code>git add public/notes/architecture &amp;&amp; git commit -m "docs: add DDD overview and foundations"</code>。</li>
+  </ul>
+
+  <h2>任务 4：发布战略设计与战术设计</h2>
+  <p><strong>文件：</strong>创建战略设计页和战术设计页。</p>
+  <p><strong>内容接口：</strong>战略页产生订单、支付、库存、商品目录四个限界上下文及其关系；战术页只深入订单上下文内部，避免把跨上下文对象放进一个聚合。</p>
+  <ul>
+    <li><input type="checkbox" disabled>编写战略页，嵌入 <code>subdomain-context-boundaries.svg</code> 与 <code>context-map.svg</code>；使用表格覆盖七种主要上下文关系的含义、耦合、适用场景与风险。</li>
+    <li><input type="checkbox" disabled>运行 <code>node scripts/test-ddd-architecture-series.mjs --page strategic</code>，预期通过。</li>
+    <li><input type="checkbox" disabled>编写战术页，嵌入 <code>aggregate-consistency-boundary.svg</code> 与 <code>tactical-building-blocks.svg</code>；展示 Order、OrderLine、Money、OrderRepository、PricingService 和 OrderCreated 的职责。</li>
+    <li><input type="checkbox" disabled>运行 <code>node scripts/test-ddd-architecture-series.mjs --page tactical</code>，预期通过。</li>
+    <li><input type="checkbox" disabled>提交：<code>git add public/notes/architecture &amp;&amp; git commit -m "docs: explain DDD strategic and tactical design"</code>。</li>
+  </ul>
+
+  <h2>任务 5：发布分层架构统一比较</h2>
+  <p><strong>文件：</strong>创建 <code>2026-08-11-DDD分层架构模式对比.html</code>。</p>
+  <p><strong>内容接口：</strong>对传统三层、经典四层、六边形、洋葱和整洁架构使用同一比较维度；最终选择建议输入业务复杂度、变化频率、外部系统数量、测试隔离要求和团队规模，输出“简单分层”“经典四层”“端口适配器/同心圆依赖”的建议，不输出主观总分。</p>
+  <ul>
+    <li><input type="checkbox" disabled>嵌入 <code>architecture-comparison.svg</code> 和 <code>dependency-rule.svg</code>，明确 UI/Application/Domain/Infrastructure、Port/Adapter、Entities/Use Cases/Interface Adapters/Frameworks 等术语映射。</li>
+    <li><input type="checkbox" disabled>加入统一比较表和 Java 包结构示例，解释接口放置取决于“谁定义协议、依赖指向哪里”，而非机械遵守目录模板。</li>
+    <li><input type="checkbox" disabled>运行 <code>node scripts/test-ddd-architecture-series.mjs --page layers</code>，预期通过。</li>
+    <li><input type="checkbox" disabled>提交：<code>git add public/notes/architecture/2026-08-11-DDD分层架构模式对比.html &amp;&amp; git commit -m "docs: compare DDD architecture layering styles"</code>。</li>
+  </ul>
+
+  <h2>任务 6：发布 Java 21 订单实践</h2>
+  <p><strong>文件：</strong>创建 <code>2026-08-11-DDD订单领域Java实践.html</code>。</p>
+  <p><strong>代码接口：</strong><code>Money</code> 为带币种且拒绝负数的值对象；<code>Order</code> 聚合通过行为方法维护订单项与状态不变量；<code>CreateOrderUseCase</code> 依赖 <code>OrderRepository</code> 端口；<code>OrderCreated</code> 记录订单 ID 和发生时间；适配器实现端口但不向领域泄露 JPA Entity。</p>
+  <pre><code>public record Money(BigDecimal amount, Currency currency) {
+    public Money {
+        Objects.requireNonNull(amount, "amount");
+        Objects.requireNonNull(currency, "currency");
+        if (amount.signum() &lt; 0) throw new IllegalArgumentException("amount must be non-negative");
+    }
+}
+
+public interface OrderRepository {
+    Optional&lt;Order&gt; findById(OrderId id);
+    void save(Order order);
+}
+
+public record OrderCreated(OrderId orderId, Instant occurredAt) {}
+</code></pre>
+  <ul>
+    <li><input type="checkbox" disabled>嵌入 <code>order-use-case-event-flow.svg</code>，展示 HTTP Adapter → CreateOrderUseCase → Order → OrderRepository Port → Persistence Adapter，以及 OrderCreated 的发布边界。</li>
+    <li><input type="checkbox" disabled>给出完整的 Money、OrderId、OrderLine、Order、CreateOrderCommand、CreateOrderUseCase、OrderRepository、OrderCreated 和测试代码片段；所有跨片段类型名称一致。</li>
+    <li><input type="checkbox" disabled>测试示例至少覆盖“有效订单成功创建”和“空订单/非法金额被拒绝”，解释领域单元测试为何不启动 Spring 容器。</li>
+    <li><input type="checkbox" disabled>运行 <code>node scripts/test-ddd-architecture-series.mjs --page java</code>，预期通过。</li>
+    <li><input type="checkbox" disabled>提交：<code>git add public/notes/architecture/2026-08-11-DDD订单领域Java实践.html &amp;&amp; git commit -m "docs: add Java DDD order walkthrough"</code>。</li>
+  </ul>
+
+  <h2>任务 7：发布落地演进页并完成专题互链</h2>
+  <p><strong>文件：</strong>创建落地演进页；修改七篇中的专题导航链接。</p>
+  <p><strong>内容接口：</strong>演进页从事件风暴和模块化单体开始，根据独立变化、数据所有权、团队自治和部署需求决定是否拆微服务；CQRS 仅在读写模型差异足够大时采用；事件溯源明确为独立且高成本的选择。</p>
+  <ul>
+    <li><input type="checkbox" disabled>嵌入 <code>adoption-evolution.svg</code>，给出“事务脚本 → 识别热点 → 模块化边界 → 富领域模型 → 按证据拆服务”的演进路线。</li>
+    <li><input type="checkbox" disabled>加入 EventStorming、模块化单体、微服务、CQRS、最终一致性和事件溯源的采用条件表。</li>
+    <li><input type="checkbox" disabled>加入贫血模型、过度建模、聚合过大、跨聚合强事务、按数据库表拆服务和包名伪架构的症状—后果—修正表。</li>
+    <li><input type="checkbox" disabled>为七篇加入指向其余六篇的显式专题导航，确保无参数契约可验证全互链。</li>
+    <li><input type="checkbox" disabled>运行 <code>node scripts/test-ddd-architecture-series.mjs --page adoption</code>，再运行 <code>node scripts/test-ddd-architecture-series.mjs</code>；两者预期通过。</li>
+    <li><input type="checkbox" disabled>提交：<code>git add public/notes/architecture &amp;&amp; git commit -m "docs: complete DDD adoption guide and series navigation"</code>。</li>
+  </ul>
+
+  <h2>任务 8：重建索引并执行全量验证</h2>
+  <p><strong>文件：</strong>修改生成的 <code>index.html</code>、<code>public/manifest.json</code> 和七篇页面中的分类侧栏、页脚上一篇/下一篇。</p>
+  <ul>
+    <li><input type="checkbox" disabled>运行 <code>node scripts/build-html-index.mjs</code>。</li>
+    <li><input type="checkbox" disabled>运行 <code>test -s index.html</code> 与 <code>test ! -e public/index.html</code>。</li>
+    <li><input type="checkbox" disabled>运行 <code>node --check scripts/build-html-index.mjs</code>、<code>node --check scripts/verify-site.mjs</code>、<code>node --check public/assets/app.js</code> 和 <code>node --check scripts/test-ddd-architecture-series.mjs</code>。</li>
+    <li><input type="checkbox" disabled>运行 <code>for test_file in scripts/test-*.mjs; do node "$test_file"; done</code>，预期全部测试输出 PASS 且退出码为 0。</li>
+    <li><input type="checkbox" disabled>运行 <code>node scripts/verify-site.mjs</code>，预期站点结构、链接、锚点与元数据检查全部通过。</li>
+    <li><input type="checkbox" disabled>再次运行 <code>node scripts/build-html-index.mjs</code>，然后运行 <code>git diff --exit-code -- index.html public</code>，预期无差异。</li>
+    <li><input type="checkbox" disabled>运行 <code>git diff --check</code>，预期无空白错误。</li>
+    <li><input type="checkbox" disabled>提交：<code>git add index.html public/manifest.json public/notes/architecture &amp;&amp; git commit -m "docs: publish DDD architecture learning series"</code>。</li>
+  </ul>
+
+  <h2>计划自审</h2>
+  <p>设计中的七篇页面、十一张蓝图、Java 21 订单案例、资料检索、专题契约、全站生成与幂等校验均映射到明确任务。所有页面文件名、图片文件名、章节 ID、关键短语和命令均已确定，没有占位步骤。任务 3 至任务 7 使用同一契约脚本的单页接口，任务 7 完成全互链，任务 8 执行全量回归；各任务产出和依赖一致。</p>
+</article>
+</main>
+</body>
+</html>
