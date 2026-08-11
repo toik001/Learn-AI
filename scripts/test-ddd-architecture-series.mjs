@@ -123,6 +123,11 @@ const assertNoAbsoluteLocalResources = (html, key) => {
       }
     }
   }
+  for (const [, styleBlock] of html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)) {
+    for (const reference of styleUrlReferences(styleBlock)) {
+      assertAllowedResourceReference(reference, key, "style block url()");
+    }
+  }
 };
 
 const assertMeta = (html, key, name, expectedValue) => {
