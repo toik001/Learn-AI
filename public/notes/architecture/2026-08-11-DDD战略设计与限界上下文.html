@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="面向 Java 开发者系统讲清 DDD 子域、限界上下文、上下文映射与订单场景的边界协作策略。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="软件架构与 DDD">
+  <meta name="study-date" content="2026-08-11">
+  <title>DDD 战略设计与限界上下文｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <div class="sidebar-category-summary"><span class="eyebrow">专题</span><strong>软件架构与 DDD</strong><small>七篇学习系列</small></div>
+    <nav class="doc-nav" aria-label="DDD 专题文档">
+      <a class="doc-nav-item" href="2026-08-11-DDD架构总览与学习路线.html"><span>1. 架构总览与学习路线</span></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD基础概念与统一语言.html"><span>2. 基础概念与统一语言</span></a>
+      <a class="doc-nav-item is-active" href="2026-08-11-DDD战略设计与限界上下文.html" aria-current="page"><span>3. 战略设计与限界上下文</span></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD战术设计与领域模型.html"><span>4. 战术设计与领域模型</span></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD分层架构模式对比.html"><span>5. 分层架构模式对比</span></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD订单领域Java实践.html"><span>6. 订单领域 Java 实践</span></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD落地演进与常见误区.html"><span>7. 落地演进与常见误区</span></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta"><a href="../../../index.html">知识库首页</a><span>·</span><span>软件架构与 DDD</span><span>·</span><time datetime="2026-08-11">2026-08-11</time></div>
+    <article class="markdown-body">
+      <h1 id="ddd战略设计与限界上下文">DDD 战略设计与限界上下文</h1>
+      <blockquote><p>整理日期：2026-08-11；资料检索日期：2026-08-11<br>目标：先在问题空间识别业务重心，再在解决方案中划清模型边界，并明确各边界如何协作。</p></blockquote>
+
+      <nav aria-label="本页目录">
+        <strong>本页目录</strong>
+        <ol>
+          <li><a href="#核心结论">核心结论</a></li>
+          <li><a href="#子域分类">子域分类</a></li>
+          <li><a href="#限界上下文">限界上下文</a></li>
+          <li><a href="#识别边界">识别边界</a></li>
+          <li><a href="#上下文映射">上下文映射</a></li>
+          <li><a href="#订单案例">订单案例</a></li>
+          <li><a href="#java工程映射">Java 工程映射</a></li>
+          <li><a href="#决策练习">决策练习</a></li>
+          <li><a href="#本篇小结">本篇小结</a></li>
+          <li><a href="#参考资料">参考资料</a></li>
+          <li><a href="#专题导航">专题导航</a></li>
+        </ol>
+      </nav>
+
+      <h2 id="核心结论">核心结论</h2>
+      <ul>
+        <li>战略设计回答“哪套模型在什么范围有效，以及边界之间如何协作”，不是先决定包、数据库或微服务数量。</li>
+        <li><strong>子域</strong>是问题空间中的业务能力或问题区域；<strong>限界上下文</strong>是解决方案中一套模型和统一语言的明确适用边界。二者相关，但不自动一一对应。</li>
+        <li>团队、代码库、部署单元和数据库边界经常与限界上下文对齐，以降低认知与变更耦合；它们是实现选择和边界证据，不是限界上下文的定义。</li>
+        <li>上下文映射不仅画“谁调用谁”，还要记录影响方向、协作治理、共享范围与翻译策略。</li>
+        <li>同一个业务词可以在不同上下文中拥有不同且合理的含义；强行建立全企业唯一模型，常把局部变化扩散成全局耦合。</li>
+      </ul>
+      <p><strong>来源定义：</strong>Eric Evans 的 <a href="https://www.domainlanguage.com/ddd/reference/" target="_blank" rel="noopener noreferrer">DDD Reference</a>将 Bounded Context 与 Context Map 放在战略设计模式中；<a href="https://martinfowler.com/bliki/BoundedContext.html" target="_blank" rel="noopener noreferrer">Martin Fowler 的 Bounded Context 说明</a>强调在各自边界内保持模型一致并显式描述关系。<strong>Java 工程翻译：</strong>模块、API 和适配器可以承载这些决定，但不能反过来代替业务建模。</p>
+
+      <h2 id="子域分类">子域分类</h2>
+      <p>直观地说，战略设计先问“哪些业务能力创造差异，哪些只是让核心业务运转，哪些已有成熟通用解法”。分类的目的不是给系统贴永久标签，而是决定稀缺的领域专家时间、建模深度和工程投入应放在哪里。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>子域类别</th><th>判断重点</th><th>投资策略</th><th>电商示例</th><th>主要风险</th></tr></thead>
+          <tbody>
+            <tr><td>Core Domain（核心域）</td><td>直接承载当前竞争优势或关键战略，规则复杂且持续变化</td><td>投入优秀团队与领域专家，反复提炼模型，避免被通用方案限制</td><td>通过承诺库存、拆单与履约策略形成差异化的订单履约</td><td>把所有“重要功能”都叫核心，导致资源失焦</td></tr>
+            <tr><td>Supporting Subdomain（支撑子域）</td><td>业务运转所需，通常带有组织特有规则，但不直接形成差异化</td><td>保持合适的定制与清晰边界，工程质量够用且可演进</td><td>库存盘点、库位与补货操作支持履约，但竞争点不在仓库台账本身</td><td>当成通用 CRUD 后低估专有规则，或投入超过其战略价值</td></tr>
+            <tr><td>Generic Subdomain（通用子域）</td><td>行业已有成熟解法，自己的特殊知识价值有限</td><td>优先采购、复用标准服务或采用成熟组件，把翻译与替换边界留好</td><td>短信、邮件和推送通知</td><td>重复造轮子，或让供应商模型泄漏进核心域</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>来源定义：</strong><a href="https://learn.microsoft.com/en-us/azure/architecture/microservices/model/domain-analysis" target="_blank" rel="noopener noreferrer">Microsoft Learn 的领域分析指南</a>用竞争优势、业务运转与行业通用解法区分三类子域；Evans 的 <a href="https://www.domainlanguage.com/wp-content/uploads/2016/05/DDD_Reference_2015-03.pdf" target="_blank" rel="noopener noreferrer">DDD Reference PDF</a>要求提炼并集中投资于小而有价值的核心。<strong>情境建议：</strong>“订单履约是核心、库存是支撑、通知是通用”只适用于本例。若企业靠库存调度算法竞争，库存可能上升为核心；战略或市场变化后分类也应复核。</p>
+
+      <h2 id="限界上下文">限界上下文</h2>
+      <p><strong>来源定义：</strong>限界上下文明确规定一套模型在哪里被定义和适用。边界内，术语、规则和代码表达应保持一致；跨出边界，同名概念可以拥有另一套属性、生命周期与约束。比如订单上下文的“商品”是下单时锁定的名称和成交价快照，商品目录上下文的“商品”则关心分类、展示素材与搜索属性。二者映射的是同一现实商品，却不是同一个模型对象。</p>
+      <p>边界通常在语言转义、业务不变量、数据责任或变化原因发生明显改变时出现。试图让订单、目录、仓储和财务共用一个企业级 <code>Product</code>，会积累大量可空字段、条件分支与跨团队发布协调。Fowler 指出，大型领域维持一个统一模型通常既不可行也不经济；合理目标是在每个显式边界内保持一致，并让边界间翻译可见。</p>
+      <figure>
+        <img src="../../assets/ddd/subdomain-context-boundaries.svg" alt="问题空间中的核心订单履约、支撑库存和通用通知子域，与解决方案中的订单、支付、库存和商品目录限界上下文之间的非一一对应关系">
+        <figcaption>子域与限界上下文：前者分析业务问题，后者承载一套可实现的模型与语言。</figcaption>
+      </figure>
+      <p>图可用文字等价表达为：问题空间把业务分析为订单履约、库存和通知等子域；解决方案空间则建立订单、支付、库存、商品目录等模型边界。子域会启发上下文边界，却没有自动的一对一规则：一个复杂子域可能拆成多个上下文，例如订单履约拆成订单、支付协调与配送；多个简单且变化一致的子域也可能暂时由一个上下文承载。只有发现模型含义、规则和演进压力后，才能决定映射。</p>
+      <p><strong>边界提醒：</strong>一个限界上下文可以先在模块化单体内实现，也可能后来拆成多个部署组件；一个微服务若跨越多套相互冲突的模型，仍然没有解决边界问题。数据库独立、团队独立或网络调用也不能单独证明存在限界上下文。</p>
+
+      <h2 id="识别边界">识别边界</h2>
+      <p>识别不是按组织架构机械切割，而是收集多种业务证据，提出候选边界，再用真实场景验证。部署拓扑可以提示现状约束，但模型与语言才是判断核心。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>证据</th><th>要问的问题</th><th>边界信号</th><th>电商例子</th><th>避免误判</th></tr></thead>
+          <tbody>
+            <tr><td>语言变化</td><td>同一词在不同参与者口中是否指不同事物？</td><td>定义、动作或状态语义分叉</td><td>目录“上架”是可展示，库存“上架”是货物进入库位</td><td>只有叫法不同但规则完全一致，未必需要拆分</td></tr>
+            <tr><td>不变量</td><td>哪些规则必须同步成立？由谁守护？</td><td>一致性要求形成内聚簇</td><td>订单提交要求至少一行；库存预占由库存规则决定</td><td>不要把所有关联数据都塞进一个事务</td></tr>
+            <tr><td>数据所有权</td><td>谁有权解释和改变这份事实？</td><td>写入权与权威含义不同</td><td>目录拥有展示名称，订单拥有成交快照</td><td>共享数据库现状是约束，不是共享模型证明</td></tr>
+            <tr><td>变化节奏</td><td>哪些规则因不同原因、按不同频率变化？</td><td>独立演进能减少连锁回归</td><td>促销定价频繁变化，财务入账遵循稳定审计规则</td><td>发布频率不同只是证据之一</td></tr>
+            <tr><td>外部依赖</td><td>供应商或遗留系统的模型会不会侵入内部？</td><td>需要翻译或保护模型</td><td>第三方支付状态不等于订单支付状态</td><td>不要把每个 HTTP 客户端都叫 ACL</td></tr>
+            <tr><td>团队认知</td><td>一个团队能否持续理解并统一该模型？</td><td>知识与沟通网络出现自然分区</td><td>目录运营与仓配专家关注不同决策</td><td>组织边界可调整，不能直接充当定义</td></tr>
+            <tr><td>流程交接</td><td>何时从一种业务承诺转为另一种？</td><td>明确事件、契约和责任移交</td><td>订单提交后，请求库存预占</td><td>流程步骤不同不必每步一个上下文</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>实践建议：</strong>选一个端到端场景，把参与者说出的名词、命令、事件、不变量和权威数据标在白板上；先圈出含义稳定的区域，再标出翻译点。最后用失败场景检验：若上游改字段、团队重组或部署合并，候选边界内的业务含义是否仍自洽？</p>
+
+      <h2 id="上下文映射">上下文映射</h2>
+      <p>Context Map 是现状地图：命名各限界上下文，标出接触点、共享内容、翻译机制与影响力。它不是调用链图。<a href="https://contextmapper.org/docs/context-map/" target="_blank" rel="noopener noreferrer">Context Mapper 官方上下文映射文档</a>明确规定：有向关系中的箭头从 Upstream（上游）指向 Downstream（下游），表达上游模型或契约对下游的<strong>影响方向</strong>；它不保证 HTTP 请求、事件数据或资金也沿箭头方向流动。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>模式</th><th>方向与治理</th><th>何时有用</th><th>耦合与风险</th><th>电商示例</th></tr></thead>
+          <tbody>
+            <tr><td>Partnership（合作伙伴）</td><td>对称关系；双方共同规划接口与发布，成败相互牵连</td><td>关键能力必须同批交付，双方都愿意高频协作</td><td>计划耦合高；任一方延迟都可能阻塞整体</td><td>订单与新履约编排共同试运行一项不可分割能力</td></tr>
+            <tr><td>Shared Kernel（共享内核）</td><td>对称且共同治理；只共享明确、很小的一部分模型与代码</td><td>翻译成本高于共同维护成本，团队关系紧密</td><td>变更需双方协商；范围膨胀会重新制造大模型，不能退化成共享工具包</td><td>订单与结算共同维护极小的货币代码模型</td></tr>
+            <tr><td>Customer / Supplier（客户/供应商）</td><td>U → D；下游客户的优先级进入上游供应商计划</td><td>下游有谈判能力，上游愿意承诺所需契约</td><td>规划与验收耦合；权责不清会变成口头承诺</td><td>支付 U 为订单 D 承诺支付能力和兼容窗口</td></tr>
+            <tr><td>Conformist（遵奉者）</td><td>U → D；下游主动接受上游模型，不建设翻译模型</td><td>下游影响力很小，且翻译收益低于成本</td><td>下游语言受限、上游变更会外溢；但这是可审计的理性选择，不天然“坏”</td><td>简单库存消费者直接遵循稳定的订单事件契约</td></tr>
+            <tr><td>Anti-Corruption Layer（防腐层）</td><td>U → D；由下游用自己的语言包装并翻译上游能力</td><td>上游模型不合适、遗留或变化频繁，而下游模型值得保护</td><td>翻译与故障处理有成本；若只改字段名而不隔离语义，形成伪 ACL</td><td>订单把目录的“可展示商品”翻译成“可下单商品快照”</td></tr>
+            <tr><td>Open Host Service（开放主机服务）</td><td>上游角色；提供供多个下游使用的一致访问协议</td><td>上游有很多消费者，逐个定制适配成本过高</td><td>公共协议演进与兼容成本上升；不要暴露内部模型</td><td>商品目录提供稳定的查询服务给订单、搜索和营销</td></tr>
+            <tr><td>Published Language（发布语言）</td><td>通常由上游发布、双方用于交换的文档化语言或格式</td><td>需要让不同模型通过稳定、可理解的中间语言沟通</td><td>契约版本与语义治理成本；不要把内部对象直接冻结为公共格式</td><td>目录发布版本化的商品 JSON Schema 与语义说明</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>来源定义与边界：</strong>Evans 的 DDD Reference 将 Partnership 定义为双方共同成败的协作，将 Shared Kernel 限定为小而共同治理的模型子集，并区分下游的 Conformist/ACL 与上游的 OHS/PL。<a href="https://contextmapper.org/docs/language-model/" target="_blank" rel="noopener noreferrer">Context Mapper 官方语义规则</a>进一步校验了角色方向：ACL 与 Conformist 是替代性的下游选择，OHS 与 Published Language 是上游角色。OHS 定义“怎样以服务协议开放能力”，Published Language 定义“交换信息用哪套文档化语言”；二者常组合，却不是同一个模式。</p>
+      <figure>
+        <img src="../../assets/ddd/context-map.svg" alt="订单、支付、库存与商品目录限界上下文的上下游关系，以及客户供应商、防腐层、遵奉者、开放主机服务和发布语言模式">
+        <figcaption>订单上下文映射：箭头从上游指向下游，关系标签记录治理与翻译策略。</figcaption>
+      </figure>
+      <p>图可用文字等价表达为：支付是上游供应商，订单作为下游客户消费支付能力，并在订单侧用 ACL 隔离支付模型；商品目录是上游，通过 OHS 与 Published Language 向下游订单开放商品信息；订单又是库存的上游，库存选择遵循订单契约。实线或虚线展示交互方式，箭头只说明模型影响由 U 指向 D，不应据此推断请求、响应或事件一定同向。</p>
+      <p><strong>模式组合审查：</strong>图中的 Payment Customer/Supplier + Order ACL 可表达一种现实过渡状态：下游能参与上游计划，但双方模型仍需翻译。不过，Context Mapper 按原始模式语义会对 Customer/Supplier + ACL 给出软警告，因为充分合作时下游通常无需防御。若 Order 能影响 Payment 并共同验收契约，应优先简化为 Customer/Supplier；若 Order 实际没有影响力而必须保护自身模型，应更准确地画成普通 U/D + ACL。地图要记录真实治理关系，不能为了凑模式而叠加标签。</p>
+
+      <h2 id="订单案例">订单案例</h2>
+      <h3 id="订单上下文现状图">四个上下文与权威模型</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>上下文</th><th>拥有的业务含义</th><th>不拥有的含义</th><th>对外协作</th></tr></thead>
+          <tbody>
+            <tr><td>Order</td><td>订单草稿、订单行、成交价快照、提交规则</td><td>商品展示详情、真实可售量、支付清算状态</td><td>消费目录与支付契约；发布订单事实</td></tr>
+            <tr><td>Product Catalog</td><td>商品展示、分类、可发布状态和目录价格</td><td>订单成交承诺与库存预占</td><td>用 OHS + Published Language 提供目录能力</td></tr>
+            <tr><td>Payment</td><td>支付尝试、渠道状态、授权与退款</td><td>订单是否可以提交</td><td>作为供应商向订单提供支付能力</td></tr>
+            <tr><td>Inventory</td><td>可售量、预占、释放与仓储规则</td><td>订单行价格和目录展示</td><td>消费订单集成消息并作出库存决策</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3 id="下单协作场景">从目录到订单再到下游</h3>
+      <ol>
+        <li>Order 需要商品信息时，调用 Product Catalog 的开放服务；目录发布语言里可能叫 <code>listedPrice</code> 与 <code>displayName</code>。</li>
+        <li>Order 下游的 ACL 检验商品是否可下单，并翻译为订单语言里的商品标识、下单名称和单位价格快照。ACL 保护的是订单模型和决策，不只是机械复制 DTO 字段。</li>
+        <li>订单聚合在自己的边界内创建并记录 <code>OrderCreated</code> 领域事件。它是订单模型中已经发生的事实，不要求此刻已经发送到消息代理。</li>
+        <li>事务提交后，应用/集成适配器把必要信息转换为版本化的集成消息，再交给 Inventory 等下游。外部消息要处理序列化、兼容、重试与幂等，不应直接泄漏内部领域对象。</li>
+      </ol>
+      <p><strong>关键区别：</strong><code>OrderCreated</code> 领域事件服务于 Order 上下文内部模型；跨边界发布的消息服务于上下文之间的契约。二者可以来源于同一业务事实，却可能有不同名称、字段、版本和发布时间。把领域事件对象直接序列化到消息总线，会把内部演进权交给所有消费者。</p>
+
+      <h2 id="java工程映射">Java 工程映射</h2>
+      <p>下面是可选的工程翻译，不是 DDD 定义。一个限界上下文可以对应 Maven module、Java module 或受架构测试约束的 package；公共 API/事件承载 Published Language；调用上游的端口和适配器可实现 ACL。团队和部署可以与模型边界对齐，但没有“一上下文一微服务一数据库”的强制公式。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>战略决定</th><th>可能的 Java 产物</th><th>应保护的规则</th><th>不是</th></tr></thead>
+          <tbody>
+            <tr><td>Order 限界上下文</td><td><code>com.example.order</code> module 及其对外端口</td><td>外部代码不能绕过订单语言修改内部模型</td><td>包名本身不是边界</td></tr>
+            <tr><td>目录 Published Language</td><td>版本化 OpenAPI/JSON Schema 和兼容测试</td><td>公开语义与版本策略独立于目录内部对象</td><td>共享内部实体 JAR</td></tr>
+            <tr><td>Order 侧 ACL</td><td>领域端口、外部客户端与翻译适配器</td><td>用订单语言表达上游能力、失败和约束</td><td>只有 DTO-to-DTO 字段映射</td></tr>
+            <tr><td>上下游关系</td><td>契约测试、发布策略、责任人和变更流程</td><td>治理权与兼容承诺可见</td><td>仅一条依赖箭头</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3 id="acl适配器示例">聚焦 ACL 适配器示例（Java 21）</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>Java 21 · 单文件聚焦示例</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-java">import java.math.BigDecimal;
+import java.util.Currency;
+import java.util.Objects;
+
+record OrderProductId(String value) {
+    OrderProductId {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("订单商品标识不能为空");
+        }
+    }
+}
+
+// Order 上下文自己的语言：可加入订单的商品快照。
+record OrderableProduct(
+        OrderProductId id,
+        String orderingName,
+        BigDecimal unitPrice,
+        Currency currency) {}
+
+interface ProductCatalogPort {
+    OrderableProduct loadOrderable(OrderProductId id);
+}
+
+// Product Catalog 发布语言中的 DTO，不进入 Order 领域模型。
+record CatalogProductPayload(
+        String sku,
+        String displayName,
+        String listedPrice,
+        String currencyCode,
+        boolean sellable) {}
+
+interface CatalogPublishedApi {
+    CatalogProductPayload getProduct(String sku);
+}
+
+final class CatalogAclAdapter implements ProductCatalogPort {
+    private final CatalogPublishedApi catalogApi;
+
+    CatalogAclAdapter(CatalogPublishedApi catalogApi) {
+        this.catalogApi = Objects.requireNonNull(catalogApi);
+    }
+
+    @Override
+    public OrderableProduct loadOrderable(OrderProductId id) {
+        var payload = catalogApi.getProduct(id.value());
+        if (!payload.sellable()) {
+            throw new IllegalStateException("商品当前不可下单：" + id.value());
+        }
+        return new OrderableProduct(
+                id,
+                payload.displayName().strip(),
+                new BigDecimal(payload.listedPrice()),
+                Currency.getInstance(payload.currencyCode()));
+    }
+}</code></pre>
+      </div>
+      <p><strong>工程解释：</strong><code>ProductCatalogPort</code>用 Order 的语言描述所需能力，<code>CatalogPublishedApi</code>表示上游公共契约，<code>CatalogAclAdapter</code>处理可下单语义、失败与数据转换。实际系统还应在适配器边界处理超时、重试与观测；这些技术职责不改变 ACL 的战略目的——阻止外部模型支配内部模型。</p>
+
+      <h2 id="决策练习">决策练习</h2>
+      <p><strong>工作坊输入：</strong>“运营上架商品；客户提交订单后，仓库预占库存；支付渠道把 <code>SUCCESS</code> 回调给平台；缺货时订单仍可保留十分钟；短信供应商可替换。”</p>
+      <ol>
+        <li><strong>圈问题空间：</strong>先标出商品经营、订单承诺、库存预占、支付处理与通知，不讨论微服务。</li>
+        <li><strong>找语言分叉：</strong>询问“上架”“成功”“保留”分别由谁定义；记录同词在不同场景的反例。</li>
+        <li><strong>找不变量和权威事实：</strong>订单提交规则由 Order 拥有，真实预占由 Inventory 拥有，渠道成功由 Payment 翻译后才能成为内部支付状态。</li>
+        <li><strong>提出候选上下文：</strong>Order、Product Catalog、Inventory、Payment、Notification；写清每个上下文拥有与不拥有的概念。</li>
+        <li><strong>标 U/D 与关系：</strong>Payment U → Order D 可采用 Customer/Supplier + Order ACL；Catalog U → Order D 可采用 OHS + PL + Order ACL；Order U → Inventory D 根据影响力选择 Conformist 或协商式关系。</li>
+        <li><strong>补非代码治理：</strong>写出契约负责人、版本兼容期、验收测试归属与故障降级规则。</li>
+      </ol>
+      <p><strong>期望输出：</strong>一张包含五个命名上下文的现状图；每条有向关系标注 U/D、模式、公共契约和翻译责任；旁边附一张子域分类表，并明确“支付成功”“订单已支付”不是同一个模型事实。</p>
+      <p><strong>自检：</strong>箭头是否从 U 指向 D，而不是照抄请求方向？子域是否被错误写成微服务？Shared Kernel 是否确实小且有共同治理？Conformist 是否基于成本收益主动选择？ACL 是否保护语义而非只换字段名？OHS 与 Published Language 是否分别说明协议和交换语言？如果部署合并，模型边界是否仍能解释业务？</p>
+
+      <h2 id="本篇小结">本篇小结</h2>
+      <p>战略设计从业务价值与语言差异出发：用子域决定投资重点，用限界上下文规定模型有效范围，再用上下文映射公开影响力、治理与翻译。完成本篇后，不应再把子域、团队、数据库、微服务和限界上下文画成自动一一对应。下一步进入战术设计篇，在 Order 上下文内部用实体、值对象、聚合和事件守住具体业务规则。</p>
+
+      <h2 id="参考资料">参考资料</h2>
+      <p>资料检索于 <strong>2026-08-11</strong>。以下均为作者原站或官方技术资料，正文为自行归纳。</p>
+      <ul>
+        <li><a href="https://www.domainlanguage.com/ddd/reference/" target="_blank" rel="noopener noreferrer">Eric Evans / Domain Language：DDD Reference</a> — DDD 原著定义与模式摘要的官方入口。</li>
+        <li><a href="https://www.domainlanguage.com/wp-content/uploads/2016/05/DDD_Reference_2015-03.pdf" target="_blank" rel="noopener noreferrer">Eric Evans：Domain-Driven Design Reference（PDF）</a> — Bounded Context、Context Map、关系模式与核心域的原始摘要。</li>
+        <li><a href="https://martinfowler.com/bliki/BoundedContext.html" target="_blank" rel="noopener noreferrer">Martin Fowler：Bounded Context</a> — 大模型拆分、同名概念多义与显式上下文关系。</li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/architecture/microservices/model/domain-analysis" target="_blank" rel="noopener noreferrer">Microsoft Learn：Use domain analysis to model microservices</a> — 子域分类、模型边界和 ACL 的工程分析流程。</li>
+        <li><a href="https://contextmapper.org/docs/context-map/" target="_blank" rel="noopener noreferrer">Context Mapper：Context Map</a> — 上下游箭头、对称/非对称关系与角色的官方语义。</li>
+        <li><a href="https://contextmapper.org/docs/language-model/" target="_blank" rel="noopener noreferrer">Context Mapper：Language Semantics</a> — OHS/PL 与 ACL/Conformist 的方向及组合约束。</li>
+        <li><a href="https://contextmapper.org/docs/shared-kernel/" target="_blank" rel="noopener noreferrer">Context Mapper：Shared Kernel</a> — 共享内核作为对称、共同维护关系的官方说明。</li>
+      </ul>
+
+      <h2 id="专题导航">DDD 七篇专题导航</h2>
+      <ol>
+        <li><a href="2026-08-11-DDD架构总览与学习路线.html">DDD 架构总览与学习路线</a></li>
+        <li><a href="2026-08-11-DDD基础概念与统一语言.html">DDD 基础概念与统一语言</a></li>
+        <li><span aria-current="page">DDD 战略设计与限界上下文（本篇）</span></li>
+        <li><a href="2026-08-11-DDD战术设计与领域模型.html">DDD 战术设计与领域模型</a></li>
+        <li><a href="2026-08-11-DDD分层架构模式对比.html">DDD 分层架构模式对比</a></li>
+        <li><a href="2026-08-11-DDD订单领域Java实践.html">DDD 订单领域 Java 实践</a></li>
+        <li><a href="2026-08-11-DDD落地演进与常见误区.html">DDD 落地演进与常见误区</a></li>
+      </ol>
+    </article>
+    <footer class="article-footer"><div class="source-path">HTML 页面：<code>notes/architecture/2026-08-11-DDD战略设计与限界上下文.html</code></div></footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录侧栏"><ol class="toc-list">
+      <li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#子域分类">子域分类</a></li><li class="toc-level-2"><a href="#限界上下文">限界上下文</a></li><li class="toc-level-2"><a href="#识别边界">识别边界</a></li><li class="toc-level-2"><a href="#上下文映射">上下文映射</a></li><li class="toc-level-2"><a href="#订单案例">订单案例</a></li><li class="toc-level-2"><a href="#java工程映射">Java 工程映射</a></li><li class="toc-level-2"><a href="#决策练习">决策练习</a></li><li class="toc-level-2"><a href="#本篇小结">本篇小结</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li><li class="toc-level-2"><a href="#专题导航">专题导航</a></li>
+    </ol></nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+<div class="mobile-backdrop" hidden></div>
+</body>
+</html>

@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="以 Java 21 订单模型讲清 DDD 实体、值对象、聚合、领域服务、事件、仓储、工厂与规约。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="软件架构与 DDD">
+  <meta name="study-date" content="2026-08-11">
+  <title>DDD 战术设计与领域模型｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <div class="sidebar-category-summary"><span class="eyebrow">专题</span><strong>软件架构与 DDD</strong><small>七篇学习系列</small></div>
+    <nav class="doc-nav" aria-label="DDD 专题文档">
+      <a class="doc-nav-item" href="2026-08-11-DDD架构总览与学习路线.html"><span>1. 架构总览与学习路线</span></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD基础概念与统一语言.html"><span>2. 基础概念与统一语言</span></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD战略设计与限界上下文.html"><span>3. 战略设计与限界上下文</span></a>
+      <a class="doc-nav-item is-active" href="2026-08-11-DDD战术设计与领域模型.html" aria-current="page"><span>4. 战术设计与领域模型</span></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD分层架构模式对比.html"><span>5. 分层架构模式对比</span></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD订单领域Java实践.html"><span>6. 订单领域 Java 实践</span></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD落地演进与常见误区.html"><span>7. 落地演进与常见误区</span></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta"><a href="../../../index.html">知识库首页</a><span>·</span><span>软件架构与 DDD</span><span>·</span><time datetime="2026-08-11">2026-08-11</time></div>
+    <article class="markdown-body">
+      <h1 id="ddd战术设计与领域模型">DDD 战术设计与领域模型</h1>
+      <blockquote><p>整理日期：2026-08-11；资料检索日期：2026-08-11<br>目标：在 Order 限界上下文内部，用普通 Java 21 类型表达身份、值、业务行为与一致性。</p></blockquote>
+
+      <nav aria-label="本页目录">
+        <strong>本页目录</strong>
+        <ol>
+          <li><a href="#核心结论">核心结论</a></li>
+          <li><a href="#实体与值对象">实体与值对象</a></li>
+          <li><a href="#聚合与不变量">聚合与不变量</a></li>
+          <li><a href="#领域服务与事件">领域服务与事件</a></li>
+          <li><a href="#仓储工厂与规约">仓储、工厂与规约</a></li>
+          <li><a href="#订单案例">订单案例</a></li>
+          <li><a href="#常见误区">常见误区</a></li>
+          <li><a href="#练习与验收">练习与验收</a></li>
+          <li><a href="#本篇小结">本篇小结</a></li>
+          <li><a href="#参考资料">参考资料</a></li>
+          <li><a href="#专题导航">专题导航</a></li>
+        </ol>
+      </nav>
+
+      <h2 id="核心结论">核心结论</h2>
+      <ul>
+        <li>战术模式在<strong>一个限界上下文内部</strong>表达模型；若模型边界仍混乱，堆叠实体、仓储和服务只会把混乱写得更复杂。</li>
+        <li>实体以身份和生命周期延续，值对象以属性值表达含义；二者都可以包含业务行为，而不只是数据容器。</li>
+        <li>聚合保护需要同步成立的不变量与事务一致性，不是“能从一个对象导航到的所有对象”，也不是数据库外键图。</li>
+        <li>领域行为如果表达业务政策，应优先放在自然拥有该责任的实体或值对象；只有确实没有自然归属时才使用领域服务。</li>
+        <li>领域事件是上下文内部模型中的已发生事实；集成事件是边界外的通信契约。它们可能源于同一事实，但不应被当成同一个对象。</li>
+      </ul>
+      <p><strong>来源定义：</strong>Eric Evans 的 <a href="https://www.domainlanguage.com/wp-content/uploads/2016/05/DDD_Reference_2015-03.pdf" target="_blank" rel="noopener noreferrer">DDD Reference PDF</a>把实体、值对象、服务、聚合、仓储、工厂和领域事件作为模型构件，并要求聚合根守护整体不变量。<strong>Java 工程翻译：</strong>本篇以框架无关的 Java 类型演示职责；没有 Spring、JPA 或 Web 注解，不表示基础设施不需要，而是先让业务规则可独立理解和测试。</p>
+
+      <h2 id="实体与值对象">实体与值对象</h2>
+      <p>最直接的判断题是：“属性都变了，它还是不是同一个业务对象？”订单改了收货地址仍是同一张订单，因为 <code>OrderId</code> 延续了身份；两个金额同为 CNY 99.00 则可以互换，因为 Money 的含义完全由数值和币种决定。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>判断维度</th><th>Entity（实体）</th><th>Value Object（值对象）</th><th>订单例子</th></tr></thead>
+          <tbody>
+            <tr><td>相等依据</td><td>稳定身份；属性变化后仍可视为同一个</td><td>全部构成属性的值；值相同即可互换</td><td><code>Order</code>/<code>OrderLine</code> 对比 <code>Money</code>/<code>Address</code></td></tr>
+            <tr><td>生命周期</td><td>需要跟踪创建、状态转换与终止</td><td>没有独立身份，通常随拥有者被替换</td><td>订单从 Draft 到 Submitted；地址修改产生新地址值</td></tr>
+            <tr><td>可变性</td><td>可以在受约束行为中改变状态</td><td>应不可变，操作返回新值</td><td><code>order.submit()</code>；<code>money.add(other)</code></td></tr>
+            <tr><td>设计焦点</td><td>身份、连续性和行为</td><td>有效构造、值相等、无副作用行为</td><td>订单号不可随意替换；Money 禁止缺币种或负金额</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>来源定义：</strong><a href="https://martinfowler.com/bliki/ValueObject.html" target="_blank" rel="noopener noreferrer">Fowler 的 Value Object 说明</a>强调值对象按属性值判断相等，并指出对象属于实体还是值取决于上下文；Address 在订单中可作为不可变快照，在需要独立审计每个地址记录的上下文中也可能成为实体。</p>
+      <h3 id="money值对象">Money 值对象（Java 21）</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>Java 21</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-java">import java.math.BigDecimal;
+import java.util.Currency;
+import java.util.Objects;
+
+record Money(BigDecimal amount, Currency currency) {
+    Money {
+        Objects.requireNonNull(amount, "amount");
+        Objects.requireNonNull(currency, "currency");
+        if (amount.signum() &lt; 0) {
+            throw new IllegalArgumentException("金额不能为负数");
+        }
+        amount = amount.stripTrailingZeros();
+    }
+
+    Money add(Money other) {
+        if (!currency.equals(other.currency())) {
+            throw new IllegalArgumentException("币种必须一致");
+        }
+        return new Money(amount.add(other.amount()), currency);
+    }
+
+    Money multiply(int factor) {
+        if (factor &lt;= 0) {
+            throw new IllegalArgumentException("数量必须大于 0");
+        }
+        return new Money(amount.multiply(BigDecimal.valueOf(factor)), currency);
+    }
+}</code></pre>
+      </div>
+      <p><strong>工程解释：</strong>Java <code>record</code>自动提供 final 组件、按组件的 <code>equals/hashCode</code> 和访问器，适合许多值对象；但 <code>record</code> 只是语言机制，不自动保证领域有效性。仍需在规范构造器中校验，保护可变组件的防御性副本，并明确金额精度、舍入和币种规则。若对象需要延续身份、延迟加载或复杂封装，record 可能并不合适。</p>
+
+      <h2 id="聚合与不变量">聚合与不变量</h2>
+      <p><strong>Aggregate（聚合）</strong>把必须共同保持业务一致的实体和值对象圈进一个边界；其中一个实体是 <strong>Aggregate Root（聚合根）</strong>，外部只能持有根的引用并通过根发起修改。<strong>Invariant（不变量）</strong>是在一次业务操作完成后必须为真的规则，例如“已提交订单至少包含一个订单行”“只有草稿订单能增加订单行”。</p>
+      <figure>
+        <img src="../../assets/ddd/aggregate-consistency-boundary.svg" alt="Order 聚合根包围 OrderLine 实体和 Money 值对象，守护订单不变量，并通过 OrderCreated 事件与外部 Payment 和 Inventory 聚合协作">
+        <figcaption>订单聚合：边界由同步一致性需求决定，外部聚合通过标识和事件协作。</figcaption>
+      </figure>
+      <p>图可用文字等价表达为：<code>Order</code> 是唯一外部修改入口，内部管理 <code>OrderLine</code> 和 <code>Money</code>，同步守住订单总额与状态转换等不变量；Payment 与 Inventory 在聚合边界外，不通过可变对象引用加入订单事务，而是通过标识、命令或事件完成协作。<code>OrderCreated</code> 记录订单领域事实，边界外消费者采用最终一致性。</p>
+      <p><a href="https://www.dddcommunity.org/library/vernon_2011/" target="_blank" rel="noopener noreferrer">Vaughn Vernon 的 Effective Aggregate Design</a>把重点从对象图导航转向真实一致性约束，并建议设计小聚合、通过标识引用其他聚合、跨聚合使用最终一致性。<strong>实践默认：</strong>“一个事务只修改一个聚合实例”是控制锁竞争、耦合和失败范围的强启发式，不是不可违反的 DDD 法律。若业务确有必须原子成立的跨对象不变量，应先复核聚合边界；若仍决定一次修改多个聚合，要记录并发、恢复与扩展代价，而不是把技术事务能力当作证明。</p>
+
+      <h3 id="order聚合示例">Order 聚合聚焦示例（Java 21）</h3>
+      <p>下列代码可保存为 <code>Order.java</code> 编译。它是战术模式的聚焦示例，不包含持久化、消息发布和完整错误层次；所有引用的领域类型均定义在片段内，后续 Java 实践篇会扩展应用与基础设施实现。</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>Java 21 · Order.java</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-java">import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Currency;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+
+record OrderId(UUID value) {
+    OrderId {
+        Objects.requireNonNull(value, "value");
+    }
+}
+
+record Money(BigDecimal amount, Currency currency) {
+    Money {
+        Objects.requireNonNull(amount, "amount");
+        Objects.requireNonNull(currency, "currency");
+        if (amount.signum() &lt; 0) {
+            throw new IllegalArgumentException("金额不能为负数");
+        }
+        amount = amount.stripTrailingZeros();
+    }
+
+    Money multiply(int factor) {
+        if (factor &lt;= 0) {
+            throw new IllegalArgumentException("数量必须大于 0");
+        }
+        return new Money(amount.multiply(BigDecimal.valueOf(factor)), currency);
+    }
+}
+
+enum OrderStatus { DRAFT, SUBMITTED }
+
+record OrderCreated(OrderId orderId, Instant occurredAt) {
+    OrderCreated {
+        Objects.requireNonNull(orderId, "orderId");
+        Objects.requireNonNull(occurredAt, "occurredAt");
+    }
+}
+
+final class OrderLine {
+    private final UUID id;
+    private final String productId;
+    private final Money unitPrice;
+    private int quantity;
+
+    OrderLine(UUID id, String productId, int quantity, Money unitPrice) {
+        this.id = Objects.requireNonNull(id);
+        if (productId == null || productId.isBlank()) {
+            throw new IllegalArgumentException("商品标识不能为空");
+        }
+        this.productId = productId;
+        this.unitPrice = Objects.requireNonNull(unitPrice);
+        changeQuantity(quantity);
+    }
+
+    UUID id() { return id; }
+    String productId() { return productId; }
+    int quantity() { return quantity; }
+    Money unitPrice() { return unitPrice; }
+    Money subtotal() { return unitPrice.multiply(quantity); }
+
+    void changeQuantity(int newQuantity) {
+        if (newQuantity &lt;= 0) {
+            throw new IllegalArgumentException("订单行数量必须大于 0");
+        }
+        this.quantity = newQuantity;
+    }
+}
+
+public final class Order {
+    private final OrderId id;
+    private final List&lt;OrderLine&gt; lines = new ArrayList&lt;&gt;();
+    private final List&lt;OrderCreated&gt; domainEvents = new ArrayList&lt;&gt;();
+    private OrderStatus status = OrderStatus.DRAFT;
+
+    private Order(OrderId id) {
+        this.id = Objects.requireNonNull(id);
+    }
+
+    public static Order create(OrderId id, Instant now) {
+        var order = new Order(id);
+        order.domainEvents.add(new OrderCreated(id, now));
+        return order;
+    }
+
+    public void addLine(String productId, int quantity, Money unitPrice) {
+        requireDraft();
+        lines.add(new OrderLine(UUID.randomUUID(), productId, quantity, unitPrice));
+    }
+
+    public void changeLineQuantity(UUID lineId, int quantity) {
+        requireDraft();
+        line(lineId).changeQuantity(quantity);
+    }
+
+    public void submit() {
+        requireDraft();
+        if (lines.isEmpty()) {
+            throw new IllegalStateException("空订单不能提交");
+        }
+        status = OrderStatus.SUBMITTED;
+    }
+
+    public OrderId id() { return id; }
+    public OrderStatus status() { return status; }
+    public List&lt;OrderLine&gt; lines() { return List.copyOf(lines); }
+
+    public List&lt;OrderCreated&gt; pullEvents() {
+        var collected = List.copyOf(domainEvents);
+        domainEvents.clear();
+        return collected;
+    }
+
+    private OrderLine line(UUID lineId) {
+        return lines.stream()
+                .filter(candidate -&gt; candidate.id().equals(lineId))
+                .findFirst()
+                .orElseThrow(() -&gt; new IllegalArgumentException("订单行不存在"));
+    }
+
+    private void requireDraft() {
+        if (status != OrderStatus.DRAFT) {
+            throw new IllegalStateException("只有草稿订单可以修改或提交");
+        }
+    }
+}
+
+interface OrderRepository {
+    Optional&lt;Order&gt; findById(OrderId id);
+    void save(Order order);
+}
+
+interface PricingPolicy {
+    Money priceFor(String productId, int quantity);
+}</code></pre>
+      </div>
+      <p><strong>不变量审查：</strong>构造器不可从外部直接调用；<code>create</code> 建立有效草稿并记录不可变、过去式的 <code>OrderCreated</code>；订单行只能经聚合根加入或改量；<code>submit()</code> 同时拒绝非 Draft 和空订单；没有 public setter。Payment 与 Inventory 没有成为 Order 的直接对象引用。示例故意不让聚合发布网络消息，以免把同步副作用塞进领域状态转换。</p>
+
+      <h2 id="领域服务与事件">领域服务与事件</h2>
+      <p>“服务”一词容易把所有行为都吸走。判断顺序应是：先问行为是否自然属于实体或值对象；若它表达领域政策，却涉及多个对象或没有自然拥有者，再命名为领域服务；用例调度、事务和外部 I/O 则属于应用服务。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>构件</th><th>职责与所有权</th><th>是否承载业务决策</th><th>订单例子</th><th>边界提醒</th></tr></thead>
+          <tbody>
+            <tr><td>Entity 行为</td><td>对象自己拥有的身份、状态转换和规则</td><td>是</td><td><code>Order.submit()</code> 决定能否提交</td><td>不要把自然行为移到 <code>OrderService</code></td></tr>
+            <tr><td>Domain Service</td><td>领域中的无自然对象归属操作，使用统一语言命名</td><td>是</td><td><code>PricingPolicy.priceFor(...)</code>，仅当价格政策不自然属于某个实体/值对象</td><td>不是通用 helper 或“放不下的代码”桶</td></tr>
+            <tr><td>Application Service</td><td>接收用例、协调仓储/领域对象/端口、控制事务</td><td>否；只编排</td><td>创建订单、取得价格、提交、保存、收集事件</td><td>认证、重试和消息发送不应进入聚合</td></tr>
+            <tr><td>Domain Event</td><td>当前上下文模型中领域专家关心的已发生事实</td><td>记录业务意义</td><td>不可变的 <code>OrderCreated</code></td><td>不等于数据库行变更或 Kafka 消息</td></tr>
+            <tr><td>Integration Event</td><td>面向其他上下文的版本化通信契约</td><td>不重新作领域决策</td><td><code>ordering.order-created.v1</code> 消息</td><td>通常在事务提交后发布，需兼容、幂等与投递策略</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>来源定义：</strong>Evans 将领域服务描述为模型中重要、无自然实体/值对象归属的操作，将领域事件描述为领域专家关心的已发生事实；事件通常不可变并记录发生时间。<a href="https://learn.microsoft.com/en-us/azure/architecture/microservices/model/tactical-domain-driven-design" target="_blank" rel="noopener noreferrer">Microsoft Learn 的战术 DDD 指南</a>明确区分领域服务与应用服务，也区分上下文内领域事件和事务提交后跨边界发布的集成事件。</p>
+
+      <h2 id="仓储工厂与规约">仓储、工厂与规约</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>模式</th><th>核心语义</th><th>何时使用</th><th>订单选择</th><th>常见误用</th></tr></thead>
+          <tbody>
+            <tr><td>Repository（仓储）</td><td>以聚合根集合般的接口提供查找、加入/保存，隐藏存储与映射技术</td><td>聚合根需要全局访问或按领域条件查找</td><td><code>OrderRepository.findById/save</code></td><td>为每个实体建仓储；暴露 ORM Session 或全套表级 CRUD</td></tr>
+            <tr><td>Factory（工厂）</td><td>封装复杂创建，产出内部一致、身份明确的完整对象或聚合</td><td>构造跨多个步骤、类型选择或规则，构造器已无法清晰表达</td><td>简单情况先用 <code>Order.create</code>；复杂导入再引入独立工厂</td><td>只为隐藏 <code>new</code> 建无意义工厂，或让工厂产生半成品</td></tr>
+            <tr><td>Specification（规约）</td><td>把一个业务候选是否满足条件表达为可命名、可组合的谓词</td><td>同一规则用于校验、选择或组合，且是稳定领域概念</td><td><code>EligibleForPriorityFulfillment</code> 可由客户等级、地区与订单额规约组合</td><td>把任意查询过滤器包装成规约，或在规约里做 I/O</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><a href="https://martinfowler.com/eaaCatalog/repository.html" target="_blank" rel="noopener noreferrer">Fowler 的 Repository 模式</a>把仓储描述为领域与数据映射之间、具有集合语义的中介；Evans 进一步建议只为确需直接访问的聚合根提供仓储。规约用于表达可组合的业务谓词，可参考 Fowler 的原始 <a href="https://martinfowler.com/apsupp/spec.pdf" target="_blank" rel="noopener noreferrer">Specifications 论文</a>。<strong>工程解释：</strong>仓储接口放在 <code>domain</code>、<code>application</code> 或端口包并无普适规则，应由谁拥有用例依赖与抽象来决定；关键是核心规则只依赖稳定契约，ORM DAO 实现留在基础设施边界。</p>
+      <figure>
+        <img src="../../assets/ddd/tactical-building-blocks.svg" alt="领域模型中的实体、值对象、聚合根、领域服务、领域事件、仓储、工厂和规约，与应用层编排和基础设施实现之间的职责关系">
+        <figcaption>战术构件按领域职责组合；应用层编排用例，基础设施层实现外部技术。</figcaption>
+      </figure>
+      <p>图可用文字等价表达为：领域模型内部，Entity 用身份延续生命周期，Value Object 表达不可变值，Aggregate Root 守护一致性入口，Domain Service 承载无自然对象归属的政策，Domain Event 记录业务事实，Repository、Factory 与 Specification 分别处理聚合访问、有效创建和业务谓词；应用层负责事务与流程协调，基础设施层实现数据库、消息和 HTTP。各构件按问题选用，不要求每个上下文全部具备。</p>
+
+      <h2 id="订单案例">订单案例</h2>
+      <p>以下用例沿用上面的类型，展示“领域决定”和“应用编排”的分工；它不是完整生产实现。</p>
+      <div class="code-block">
+        <div class="code-toolbar"><span>Java 21 · 应用编排聚焦示例</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-java">import java.time.Clock;
+import java.util.List;
+
+interface DomainEventPublisher {
+    void publish(List&lt;OrderCreated&gt; events);
+}
+
+final class PlaceOrderUseCase {
+    private final OrderRepository orders;
+    private final PricingPolicy pricingPolicy;
+    private final DomainEventPublisher events;
+    private final Clock clock;
+
+    PlaceOrderUseCase(
+            OrderRepository orders,
+            PricingPolicy pricingPolicy,
+            DomainEventPublisher events,
+            Clock clock) {
+        this.orders = orders;
+        this.pricingPolicy = pricingPolicy;
+        this.events = events;
+        this.clock = clock;
+    }
+
+    void handle(OrderId orderId, String productId, int quantity) {
+        var order = Order.create(orderId, clock.instant());
+        var unitPrice = pricingPolicy.priceFor(productId, quantity);
+
+        order.addLine(productId, quantity, unitPrice);
+        order.submit();
+
+        orders.save(order);
+        events.publish(order.pullEvents());
+    }
+}</code></pre>
+      </div>
+      <ol>
+        <li><strong>创建：</strong>应用服务提供标识和时间；<code>Order.create</code> 建立有效 Draft 并记录 <code>OrderCreated</code>。</li>
+        <li><strong>定价与加行：</strong><code>PricingPolicy</code>只在定价政策没有自然实体/值对象归属时参与；Order 决定是否仍允许添加订单行。</li>
+        <li><strong>提交：</strong>应用服务发起动作，Order 独立判断 Draft → Submitted 并拒绝空订单。这是领域决策。</li>
+        <li><strong>持久化：</strong>应用服务通过 <code>OrderRepository</code> 保存整个聚合，而不是逐行调用 DAO。</li>
+        <li><strong>收集事件：</strong>保存后收集领域事件并交给发布端口；生产环境还需事务消息或 Outbox 等可靠性机制。网络发送不是聚合职责。</li>
+      </ol>
+      <p><strong>边界说明：</strong>示例为了展示顺序而直接调用发布端口，不宣称它解决了“数据库提交后进程崩溃”的一致性窗口。完整 Java 实践篇应选择并验证可靠发布策略，并把 <code>OrderCreated</code> 映射为独立的集成契约。</p>
+
+      <h2 id="常见误区">常见误区</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>误区</th><th>暴露的问题</th><th>修正问题</th></tr></thead>
+          <tbody>
+            <tr><td>贫血模型：实体只有 getter/setter</td><td>状态转换和不变量散落在服务，任意调用者都能绕过规则</td><td>哪一个模型对象自然拥有这个业务行为？</td></tr>
+            <tr><td>每张表一个聚合</td><td>用存储结构替代一致性分析，表关系被误当业务边界</td><td>哪些规则必须在一次业务操作结束时同步成立？</td></tr>
+            <tr><td>把整个关联图做成巨型聚合</td><td>锁竞争、加载成本和变更耦合扩大</td><td>哪些对象具有独立生命周期，可用标识和最终一致性协作？</td></tr>
+            <tr><td>跨聚合持有可变对象引用</td><td>调用者可能在一个事务中无意修改多个一致性边界</td><td>能否只保存 <code>PaymentId</code> 或 <code>InventoryReservationId</code>？</td></tr>
+            <tr><td>Domain Service 成为杂物桶</td><td>实体和值对象失去行为，服务名退化为 <code>Manager/Helper</code></td><td>该行为真的没有自然拥有者吗？它是否有领域名称？</td></tr>
+            <tr><td>每个实体一个 Repository</td><td>内部实体可被单独加载和修改，聚合根无法守住规则</td><td>谁是需要全局访问的聚合根？</td></tr>
+            <tr><td>聚合里同步发邮件、HTTP 或 MQ</td><td>业务状态转换被 I/O 失败、延迟和重试语义污染</td><td>能否先记录领域事件，再由应用/基础设施在事务边界外处理？</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><a href="https://martinfowler.com/bliki/AnemicDomainModel.html" target="_blank" rel="noopener noreferrer">Fowler 对 Anemic Domain Model 的分析</a>指出，只有数据而把领域行为全部放进服务，会失去领域模型组织复杂业务规则的主要收益。<strong>情境建议：</strong>这不代表简单 CRUD 必须强造富模型；没有复杂不变量时，保持简单比形式化堆模式更诚实。</p>
+
+      <h2 id="练习与验收">练习与验收</h2>
+      <p><strong>场景：</strong>客户创建草稿订单，可加入多个商品；数量必须大于零；提交时至少一行且所有金额币种一致；提交后不能改数量。库存预占可能稍后失败，失败时订单进入待人工处理，不要求与订单提交同一数据库事务。</p>
+      <ol>
+        <li>标出具有身份和生命周期的候选实体，以及只按属性值判断的候选值对象。</li>
+        <li>逐条写出必须同步成立的不变量，并指出由哪个对象的方法守护。</li>
+        <li>决定 Order 聚合边界；说明 Product、InventoryReservation 是否应进入边界，以及为什么。</li>
+        <li>设计 <code>create</code>、<code>addLine</code>、<code>changeLineQuantity</code>、<code>submit</code> 的成功例和失败例。</li>
+        <li>标出应用服务负责的加载、定价、事务、保存和事件转交，与领域模型负责的决策。</li>
+      </ol>
+      <p><strong>期望推理：</strong><code>Order</code> 是聚合根，<code>OrderLine</code> 是边界内实体，<code>OrderId</code>、<code>Money</code> 和本场景中的 <code>Address</code> 可作为值对象；Order 同步守护 Draft 状态、非空提交、正数量和币种约束。Product 与库存预占具有独立生命周期及权威规则，应以标识/快照和事件协作，不因页面能显示它们就并入聚合。库存失败属于跨聚合流程，采用可观察、可补偿的最终一致性。</p>
+      <p><strong>验收自检：</strong>是否能指出每条不变量的同步边界？聚合边界是否来自业务规则而非表或页面？是否只有聚合根暴露修改入口？代码能否在没有 Spring/数据库时测试？领域服务是否确实没有自然对象归属？领域事件是否过去式、不可变且没有直接承担消息协议？全部回答清楚，才算完成本节。</p>
+
+      <h2 id="本篇小结">本篇小结</h2>
+      <p>战术设计不是按清单创建类，而是给业务知识安排准确职责：身份交给实体，描述性交给不可变值，事务不变量交给小聚合及其根，无自然归属的政策才交给领域服务，边界内事实用领域事件表达，持久化与创建分别由仓储和工厂在必要时封装。下一步比较分层、六边形与整洁架构，看它们怎样保护这些模型决定免受 Web、ORM 和消息技术反向支配。</p>
+
+      <h2 id="参考资料">参考资料</h2>
+      <p>资料检索于 <strong>2026-08-11</strong>。以下均为作者原站、DDD 社区原始材料或官方技术资料，正文为自行归纳。</p>
+      <ul>
+        <li><a href="https://www.domainlanguage.com/ddd/reference/" target="_blank" rel="noopener noreferrer">Eric Evans / Domain Language：DDD Reference</a> — DDD 原著定义与模式摘要的官方入口。</li>
+        <li><a href="https://www.domainlanguage.com/wp-content/uploads/2016/05/DDD_Reference_2015-03.pdf" target="_blank" rel="noopener noreferrer">Eric Evans：Domain-Driven Design Reference（PDF）</a> — 实体、值对象、聚合、事件、服务、仓储和工厂的原始摘要。</li>
+        <li><a href="https://martinfowler.com/bliki/ValueObject.html" target="_blank" rel="noopener noreferrer">Martin Fowler：Value Object</a> — 值相等、不可变性与上下文相关的建模选择。</li>
+        <li><a href="https://martinfowler.com/eaaCatalog/repository.html" target="_blank" rel="noopener noreferrer">Martin Fowler：Repository</a> — 集合式领域访问与数据映射隔离。</li>
+        <li><a href="https://martinfowler.com/apsupp/spec.pdf" target="_blank" rel="noopener noreferrer">Martin Fowler：Specifications（PDF）</a> — 可组合业务谓词的原始模式说明。</li>
+        <li><a href="https://martinfowler.com/bliki/AnemicDomainModel.html" target="_blank" rel="noopener noreferrer">Martin Fowler：Anemic Domain Model</a> — 领域行为外移与纯数据对象的风险。</li>
+        <li><a href="https://www.dddcommunity.org/library/vernon_2011/" target="_blank" rel="noopener noreferrer">Vaughn Vernon / DDD Community：Effective Aggregate Design</a> — 小聚合、标识引用与最终一致性的实践规则。</li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/architecture/microservices/model/tactical-domain-driven-design" target="_blank" rel="noopener noreferrer">Microsoft Learn：Use tactical DDD to design microservices</a> — 实体、值对象、聚合、服务与事件的官方工程说明。</li>
+      </ul>
+
+      <h2 id="专题导航">DDD 七篇专题导航</h2>
+      <ol>
+        <li><a href="2026-08-11-DDD架构总览与学习路线.html">DDD 架构总览与学习路线</a></li>
+        <li><a href="2026-08-11-DDD基础概念与统一语言.html">DDD 基础概念与统一语言</a></li>
+        <li><a href="2026-08-11-DDD战略设计与限界上下文.html">DDD 战略设计与限界上下文</a></li>
+        <li><span aria-current="page">DDD 战术设计与领域模型（本篇）</span></li>
+        <li><a href="2026-08-11-DDD分层架构模式对比.html">DDD 分层架构模式对比</a></li>
+        <li><a href="2026-08-11-DDD订单领域Java实践.html">DDD 订单领域 Java 实践</a></li>
+        <li><a href="2026-08-11-DDD落地演进与常见误区.html">DDD 落地演进与常见误区</a></li>
+      </ol>
+    </article>
+    <footer class="article-footer"><div class="source-path">HTML 页面：<code>notes/architecture/2026-08-11-DDD战术设计与领域模型.html</code></div></footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录侧栏"><ol class="toc-list">
+      <li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#实体与值对象">实体与值对象</a></li><li class="toc-level-2"><a href="#聚合与不变量">聚合与不变量</a></li><li class="toc-level-2"><a href="#领域服务与事件">领域服务与事件</a></li><li class="toc-level-2"><a href="#仓储工厂与规约">仓储、工厂与规约</a></li><li class="toc-level-2"><a href="#订单案例">订单案例</a></li><li class="toc-level-2"><a href="#常见误区">常见误区</a></li><li class="toc-level-2"><a href="#练习与验收">练习与验收</a></li><li class="toc-level-2"><a href="#本篇小结">本篇小结</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li><li class="toc-level-2"><a href="#专题导航">专题导航</a></li>
+    </ol></nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+<div class="mobile-backdrop" hidden></div>
+</body>
+</html>
