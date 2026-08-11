@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="面向 Java 开发者的 DDD 全景与七篇学习路线，厘清战略设计、战术设计和架构实现的边界。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="软件架构与 DDD">
+  <meta name="study-date" content="2026-08-11">
+  <title>DDD 架构总览与学习路线｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <div class="sidebar-category-summary"><span class="eyebrow">专题</span><strong>软件架构与 DDD</strong><small>七篇学习系列</small></div>
+    <nav class="doc-nav" aria-label="DDD 专题文档">
+      <a class="doc-nav-item is-active" href="2026-08-11-DDD架构总览与学习路线.html" aria-current="page"><span>1. 架构总览与学习路线</span></a>
+      <a class="doc-nav-item" href="2026-08-11-DDD基础概念与统一语言.html"><span>2. 基础概念与统一语言</span></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta"><a href="../../../index.html">知识库首页</a><span>·</span><span>软件架构与 DDD</span><span>·</span><time datetime="2026-08-11">2026-08-11</time></div>
+    <article class="markdown-body">
+      <h1 id="ddd架构总览与学习路线">DDD 架构总览与学习路线</h1>
+      <blockquote><p>整理日期：2026-08-11；资料检索日期：2026-08-11<br>面向有 Java、Spring 与数据库基础的开发者：先建立正确地图，再逐步进入模型边界、战术模式和工程落地。</p></blockquote>
+
+      <nav aria-label="本页目录">
+        <strong>本页目录</strong>
+        <ol>
+          <li><a href="#核心结论">核心结论</a></li>
+          <li><a href="#ddd全景">DDD 全景</a></li>
+          <li><a href="#三个层次">三个层次</a></li>
+          <li><a href="#java工程映射">Java 工程映射</a></li>
+          <li><a href="#七篇学习路线">七篇学习路线</a></li>
+          <li><a href="#前置知识">前置知识</a></li>
+          <li><a href="#术语速览">术语速览</a></li>
+          <li><a href="#学习方法">学习方法</a></li>
+          <li><a href="#验收标准">验收标准</a></li>
+          <li><a href="#参考资料">参考资料</a></li>
+          <li><a href="#专题导航">专题导航</a></li>
+        </ol>
+      </nav>
+
+      <h2 id="核心结论">核心结论</h2>
+      <ul>
+        <li>DDD 是在复杂领域中持续建模、对话和验证的工作方式，不是一套固定的 Controller–Service–Repository 分层模板。</li>
+        <li>战略设计回答“模型边界在哪里、边界之间怎样协作”，战术设计回答“在一个边界内怎样表达身份、值、行为与一致性”。</li>
+        <li>架构可以隔离数据库、Web 框架和消息中间件，保护领域模型独立演化；但分层、六边形或微服务架构本身都不等于 DDD。</li>
+        <li>统一语言连接业务对话、示例、测试和代码；语言一旦含混，模型与实现通常也会含混。</li>
+        <li>DDD 应按业务复杂度选择性使用。简单 CRUD 可以保持简单，复杂且持续变化的规则才更能体现领域模型的收益。</li>
+      </ul>
+      <p><strong>来源定义：</strong>Eric Evans 的 <a href="https://www.domainlanguage.com/ddd/reference/" target="_blank" rel="noopener noreferrer">DDD Reference</a>汇总了原著中的定义与模式；Martin Fowler 将 DDD 的核心概括为复杂领域中的统一语言、可演化的软件模型与战略边界。<strong>工程解释：</strong>对 Java 开发者而言，重点不是先建多少包，而是先让代码中的名词、动作和规则能够接受业务人员检验。</p>
+
+      <h2 id="ddd全景">DDD 全景</h2>
+      <figure>
+        <img src="../../assets/ddd/ddd-landscape.svg" alt="DDD 从问题空间、子域和限界上下文，到统一语言、领域模型、战术构件以及应用与适配器实现的全景图">
+        <figcaption>DDD 全景：先理解业务问题，再划定模型边界，最后选择实现结构。</figcaption>
+      </figure>
+      <p>图中的路径可用文字等价表达为：从<strong>问题空间</strong>识别业务能力与约束，分析出不同<strong>子域</strong>；在解决方案中为模型建立<strong>限界上下文</strong>，让每个上下文拥有内部一致的<strong>统一语言与领域模型</strong>；再用实体、值对象、聚合、领域事件等<strong>战术构件</strong>表达规则；最后由应用用例、端口和适配器连接 HTTP、数据库或消息系统。此顺序不是一次性瀑布流程，而是可反复回退修正的学习地图。</p>
+      <p><strong>来源定义：</strong><a href="https://martinfowler.com/bliki/BoundedContext.html" target="_blank" rel="noopener noreferrer">Fowler 的 Bounded Context 说明</a>强调大型领域难以维持单一统一模型，应在明确边界内保持模型一致，并显式描述边界关系。<strong>实践建议：</strong>不要从“建微服务”倒推子域；先收集业务语言和决策规则，再讨论部署单元。</p>
+
+      <h2 id="三个层次">三个层次</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>层次</th><th>核心问题</th><th>主要产物</th><th>常见失败</th><th>可能的 Java 产物</th></tr></thead>
+          <tbody>
+            <tr><td>战略设计</td><td>业务能力如何拆分？哪套语言和模型在哪个范围有效？上下文如何协作？</td><td>子域判断、限界上下文、上下文映射、核心领域取舍</td><td>按组织表或技术层切边界；试图建立全公司唯一模型</td><td>模块边界、上下文 API/事件契约、独立构建单元</td></tr>
+            <tr><td>战术设计</td><td>一个上下文内部怎样表达身份、值、行为、规则和一致性？</td><td>实体、值对象、聚合、领域服务、仓储、领域事件</td><td>把数据库表逐张变成类；只有 getter/setter；聚合无限扩大</td><td>普通 Java 类型、<code>record</code> 值对象、聚合根、领域异常、仓储接口</td></tr>
+            <tr><td>架构与实现</td><td>怎样执行用例，并让领域规则不被 Web、ORM、消息等技术细节绑住？</td><td>依赖方向、端口/适配器、事务和集成策略、可观测与部署方案</td><td>把选定架构当成 DDD 教条；框架注解渗透核心模型；为了模式而模式</td><td>application service、input/output port、REST adapter、JPA adapter、module</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>工程解释：</strong>三个层次相互反馈，却不能互相替代。<a href="https://learn.microsoft.com/en-us/azure/architecture/microservices/model/domain-analysis" target="_blank" rel="noopener noreferrer">Microsoft Learn 的领域分析指南</a>也将战略阶段与用于精化领域模型的战术模式分开描述；其文章以微服务为应用场景，不代表 DDD 必须采用微服务。</p>
+
+      <h2 id="java工程映射">Java 工程映射</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>DDD 概念</th><th>Java 工程翻译</th><th>必须保留的边界意识</th></tr></thead>
+          <tbody>
+            <tr><td>限界上下文</td><td>可映射为 Java module、Maven module 或受约束的 package 边界</td><td>定义的是模型和语言的适用范围，不等于一个包，也不必等于一个微服务</td></tr>
+            <tr><td>聚合</td><td>在一次业务事务中共同保持一致的对象簇，由聚合根控制修改入口</td><td>不是对象图随意分组，也不是“一张主表加所有从表”</td></tr>
+            <tr><td>应用用例</td><td>application service 或 input port</td><td>负责协调流程；关键业务规则仍由领域对象表达</td></tr>
+            <tr><td>仓储</td><td>面向领域集合语义的接口，适配器实现 JDBC/JPA 等持久化</td><td>接口形状服务于领域操作，不应机械暴露整套 DAO CRUD</td></tr>
+            <tr><td>领域事件</td><td>不可变 Java 对象或 <code>record</code>，表达已经发生且有业务意义的事实</td><td>并不自动意味着 Kafka、异步消息或事件溯源</td></tr>
+            <tr><td>端口 / 适配器</td><td>用例接口与技术实现类</td><td>来自架构模式，是保护模型的一种选择，不是 DDD 定义本身</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>实践建议：</strong>上表是工程翻译而非来源定义。Alistair Cockburn 的<a href="https://alistair.cockburn.us/hexagonal-architecture" target="_blank" rel="noopener noreferrer">六边形架构原文</a>把端口描述为有目的的交互边界、把适配器描述为技术转换；团队可以用它隔离技术细节，也可以选择其他同样能保护领域模型的结构。</p>
+
+      <h2 id="七篇学习路线">七篇学习路线</h2>
+      <figure>
+        <img src="../../assets/ddd/ddd-learning-roadmap.svg" alt="从 DDD 总览、基础语言、战略设计、战术设计、架构对比、Java 订单实践到落地演进的七步学习路线图">
+        <figcaption>七篇路线：概念与语言奠基，战略到战术，再进入架构和 Java 实践。</figcaption>
+      </figure>
+      <p>图中的顺序等价为：先用本篇建立全景，再学习领域、模型和统一语言；随后识别子域与上下文，进入聚合等战术构件；比较分层、六边形、整洁等实现结构；完成 Java 订单用例；最后用渐进策略处理遗留系统与常见误区。每一步都以前一步的业务证据为输入。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>篇次</th><th>学习目标</th><th>关键问题</th><th>Java 实践</th><th>完成标准</th></tr></thead>
+          <tbody>
+            <tr><td>1. 总览</td><td>建立 DDD 全景地图</td><td>战略、战术、架构分别解决什么？</td><td>把概念映射到 module、普通 Java 类型和端口</td><td>能解释 DDD 不等于分层或微服务</td></tr>
+            <tr><td>2. 基础概念</td><td>建立可演化的业务语言</td><td>领域、模型、语言、代码如何区分并反馈？</td><td>以 <code>Order.submit()</code> 表达业务动作</td><td>能把含混 CRUD 改写为业务语言</td></tr>
+            <tr><td>3. 战略设计</td><td>识别问题与模型边界</td><td>问题空间如何拆分？模型边界怎样划定和协作？</td><td>为订单、库存等上下文定义接口契约</td><td>能解释子域与限界上下文的差别</td></tr>
+            <tr><td>4. 战术设计</td><td>用对象表达业务规则</td><td>如何表达身份、值、规则和事务一致性？</td><td>设计实体、值对象、聚合与领域事件</td><td>聚合边界有明确不变量证据</td></tr>
+            <tr><td>5. 架构模式</td><td>隔离技术细节与领域模型</td><td>哪些依赖方向能保护模型？</td><td>比较分层、六边形、整洁架构的包与依赖</td><td>能按约束选型而非套模板</td></tr>
+            <tr><td>6. 订单实践</td><td>贯通一个订单用例</td><td>如何把一个用例端到端实现？</td><td>Java 21 + Spring 应用层 + 持久化适配器 + 测试</td><td>规则测试不依赖 Spring 或数据库</td></tr>
+            <tr><td>7. 落地演进</td><td>形成渐进采用策略</td><td>遗留系统如何采用 DDD 并避免模式堆砌？</td><td>从热点规则提取模型并建立架构约束</td><td>能提出小步、可验证的采用计划</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 id="前置知识">前置知识</h2>
+      <ul>
+        <li>能够阅读 Java 21 的类、枚举、接口、异常和 <code>record</code>；无需掌握预览特性。</li>
+        <li>理解基本的 Spring Web/Service 调用、事务和关系数据库持久化即可。</li>
+        <li>愿意追问业务术语、具体例子、边界条件和不变量，而不是直接画表或生成 CRUD。</li>
+        <li><strong>不要求微服务经验。</strong>本系列先讨论模型，再选择单体模块或分布式部署；DDD、CQRS、事件溯源和微服务之间没有强制绑定。</li>
+      </ul>
+
+      <h2 id="术语速览">术语速览</h2>
+      <dl>
+        <dt><strong>Domain（领域）</strong></dt><dd>软件所面对的业务活动与知识范围。</dd>
+        <dt><strong>Domain Model（领域模型）</strong></dt><dd>为特定目的选择、组织并表达领域知识的抽象，不是现实或数据库的完整复制。</dd>
+        <dt><strong>Ubiquitous Language（统一语言）</strong></dt><dd>团队在一个模型边界内共同使用、并随理解持续演化的严格语言。</dd>
+        <dt><strong>Subdomain（子域）</strong></dt><dd>问题空间中相对内聚的业务能力或问题区域。</dd>
+        <dt><strong>Bounded Context（限界上下文）</strong></dt><dd>某套模型与统一语言保持一致、具有明确含义的适用边界。</dd>
+        <dt><strong>Aggregate（聚合）</strong></dt><dd>作为数据修改与一致性边界处理的一簇领域对象。</dd>
+        <dt><strong>Domain Event（领域事件）</strong></dt><dd>领域中已经发生、领域专家关心的事实。</dd>
+        <dt><strong>Port（端口）</strong></dt><dd>应用与外界之间一类有目的交互的技术无关契约。</dd>
+        <dt><strong>Adapter（适配器）</strong></dt><dd>把 HTTP、数据库、消息等具体技术转换为端口交互的组件。</dd>
+      </dl>
+      <p><strong>边界提醒：</strong>前七项来自 DDD 语境，端口和适配器来自六边形架构。把它们并列是为了学习工程落地，不表示 DDD 要求六边形架构。</p>
+
+      <h2 id="学习方法">学习方法</h2>
+      <ol>
+        <li><strong>业务对话：</strong>请业务人员讲一个具体决策或异常，而不是只给字段清单。</li>
+        <li><strong>例子与不变量：</strong>记录成功例、反例、状态转换，以及“任何时候都必须成立”的规则。</li>
+        <li><strong>模型与代码：</strong>用统一术语命名测试与 Java 类型，把关键行为放到能守住规则的对象中。</li>
+        <li><strong>反馈与修订：</strong>让业务人员读示例，让测试暴露歧义；修订术语、边界和代码，再进入下一轮。</li>
+      </ol>
+      <p><strong>来源定义：</strong><a href="https://martinfowler.com/bliki/UbiquitousLanguage.html" target="_blank" rel="noopener noreferrer">Fowler 对统一语言的说明</a>强调在与领域专家的对话中检验语言，并随团队理解增长而演化。<strong>实践建议：</strong>每轮只攻克一个有决策含量的业务场景，保留被推翻的假设，避免一次设计“完整模型”。</p>
+
+      <h2 id="验收标准">验收标准</h2>
+      <p>完成本篇后，你应当能够：</p>
+      <ul>
+        <li>用自己的话区分战略设计、战术设计和架构实现，并各举一个产物；</li>
+        <li>解释 DDD 为什么适合复杂、变化频繁且知识密集的领域，同时承认简单 CRUD 的合理性；</li>
+        <li>说明限界上下文与 Java module、聚合与事务边界只是有条件的工程映射；</li>
+        <li>明确说出 DDD 不要求微服务、CQRS、事件溯源、六边形架构或固定包结构。</li>
+      </ul>
+      <p><strong>预习练习：</strong>不用画数据库表，回答“客户在什么条件下可以取消订单？”列出参与者、业务动作、订单可能状态、三条不变量、两个失败原因，以及需要业务人员澄清的词。若答案仍只有 <code>update order_status</code>，说明你描述的是数据修改，还没有建立业务模型。</p>
+
+      <h2 id="参考资料">参考资料</h2>
+      <p>资料检索于 <strong>2026-08-11</strong>。以下均为作者原站或官方技术资料；正文为自行归纳。</p>
+      <ul>
+        <li><a href="https://www.domainlanguage.com/ddd/reference/" target="_blank" rel="noopener noreferrer">Eric Evans / Domain Language：DDD Reference</a> — DDD 定义与模式的作者参考入口。</li>
+        <li><a href="https://www.domainlanguage.com/wp-content/uploads/2016/05/DDD_Reference_2015-03.pdf" target="_blank" rel="noopener noreferrer">Eric Evans：Domain-Driven Design Reference（PDF）</a> — 统一语言、模型驱动设计、聚合及战略设计的原始摘要。</li>
+        <li><a href="https://martinfowler.com/bliki/DomainDrivenDesign.html" target="_blank" rel="noopener noreferrer">Martin Fowler：Domain Driven Design</a> — DDD 的复杂领域、演化模型、战略设计概览。</li>
+        <li><a href="https://martinfowler.com/bliki/BoundedContext.html" target="_blank" rel="noopener noreferrer">Martin Fowler：Bounded Context</a> — 大模型拆分、内部一致性与上下文关系。</li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/architecture/microservices/model/domain-analysis" target="_blank" rel="noopener noreferrer">Microsoft Learn：Use domain analysis to model microservices</a> — 战略与战术阶段、业务能力和模型边界的实现视角。</li>
+        <li><a href="https://alistair.cockburn.us/hexagonal-architecture" target="_blank" rel="noopener noreferrer">Alistair Cockburn：Hexagonal Architecture 原文</a> — 端口与适配器的原始架构说明。</li>
+      </ul>
+
+      <h2 id="专题导航">DDD 七篇专题导航</h2>
+      <ol>
+        <li><span aria-current="page">DDD 架构总览与学习路线（本篇）</span></li>
+        <li><a href="2026-08-11-DDD基础概念与统一语言.html">DDD 基础概念与统一语言</a></li>
+        <li><a href="2026-08-11-DDD战略设计与限界上下文.html">DDD 战略设计与限界上下文</a></li>
+        <li><a href="2026-08-11-DDD战术设计与领域模型.html">DDD 战术设计与领域模型</a></li>
+        <li><a href="2026-08-11-DDD分层架构模式对比.html">DDD 分层架构模式对比</a></li>
+        <li><a href="2026-08-11-DDD订单领域Java实践.html">DDD 订单领域 Java 实践</a></li>
+        <li><a href="2026-08-11-DDD落地演进与常见误区.html">DDD 落地演进与常见误区</a></li>
+      </ol>
+    </article>
+    <footer class="article-footer"><div class="source-path">HTML 页面：<code>notes/architecture/2026-08-11-DDD架构总览与学习路线.html</code></div></footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录侧栏"><ol class="toc-list">
+      <li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#ddd全景">DDD 全景</a></li><li class="toc-level-2"><a href="#三个层次">三个层次</a></li><li class="toc-level-2"><a href="#java工程映射">Java 工程映射</a></li><li class="toc-level-2"><a href="#七篇学习路线">七篇学习路线</a></li><li class="toc-level-2"><a href="#前置知识">前置知识</a></li><li class="toc-level-2"><a href="#术语速览">术语速览</a></li><li class="toc-level-2"><a href="#学习方法">学习方法</a></li><li class="toc-level-2"><a href="#验收标准">验收标准</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li><li class="toc-level-2"><a href="#专题导航">专题导航</a></li>
+    </ol></nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+<div class="mobile-backdrop" hidden></div>
+</body>
+</html>

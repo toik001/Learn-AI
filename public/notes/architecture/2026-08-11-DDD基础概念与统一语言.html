@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="面向 Java 开发者讲清 DDD 的领域、模型、统一语言以及从业务语言到行为代码的反馈闭环。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="软件架构与 DDD">
+  <meta name="study-date" content="2026-08-11">
+  <title>DDD 基础概念与统一语言｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <div class="sidebar-category-summary"><span class="eyebrow">专题</span><strong>软件架构与 DDD</strong><small>七篇学习系列</small></div>
+    <nav class="doc-nav" aria-label="DDD 专题文档">
+      <a class="doc-nav-item" href="2026-08-11-DDD架构总览与学习路线.html"><span>1. 架构总览与学习路线</span></a>
+      <a class="doc-nav-item is-active" href="2026-08-11-DDD基础概念与统一语言.html" aria-current="page"><span>2. 基础概念与统一语言</span></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta"><a href="../../../index.html">知识库首页</a><span>·</span><span>软件架构与 DDD</span><span>·</span><time datetime="2026-08-11">2026-08-11</time></div>
+    <article class="markdown-body">
+      <h1 id="ddd基础概念与统一语言">DDD 基础概念与统一语言</h1>
+      <blockquote><p>整理日期：2026-08-11；资料检索日期：2026-08-11<br>目标：把“领域、模型、语言、代码”分清，再让四者通过业务反馈保持一致。</p></blockquote>
+
+      <nav aria-label="本页目录">
+        <strong>本页目录</strong>
+        <ol>
+          <li><a href="#核心结论">核心结论</a></li>
+          <li><a href="#领域与模型">领域与模型</a></li>
+          <li><a href="#统一语言">统一语言</a></li>
+          <li><a href="#问题空间与解决方案空间">问题空间与解决方案空间</a></li>
+          <li><a href="#订单示例">订单示例</a></li>
+          <li><a href="#语言到代码">语言到代码</a></li>
+          <li><a href="#常见误区">常见误区</a></li>
+          <li><a href="#练习与验收">练习与验收</a></li>
+          <li><a href="#参考资料">参考资料</a></li>
+          <li><a href="#专题导航">专题导航</a></li>
+        </ol>
+      </nav>
+
+      <h2 id="核心结论">核心结论</h2>
+      <ul>
+        <li><strong>领域</strong>是要理解和支持的业务范围；<strong>领域模型</strong>是为解决某类问题而做的选择性抽象；<strong>统一语言</strong>是表达并检验该模型的共同语言；<strong>代码</strong>是模型的一种可执行表达。</li>
+        <li>领域模型不是数据库镜像，也不追求收录现实中的一切；它只保留当前目的所需的概念、关系、规则和行为。</li>
+        <li>统一语言不只是术语表。它必须进入对话、业务示例、验收测试与代码，并在发现歧义后被修订。</li>
+        <li>同一现实事物可以在不同上下文中拥有不同且都有效的模型；追求全局唯一“Customer”或“Order”常会抹平关键差异。</li>
+        <li>有业务意义的动作比通用 setter 更能承载语言与不变量，例如 <code>submit()</code> 明确表达一次受规则约束的状态转换。</li>
+      </ul>
+      <p><strong>来源定义：</strong>Eric Evans 的 <a href="https://www.domainlanguage.com/ddd/reference/" target="_blank" rel="noopener noreferrer">DDD Reference</a>将统一语言与模型驱动设计作为核心模式；<a href="https://martinfowler.com/bliki/DomainDrivenDesign.html" target="_blank" rel="noopener noreferrer">Fowler 的 DDD 概览</a>强调模型应进入软件并随产品生命周期演化。<strong>工程解释：</strong>Java 类名相同并不代表模型一致，判断依据是它们表达的业务含义和允许的行为是否相同。</p>
+
+      <h2 id="领域与模型">领域与模型</h2>
+      <p><strong>Domain（领域）</strong>是组织开展的活动以及其中的业务知识，例如电商中的定价、下单、履约和结算。它先于软件存在；API、表和类只是我们为支持它而构造的方案。<strong>Subdomain（子域）</strong>是对问题空间的进一步分析：把较大的领域拆成相对内聚的业务问题区域。本篇只预告这个概念，完整分类与取舍放在战略设计篇。</p>
+      <p><strong>Domain Model（领域模型）</strong>是团队为特定目的形成的抽象系统。它会舍弃无关细节，突出需要做出决策的概念、关系、状态和规则。因此“订单表有 24 列”是存储描述，“草稿订单确认价格后才能提交”才是模型中的业务知识。Martin Fowler 的 <a href="https://martinfowler.com/eaaCatalog/domainModel.html" target="_blank" rel="noopener noreferrer">Domain Model 模式</a>也把领域模型描述为同时包含数据与行为的对象模型。</p>
+      <p><strong>Model-Driven Design（模型驱动设计）</strong>要求设计中的核心概念与代码表达相连：对模型的洞见应能改变命名、对象职责和测试，代码暴露的问题也应反馈到模型。模型不是一次性交付的 UML 图。</p>
+      <p><strong>来源定义：</strong>大型系统不必强求一个全局模型。<a href="https://martinfowler.com/bliki/BoundedContext.html" target="_blank" rel="noopener noreferrer">Fowler 的限界上下文说明</a>指出，不同团队或业务区域会给同一个词赋予不同含义，因此需要在明确边界内保持模型一致。比如销售模型中的“客户”关注购买资格，物流模型中的“收件人”关注地址和交付条件；两种选择可同时有效。</p>
+
+      <h2 id="统一语言">统一语言</h2>
+      <p><strong>来源定义：</strong>Ubiquitous Language 是开发者和领域专家围绕模型共同建立的严格语言。<a href="https://martinfowler.com/bliki/UbiquitousLanguage.html" target="_blank" rel="noopener noreferrer">Fowler 的原文说明</a>强调语言要在与领域专家的对话中接受检验，并随理解增长而演化。它“无处不在”的范围包括日常讨论、场景示例、需求规则、测试名、类与方法，而不只是 Wiki 中的一张词汇表。</p>
+      <figure>
+        <img src="../../assets/ddd/ubiquitous-language-loop.svg" alt="业务对话、具体示例与不变量、领域模型、测试与代码、运行反馈依次循环并修订统一语言的反馈闭环图">
+        <figcaption>统一语言反馈闭环：语言用于表达模型，也在对话、代码和反馈中被持续检验。</figcaption>
+      </figure>
+      <p>图可用文字等价表达为：团队先在<strong>业务对话</strong>中提出术语，经由<strong>具体示例与不变量</strong>消除歧义，形成<strong>领域模型</strong>；模型进入<strong>测试和代码</strong>后产生可执行反馈，运行结果与新业务认知再返回对话，促使团队修订语言和模型。任何一环长期断开，词汇表、文档与实现就会漂移。</p>
+      <p><strong>实践建议：</strong>记录“被禁止的同义词”和上下文。例如团队确定“提交订单”表示从草稿进入待确认状态后，就不要在接口、测试和会议中交替使用“创建完成”“保存订单”“下单成功”；若业务确实区分这些动作，应给每个动作单独定义。</p>
+
+      <h2 id="问题空间与解决方案空间">问题空间与解决方案空间</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>观察角度</th><th>业务问题概念</th><th>软件模型选择</th><th>有效证据</th><th>典型错误</th></tr></thead>
+          <tbody>
+            <tr><td>范围</td><td>领域与子域：业务在解决哪些不同问题？</td><td>限界上下文：哪套模型和语言在何处有效？</td><td>参与者、决策、变化原因、术语差异</td><td>把一个子域机械等同于一个微服务</td></tr>
+            <tr><td>概念</td><td>报价、订单、承运、退款等现实业务概念</td><td>实体、值对象、策略、状态等表达方式</td><td>成功例、反例、边界例和领域专家反馈</td><td>看到名词就创建类</td></tr>
+            <tr><td>规则</td><td>“什么时候允许提交或取消？”</td><td>方法、对象协作、不变量与精确失败</td><td>可执行测试与生产反馈</td><td>只做字段非空校验，忽略业务状态转换</td></tr>
+            <tr><td>数据</td><td>业务需要记住哪些事实？</td><td>对象结构、持久化模型、映射策略</td><td>业务查询、事务和一致性要求</td><td>先按现有表结构决定领域对象</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>工程解释：</strong>子域属于问题空间分析，描述业务问题的一部分；限界上下文属于解决方案与建模边界，规定某套模型和语言的有效范围。两者常有关联，但不是天然一一对应。<a href="https://learn.microsoft.com/en-us/azure/architecture/microservices/model/domain-analysis" target="_blank" rel="noopener noreferrer">Microsoft Learn 的领域分析流程</a>先分析业务功能，再定义上下文和模型，提供了同样的顺序证据。这里仍不展开核心、支撑、通用子域或上下文映射的完整目录。</p>
+
+      <h2 id="订单示例">订单示例</h2>
+      <p>含混的 CRUD 需求通常是：“创建订单，后面可以更新订单。”它没有说明谁能做什么、何时允许、状态如何转换、失败意味着什么。通过追问具体场景，可以形成更精确的语言：</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>含混表达</th><th>精确业务动作/状态</th><th>需要确认的规则</th></tr></thead>
+          <tbody>
+            <tr><td>创建订单</td><td>创建草稿订单</td><td>草稿是否必须已有客户和至少一个订单项？</td></tr>
+            <tr><td>更新价格</td><td>确认价格</td><td>谁有定价权？确认后是否还允许改价？</td></tr>
+            <tr><td>更新状态</td><td>提交订单、取消订单</td><td>哪些来源状态允许转换？失败原因是什么？</td></tr>
+            <tr><td>状态字段</td><td><code>OrderStatus.DRAFT</code>、<code>SUBMITTED</code>、<code>CANCELLED</code></td><td>每个状态代表的业务承诺是什么？</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3 id="贫血式setter示例">较弱的 setter 模型（Java 21）</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>Java 21</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-java">import java.math.BigDecimal;
+
+// Java 21：对象不能阻止任意状态跳转，业务规则只能散落在调用者中。
+public final class Order {
+    private String status;
+    private BigDecimal total;
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public void setTotal(BigDecimal total) {
+        this.total = total;
+    }
+}
+
+// 任意调用者都可能绕过“只有草稿可提交”的规则：
+order.setStatus("SUBMITTED");</code></pre>
+      </div>
+      <p>问题不是 setter 语法本身，而是模型没有表达“提交”这一业务动作，也没有拥有守护状态转换的责任。字符串还允许拼写错误或未定义状态。</p>
+
+      <h3 id="行为式订单示例">行为式模型（Java 21）</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>Java 21</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-java">import java.util.Objects;
+import java.util.UUID;
+
+// Java 21：示例只演示“草稿才能提交”的不变量，不是完整聚合实现。
+public final class Order {
+    private final OrderId id;
+    private OrderStatus status;
+
+    private Order(OrderId id) {
+        this.id = id;
+        this.status = OrderStatus.DRAFT;
+    }
+
+    public static Order draft(OrderId id) {
+        return new Order(id);
+    }
+
+    public void submit() {
+        if (status != OrderStatus.DRAFT) {
+            throw new OrderCannotBeSubmitted(id, status);
+        }
+        status = OrderStatus.SUBMITTED;
+    }
+
+    public OrderStatus status() {
+        return status;
+    }
+}
+
+enum OrderStatus { DRAFT, SUBMITTED, CANCELLED }
+
+record OrderId(UUID value) {
+    OrderId {
+        Objects.requireNonNull(value, "订单编号不能为空");
+    }
+}
+
+final class OrderCannotBeSubmitted extends IllegalStateException {
+    OrderCannotBeSubmitted(OrderId id, OrderStatus actualStatus) {
+        super("订单 %s 当前状态为 %s，只有草稿订单可以提交"
+                .formatted(id.value(), actualStatus));
+    }
+}</code></pre>
+      </div>
+      <p>该版本用 <code>submit()</code> 对齐业务动作，用枚举限制合法状态，用值对象表达订单标识，并在违反不变量时给出包含订单和实际状态的精确失败。示例刻意省略订单项、金额、并发、持久化与事件，不应被误认为完整聚合设计。</p>
+      <p><strong>工程解释：</strong><a href="https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/microservice-domain-model" target="_blank" rel="noopener noreferrer">Microsoft Learn 的领域模型实现说明</a>虽然使用 C#，但其中“实体同时拥有数据与行为、方法守护规则”的原则可直接映射到普通 Java 领域类型；同一资料也提醒简单 CRUD 未必值得引入复杂领域模型。</p>
+
+      <h2 id="语言到代码">语言到代码</h2>
+      <h3 id="命名规则">命名规则</h3>
+      <ul>
+        <li>类和值对象使用业务名词：<code>Order</code>、<code>OrderId</code>，避免 <code>OrderData</code>、<code>CommonEntity</code> 等弱语义名称。</li>
+        <li>方法使用业务动作：<code>submit()</code>、<code>confirmPrice()</code>、<code>cancel(reason)</code>，避免用 <code>update()</code> 掩盖多种规则。</li>
+        <li>状态和失败使用领域词：<code>DRAFT</code>、<code>OrderCannotBeSubmitted</code>；失败应告诉调用者违反了哪条业务前置条件。</li>
+        <li>同一词在不同上下文含义不同时，用边界隔离模型，不用一个“超级枚举”统一全部含义。</li>
+        <li>领域类型保持普通 Java，不在其中放 Spring MVC、JPA 或消息框架注解；适配器负责技术转换。</li>
+      </ul>
+      <h3 id="最小规则测试">最小规则测试（Java 21）</h3>
+      <div class="code-block">
+        <div class="code-toolbar"><span>Java 21 + JUnit 5</span><button class="copy-code" type="button">复制</button></div>
+        <pre><code class="language-java">import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import org.junit.jupiter.api.Test;
+
+@Test
+void 只有草稿订单可以提交() {
+    var order = Order.draft(new OrderId(UUID.randomUUID()));
+    order.submit();
+
+    var failure = assertThrows(OrderCannotBeSubmitted.class, order::submit);
+
+    assertEquals(OrderStatus.SUBMITTED, order.status());
+    assertTrue(failure.getMessage().contains("只有草稿订单可以提交"));
+}</code></pre>
+      </div>
+      <p><strong>实践建议：</strong>测试名可以用团队最自然的语言，代码标识符则保持一致、可检索的英文领域词。重点是测试、代码和业务示例表达同一条规则，而不是把每句话逐字翻译成类。</p>
+
+      <h2 id="常见误区">常见误区</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>误区</th><th>为什么有害</th><th>修正动作</th></tr></thead>
+          <tbody>
+            <tr><td>统一语言只是词汇表</td><td>词汇不进入对话、测试和代码，很快就与实现漂移</td><td>用真实场景朗读术语，并同步修改示例、测试与代码</td></tr>
+            <tr><td>领域模型等于数据库表</td><td>表结构优化存储，无法天然表达行为、不变量和上下文含义</td><td>先从决策规则建模，再单独设计持久化映射</td></tr>
+            <tr><td>技术术语主导业务对话</td><td>“调接口、改字段、发 MQ”遮蔽了谁为什么做出何种业务承诺</td><td>先复述业务动作和结果，再讨论技术机制</td></tr>
+            <tr><td>过早建立万能模型</td><td>同名词在不同场景的差异被折中为大量可空字段和分支</td><td>明确语言有效边界，允许多个目的不同的模型</td></tr>
+            <tr><td>每个名词都变成类</td><td>语言只是线索，不是自动代码生成规则；会产生无行为对象和伪抽象</td><td>要求每个类型有身份、值语义、规则或协作职责的证据</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><a href="https://martinfowler.com/bliki/AnemicDomainModel.html" target="_blank" rel="noopener noreferrer">Fowler 对贫血领域模型的分析</a>指出，只含数据而把全部领域行为移到服务中的对象会失去领域模型的主要收益；但这不是要求每个系统都做富模型，复杂度低的场景仍可选择事务脚本或简单 CRUD。</p>
+
+      <h2 id="练习与验收">练习与验收</h2>
+      <p><strong>输入：</strong>一句需求——“客服可以更新订单，仓库出库后不允许随便改。”</p>
+      <ol>
+        <li>邀请客服、仓库或其代理角色，各给出一个允许和一个拒绝修改的具体例子。</li>
+        <li>圈出含混词：“更新”“出库”“随便改”；询问它们在何时、由谁、对哪些信息生效。</li>
+        <li>把 CRUD 改写为动作与状态，例如“更正收货地址”“锁定配送信息”“订单已交接承运商”。</li>
+        <li>写出至少三条 Given–When–Then 示例和两条不变量。</li>
+        <li>设计 Java 方法名、状态和值对象，再让参与者用自然语言复述代码代表的规则。</li>
+      </ol>
+      <p><strong>输出：</strong>一页语言清单（含定义、反例和边界）、状态转换表、三条可执行测试草案、一个不依赖 Spring 的领域类型草图。</p>
+      <p><strong>自检：</strong>每个动作是否有明确发起者、前置状态和失败原因？同一个词在所有示例中含义是否一致？代码是否能阻止非法转换？模型是否仍依赖表名、接口路径或框架注解才能解释？若业务人员否定某个词，团队是否愿意同步修改对话、测试和代码？全部能回答，才算完成本节。</p>
+
+      <h2 id="参考资料">参考资料</h2>
+      <p>资料检索于 <strong>2026-08-11</strong>。以下使用作者原站与官方工程文档，正文为自行归纳。</p>
+      <ul>
+        <li><a href="https://www.domainlanguage.com/ddd/reference/" target="_blank" rel="noopener noreferrer">Eric Evans / Domain Language：DDD Reference</a> — DDD 原著模式与定义的作者参考入口。</li>
+        <li><a href="https://www.domainlanguage.com/wp-content/uploads/2016/05/DDD_Reference_2015-03.pdf" target="_blank" rel="noopener noreferrer">Eric Evans：Domain-Driven Design Reference（PDF）</a> — 统一语言、模型驱动设计和上下文边界的原始摘要。</li>
+        <li><a href="https://martinfowler.com/bliki/UbiquitousLanguage.html" target="_blank" rel="noopener noreferrer">Martin Fowler：Ubiquitous Language</a> — 共同语言、对话检验和持续演化。</li>
+        <li><a href="https://martinfowler.com/bliki/BoundedContext.html" target="_blank" rel="noopener noreferrer">Martin Fowler：Bounded Context</a> — 多个模型的合理性及语言边界。</li>
+        <li><a href="https://martinfowler.com/eaaCatalog/domainModel.html" target="_blank" rel="noopener noreferrer">Martin Fowler：Domain Model</a> — 同时容纳数据与行为的领域对象模型。</li>
+        <li><a href="https://martinfowler.com/bliki/AnemicDomainModel.html" target="_blank" rel="noopener noreferrer">Martin Fowler：Anemic Domain Model</a> — 只有 getter/setter、行为外移的风险。</li>
+        <li><a href="https://learn.microsoft.com/en-us/azure/architecture/microservices/model/domain-analysis" target="_blank" rel="noopener noreferrer">Microsoft Learn：Use domain analysis to model microservices</a> — 从问题分析到上下文与模型的工程步骤。</li>
+        <li><a href="https://learn.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/microservice-domain-model" target="_blank" rel="noopener noreferrer">Microsoft Learn：Design a microservice domain model</a> — 行为实体、聚合一致性与简单 CRUD 的适用边界。</li>
+      </ul>
+
+      <h2 id="专题导航">DDD 七篇专题导航</h2>
+      <ol>
+        <li><a href="2026-08-11-DDD架构总览与学习路线.html">DDD 架构总览与学习路线</a></li>
+        <li><span aria-current="page">DDD 基础概念与统一语言（本篇）</span></li>
+        <li><a href="2026-08-11-DDD战略设计与限界上下文.html">DDD 战略设计与限界上下文</a></li>
+        <li><a href="2026-08-11-DDD战术设计与领域模型.html">DDD 战术设计与领域模型</a></li>
+        <li><a href="2026-08-11-DDD分层架构模式对比.html">DDD 分层架构模式对比</a></li>
+        <li><a href="2026-08-11-DDD订单领域Java实践.html">DDD 订单领域 Java 实践</a></li>
+        <li><a href="2026-08-11-DDD落地演进与常见误区.html">DDD 落地演进与常见误区</a></li>
+      </ol>
+    </article>
+    <footer class="article-footer"><div class="source-path">HTML 页面：<code>notes/architecture/2026-08-11-DDD基础概念与统一语言.html</code></div></footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录侧栏"><ol class="toc-list">
+      <li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#领域与模型">领域与模型</a></li><li class="toc-level-2"><a href="#统一语言">统一语言</a></li><li class="toc-level-2"><a href="#问题空间与解决方案空间">问题空间与解决方案空间</a></li><li class="toc-level-2"><a href="#订单示例">订单示例</a></li><li class="toc-level-2"><a href="#语言到代码">语言到代码</a></li><li class="toc-level-2"><a href="#常见误区">常见误区</a></li><li class="toc-level-2"><a href="#练习与验收">练习与验收</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li><li class="toc-level-2"><a href="#专题导航">专题导航</a></li>
+    </ol></nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+<div class="mobile-backdrop" hidden></div>
+</body>
+</html>
