@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="评估以 OpenSpec 整理需求与规格、以 Codex 原生能力完成实现的混合流程，并与完整 Superpowers 工作流做具体差异对比，给出大型项目的控制条件和试点方案。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="Codex 与 AI 工程">
+  <meta name="study-date" content="2026-08-31">
+  <title>OpenSpec + Codex 原生：大型项目开发流程与 Superpowers 差异｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <div class="sidebar-category-summary">
+      <span class="eyebrow">当前分类</span>
+      <a class="sidebar-category-link" href="../../../index.html#category-codex-与-ai-工程-1ubbp3w">
+        <strong>Codex 与 AI 工程</strong>
+        <small>11 篇文档</small>
+      </a>
+    </div>
+    <label class="sidebar-search"><span class="sr-only">筛选文档</span><input type="search" placeholder="筛选当前分类…" data-sidebar-search></label>
+    <nav class="doc-nav" aria-label="当前分类文档">
+      <a class="doc-nav-item" href="2026-07-24-AI开发工作流选型与小团队沉淀指南.html"><span>AI 开发工作流选型与小团队沉淀指南</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC详细介绍.html"><span>AIDLC 详细介绍：从 AI 辅助编码到可审计的软件交付生命周期</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC与Superpowers差异分析.html"><span>AIDLC 与 Superpowers 差异分析：生命周期治理与工程 Inner Loop</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-Codex全栈开发最佳实践.html"><span>Codex 全栈开发最佳实践：Vibe Coding、Harness 与 Loop</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-OpenSpec-Superpowers-CI-Codex-CLI实战教程.html"><span>OpenSpec + Superpowers + CI：Codex CLI 全栈实战教程</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-Superpowers大型Java微服务Monorepo使用指南.html"><span>Superpowers 大型 Java 微服务 Monorepo 使用指南</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-Superpowers详细介绍.html"><span>Superpowers 详细介绍：Codex 的技能化软件开发方法</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-28-Codex官方原生项目开发最佳路径.html"><span>Codex 官方原生项目开发最佳路径</span><small>2026-07-28</small></a><a class="doc-nav-item" href="2026-08-07-Harness-Loop-Graph与Codex-Superpowers开发模式.html"><span>Harness、Loop、Graph 与 Codex + Superpowers 开发模式</span><small>2026-08-07</small></a><a class="doc-nav-item" href="2026-08-31-OpenSpec-Apply与Superpowers对比.html"><span>OpenSpec + Apply 与 Superpowers：大型项目执行流程对比</span><small>2026-08-31</small></a><a class="doc-nav-item is-active" href="2026-08-31-OpenSpec与Codex原生大型项目开发流程.html" aria-current="page"><span>OpenSpec + Codex 原生：大型项目开发流程与 Superpowers 差异</span><small>2026-08-31</small></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta">
+      <a href="../../../index.html">知识库首页</a><span>·</span><span>Codex 与 AI 工程</span><span>·</span>
+      <time datetime="2026-08-31">2026-08-31</time>
+    </div>
+    <article class="markdown-body">
+      <h1 id="openspec-codex-原生大型项目开发流程"><a class="heading-anchor" href="#openspec-codex-原生大型项目开发流程" aria-label="链接到本节">#</a>OpenSpec + Codex 原生：大型项目开发流程与 Superpowers 差异</h1>
+      <blockquote>
+        <p><strong>目标：</strong>OpenSpec 负责需求整理、规格与变更历史；Codex 原生能力负责代码实现、测试、隔离、并行和审查。</p>
+        <p><strong>问题背景：</strong>完整 Superpowers 任务可能运行十几小时，大量时间消耗在细粒度 TDD、失败后的系统化调试、逐任务双重审查和反复修复。</p>
+        <p><strong>资料截至：</strong>2026-08-31。OpenSpec npm 最新版本核对为 <code>1.11.0</code>（发布于 2026-08-26）；Codex 能力以同期 OpenAI 官方文档为准。</p>
+      </blockquote>
+
+      <nav aria-label="本页快速目录">
+        <strong>快速阅读：</strong>
+        <a href="#核心结论">核心结论</a> ·
+        <a href="#职责分层">职责分层</a> ·
+        <a href="#具体差异">具体差异</a> ·
+        <a href="#耗时原因">耗时原因</a> ·
+        <a href="#推荐流程">推荐流程</a> ·
+        <a href="#大型项目控制条件">大型项目边界</a> ·
+        <a href="#试点方案">试点</a> ·
+        <a href="#参考资料">参考资料</a>
+      </nav>
+
+      <h2 id="核心结论"><a class="heading-anchor" href="#核心结论" aria-label="链接到本节">#</a>核心结论</h2>
+      <ol>
+        <li><strong>可以采用，而且比“完整 Superpowers 贯穿开发”更符合当前的效率目标。</strong>推荐模型是：<strong>OpenSpec 管外循环，Codex 原生管实现内循环，CI 管最终确定性门禁</strong>。</li>
+        <li><strong>OpenSpec 不能单独把控大型项目。</strong>它是需求与变更的 agreement layer，不是依赖图、构建系统、测试平台或执行调度器。大型项目的真正控制力来自：可验证规格、合理拆分、分层 <code>AGENTS.md</code>、契约测试、Worktree 隔离、CI 和人类风险门禁。</li>
+        <li><strong>不要在同一个变更中同时启用两个实现编排器。</strong>规格确认后，不调用 Codex 中的 <code>$openspec-apply-change</code>，也不调用 Superpowers 的 <code>writing-plans</code>、<code>subagent-driven-development</code>、TDD 与逐任务 review 链；直接创建 Codex 原生任务并引用 OpenSpec 产物。</li>
+        <li><strong>最大的时间节省来自减少审查频率，而不是减少测试。</strong>把“每个 2～5 分钟小任务都双重审查”改为“每个可验收批次测试一次、每个分支统一 review 一次”；保留高风险模块的专项审查。</li>
+        <li><strong>Codex 原生过程是能力集合，不是强制方法论。</strong>它提供 <code>/plan</code>、<code>/goal</code>、长期任务、子代理、Worktree、<code>AGENTS.md</code> 和 <code>/review</code>，但需要团队在仓库中定义何时使用、怎样验收和何时停止修复循环。</li>
+        <li><strong>单仓库或 Monorepo 的可控性较高；多仓库应分阶段试点。</strong>OpenSpec Stores/Worksets 已能组织跨仓库规划，但官方仍标记为 beta；跨仓库依赖、发布顺序和契约兼容性仍应由显式计划、契约仓库与 CI 负责。</li>
+      </ol>
+
+      <h2 id="职责分层"><a class="heading-anchor" href="#职责分层" aria-label="链接到本节">#</a>推荐职责分层</h2>
+      <div class="agent-call-flow" role="img" aria-label="OpenSpec、Codex 原生与 CI 的三层职责：OpenSpec 形成 proposal、delta specs、design 和 tasks；Codex 原生使用 plan、goal、worktree、subagents、tests 和 review 完成实现；CI 与人工门禁验证构建、契约、集成、安全、迁移和发布。">
+        <div class="agent-step">OpenSpec<br>需求、范围、行为规格、设计决策、任务与历史</div>
+        <div class="agent-step">Codex 原生<br>Plan / Goal、实现、测试、Worktree、子代理、Review</div>
+        <div class="agent-step">确定性 Harness<br>编译、契约、集成、安全、迁移、CI、发布门禁</div>
+        <div class="guardrail-band">单一指挥者原则：规划阶段由 OpenSpec 主导；实现阶段由 Codex 原生主导；任何时刻只有一套任务状态和一条完成定义。</div>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>层</th><th>唯一真相</th><th>负责</th><th>明确不负责</th></tr></thead>
+        <tbody>
+          <tr><td>OpenSpec</td><td><code>openspec/specs/</code> 与活动 change</td><td>为什么改、改什么、行为场景、技术边界、任务与归档</td><td>长时间运行代码、决定每次测试失败怎样修、调度多个写代理</td></tr>
+          <tr><td>Codex 原生</td><td>当前 change + 代码 + <code>AGENTS.md</code></td><td>读仓库、制定短计划、修改代码、运行验证、形成 diff、处理 review</td><td>在未更新 OpenSpec 时擅自改变需求或架构范围</td></tr>
+          <tr><td>Harness / CI</td><td>可重复执行的命令和检查结果</td><td>编译、测试、静态检查、契约、数据库迁移、安全与发布</td><td>替代产品判断或证明需求本身正确</td></tr>
+          <tr><td>人类</td><td>业务目标与风险授权</td><td>确认范围、关键设计、不可逆操作、上线与例外</td><td>逐行监督所有低风险实现</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="具体差异"><a class="heading-anchor" href="#具体差异" aria-label="链接到本节">#</a>具体差异：OpenSpec + Codex 原生 vs. 完整 Superpowers</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>维度</th><th>OpenSpec + Codex 原生</th><th>完整 Superpowers</th><th>实际影响</th></tr></thead>
+        <tbody>
+          <tr><td>本质定位</td><td>规格层与执行平台的组合</td><td>从需求澄清到分支收尾的完整开发方法论</td><td>前者允许按项目裁剪；后者默认强调统一纪律</td></tr>
+          <tr><td>需求产物</td><td><code>proposal.md</code>、delta specs、<code>design.md</code>、<code>tasks.md</code></td><td>会话澄清后的设计文档与实施计划</td><td>OpenSpec 有“当前系统规格 + 变更增量”，更适合长期演进</td></tr>
+          <tr><td>历史模型</td><td>归档时把 delta 合并进主规格，并保存完整 change</td><td>设计与计划保存在 <code>docs/superpowers/</code>，通常不自动形成当前行为真相</td><td>OpenSpec 更容易回答“系统现在应该做什么”</td></tr>
+          <tr><td>审批方式</td><td>产物是 enabler；团队自行定义必须确认的检查点</td><td>Brainstorming 对实现设硬门禁，设计和书面 spec 均要求确认</td><td>OpenSpec 组合更灵活，但也更依赖团队纪律</td></tr>
+          <tr><td>计划粒度</td><td>任务应能在一个会话内完成，并写明验证方法</td><td>常拆成 2～5 分钟步骤，含精确文件、代码、测试和频繁提交</td><td>Superpowers 更可预测，也更容易产生大量调度和 review 开销</td></tr>
+          <tr><td>实现方式</td><td>Codex 围绕一个 outcome/goal 自主选择安全步骤</td><td>按计划逐任务执行，优先为每个任务派新子代理</td><td>原生 Goal 减少 handoff；Superpowers 减少任务间认知偏差</td></tr>
+          <tr><td>测试纪律</td><td>由 <code>AGENTS.md</code> 与 CI 定义分层验证，按风险使用 TDD</td><td>新功能与 Bugfix 默认强制 RED-GREEN-REFACTOR</td><td>原生组合能跳过低收益的机械 TDD，但必须防止测试不足</td></tr>
+          <tr><td>失败处理</td><td>要求基于证据诊断，但可设置尝试上限与升级条件</td><td>任何 bug、测试失败或意外行为都触发系统化根因调查</td><td>复杂故障 Superpowers 更稳；普通编译或夹具问题可能被过度处理</td></tr>
+          <tr><td>代码审查</td><td>按逻辑批次检查 diff，分支完成时运行一次独立 <code>/review</code></td><td>子代理开发常含规格符合性和代码质量两阶段 review，任务间还可再审</td><td>这是两者耗时差异最大的来源之一</td></tr>
+          <tr><td>并行方式</td><td>OpenSpec change 分离需求；Codex 子代理负责独立读任务，Worktree 隔离独立写任务</td><td>新子代理逐任务执行和复审，流程默认更积极使用代理</td><td>原生组合可只并行真正独立的工作，减少冲突和 token</td></tr>
+          <tr><td>上下文管理</td><td>规格在仓库持久化；主任务只保留决策与结果，噪声交给子代理</td><td>详细计划、逐任务输出与多轮 review 较多，但新子代理能隔离局部噪声</td><td>OpenSpec delta 更适合跨会话恢复；两者都需避免巨型 change</td></tr>
+          <tr><td>完成判定</td><td>任务证据 + CI + 分支 review + 规格同步/归档</td><td>计划完成 + 多轮 review + verification-before-completion + 分支收尾</td><td>原生组合门禁更少，必须把最低标准写死在 Harness 中</td></tr>
+          <tr><td>适合场景</td><td>中大型长期项目、已有 CI、希望兼顾速度与规格治理</td><td>高风险、陌生代码、测试薄弱、需要强教学或强过程约束的任务</td><td>不必二选一：Superpowers 可保留为例外工具，而非默认总流程</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="耗时原因"><a class="heading-anchor" href="#耗时原因" aria-label="链接到本节">#</a>为什么 Superpowers 容易跑到十几小时</h2>
+      <p>耗时通常不是一个步骤造成，而是多个正确但昂贵的局部纪律相乘：</p>
+      <ol>
+        <li><strong>计划被切得很细。</strong>一个跨模块功能可能被拆为几十个微任务。</li>
+        <li><strong>每个微任务重新建立上下文。</strong>新子代理要读 spec、计划、相关代码和测试。</li>
+        <li><strong>每个任务有两类审查。</strong>先核对规格，再看代码质量；发现问题后回到实现代理修复。</li>
+        <li><strong>每个测试失败都进入完整调试纪律。</strong>对复杂回归很有价值，但第三方服务抖动、测试夹具、格式问题和简单编译错误也可能承担同样流程成本。</li>
+        <li><strong>修复后重新验证和重新审查。</strong>如果测试基线不稳定或计划本身有偏差，循环次数会迅速放大。</li>
+      </ol>
+      <p><strong>所以换成 OpenSpec 并不会自动变快。</strong>如果仍使用 OpenSpec Apply 再叠加 Superpowers TDD、调试和逐任务 review，流程只会增加一层。真正的优化是把审查从“每个微任务”上移到“可验收批次和分支”，把调试强度与故障风险匹配。</p>
+
+      <h2 id="推荐流程"><a class="heading-anchor" href="#推荐流程" aria-label="链接到本节">#</a>推荐流程：OpenSpec 规划，Codex 原生开发</h2>
+      <h3 id="阶段一需求与规格"><a class="heading-anchor" href="#阶段一需求与规格" aria-label="链接到本节">#</a>阶段一：OpenSpec 整理需求</h3>
+      <ol>
+        <li>需求不清晰时使用 <code>$openspec-explore</code>，只探索问题、用户价值、现状与方案，不写代码。</li>
+        <li>使用 <code>$openspec-propose</code> 创建一个 change；OpenSpec 1.x 默认产物链是 proposal → specs → design → tasks。</li>
+        <li>人工只检查四个关键点：范围与非目标、可观察行为场景、架构风险与回退、每项任务的验证证据。</li>
+        <li>运行 <code>openspec validate &lt;change&gt; --strict</code>；它验证产物结构，不等价于验证业务正确或代码正确。</li>
+        <li>把确认后的 change 提交到 Git，形成实现基线。实现中若需求发生变化，先更新 OpenSpec 产物，再继续代码。</li>
+      </ol>
+
+      <h3 id="阶段二原生执行"><a class="heading-anchor" href="#阶段二原生执行" aria-label="链接到本节">#</a>阶段二：Codex 原生执行</h3>
+      <ol>
+        <li>每个 change 使用一个分支或 Codex Worktree；不要让两个写任务同时修改同一组文件。</li>
+        <li>小 change 直接给 Codex 实现；多步骤 change 用 <code>/goal</code>，目标中写明 outcome、constraints 和 verification。需要先读代码确认路径时先用 <code>/plan</code>。</li>
+        <li>Codex 读取 proposal、delta specs、design 和 tasks；<strong>tasks 是队列，specs 是行为契约，design 是技术边界</strong>。</li>
+        <li>按“接口/契约 → walking skeleton → 业务批次 → 集成”的顺序推进。每个批次完成后运行最小相关测试，而不是每改一行就跑全量回归。</li>
+        <li>只有读密集、互不依赖的探索、测试分析和审查交给子代理；写密集任务优先分 Worktree，并明确文件所有权。</li>
+      </ol>
+      <pre><code class="language-text">/goal
+实现 OpenSpec change：add-order-cancellation。
+
+需求真相：
+- openspec/changes/add-order-cancellation/proposal.md
+- openspec/changes/add-order-cancellation/specs/**
+- openspec/changes/add-order-cancellation/design.md
+- openspec/changes/add-order-cancellation/tasks.md
+
+执行约束：
+- 使用 Codex 原生开发过程，不调用 $openspec-apply-change 或 Superpowers 实现技能。
+- 遵守根目录和模块目录的 AGENTS.md。
+- tasks.md 是唯一任务队列；每完成一个可验收批次，记录验证证据。
+- 如果实现需要改变规格、公共契约或既定架构，停止并报告，不自行扩大范围。
+- 测试失败先定位证据；连续两次修复仍失败时总结根因假设、已尝试项和下一决策。
+
+完成标准：
+- 所有任务完成；相关单元、模块和集成测试通过。
+- 分支 diff 不含无关修改；完成一次独立 /review。
+- 不归档 OpenSpec change，等待人工验收。</code></pre>
+
+      <h3 id="阶段三验证与归档"><a class="heading-anchor" href="#阶段三验证与归档" aria-label="链接到本节">#</a>阶段三：验证、审查和归档</h3>
+      <ol>
+        <li><strong>批次验证：</strong>每个逻辑批次运行相关测试；共享契约、数据库迁移、权限和并发逻辑增加专项测试。</li>
+        <li><strong>分支验证：</strong>运行模块或全量构建、静态检查和必要的真实流程。</li>
+        <li><strong>统一审查：</strong>在逻辑功能完成后使用一次独立 <code>/review</code>，自定义要求同时检查 spec coverage、回归、兼容性和无关改动。</li>
+        <li><strong>修复预算：</strong>普通问题最多两轮“修复 → 定向测试”；仍失败则停下来重新判断规格、设计或基线，而不是无上限自循环。</li>
+        <li><strong>人工验收：</strong>确认关键行为、迁移和回退；随后同步主规格并归档 change。</li>
+      </ol>
+
+      <h2 id="agents-md-建议"><a class="heading-anchor" href="#agents-md-建议" aria-label="链接到本节">#</a>在 AGENTS.md 中固定单一指挥者</h2>
+      <pre><code class="language-markdown">## Development workflow
+
+- OpenSpec is the source of truth for product requirements and behavior changes.
+- Use OpenSpec only for explore, propose, validate, sync, and archive.
+- After a proposal is approved, implementation uses the native Codex workflow.
+- Do not invoke OpenSpec apply or the full Superpowers implementation pipeline unless the user explicitly requests it.
+- Read the active change's proposal, specs, design, and tasks before editing code.
+- If code requires a requirement, contract, or architectural change, update the OpenSpec artifacts first.
+- One active change owns one branch or worktree. Parallel writers must have non-overlapping file ownership.
+- Run targeted checks per batch, the module suite before review, and the full required CI suite before completion.
+- Request one independent branch review after the logical change is complete; use additional specialist reviews only for high-risk areas.
+- After two unsuccessful repair cycles on the same failure, stop and report evidence instead of continuing an unbounded loop.</code></pre>
+      <p>这段规则的价值是防止技能自动触发把实现重新带回完整 Superpowers 流程，也防止 OpenSpec 的 Apply 成为第二套执行状态机。</p>
+
+      <h2 id="大型项目控制条件"><a class="heading-anchor" href="#大型项目控制条件" aria-label="链接到本节">#</a>大型项目能否把控：取决于八个条件</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>控制条件</th><th>最低要求</th><th>缺失后的表现</th></tr></thead>
+        <tbody>
+          <tr><td>Change 大小</td><td>一个 change 对应一个可独立验收的业务能力或兼容性变更</td><td>巨型 change 超出上下文，tasks 变成愿望清单</td></tr>
+          <tr><td>领域边界</td><td>规格按领域/能力组织，设计明确模块所有权和依赖方向</td><td>Agent 在全库横向修改，review 无法判断影响面</td></tr>
+          <tr><td>行为可验证</td><td>每项 requirement 有可观察 scenario；任务有明确验证命令或证据</td><td>“代码写完”被误判为“需求完成”</td></tr>
+          <tr><td>稳定 Harness</td><td>快速测试、模块测试、集成测试和 CI 命令可发现且可重复</td><td>绝大多数时间被基线失败和不稳定回测吞噬</td></tr>
+          <tr><td>契约优先</td><td>跨服务先明确 API、事件、Schema、兼容期与失败语义</td><td>并行实现后在集成阶段集中返工</td></tr>
+          <tr><td>写隔离</td><td>一个文件或模块同时只有一个写者；并行 change 使用 Worktree</td><td>冲突、重复实现和互相覆盖</td></tr>
+          <tr><td>风险门禁</td><td>权限、支付、数据删除、迁移和生产操作设置人工确认</td><td>原生自主执行越快，错误放大越快</td></tr>
+          <tr><td>停止条件</td><td>修复轮次、测试时间和任务范围都有升级阈值</td><td>Agent 在同一失败上无限“回测—修复”</td></tr>
+        </tbody>
+      </table></div>
+      <p><strong>规模化原则：</strong>大型项目不是交给一个持续十几个小时的 chat，而是拆成“一个稳定 initiative/目标 → 多个边界清楚的 OpenSpec changes → 每个 change 一个 Codex 任务/Worktree → CI 汇合”。Codex 官方也建议只并行独立任务，并避免多个任务对同一来源同时写入。</p>
+
+      <h2 id="何时保留-superpowers"><a class="heading-anchor" href="#何时保留-superpowers" aria-label="链接到本节">#</a>Superpowers 不必完全删除</h2>
+      <p>建议从“默认总流程”降级为“按风险显式调用的专项工具”：</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>场景</th><th>建议</th><th>原因</th></tr></thead>
+        <tbody>
+          <tr><td>普通 CRUD、清晰 UI、低风险重构</td><td>OpenSpec + Codex 原生</td><td>批次测试和分支 review 足够，逐任务双审查收益低</td></tr>
+          <tr><td>复杂线上 Bug、并发、数据一致性</td><td>只显式调用 systematic-debugging</td><td>根因纪律有价值，但不必启动完整设计和计划链</td></tr>
+          <tr><td>核心算法、结算、权限、安全边界</td><td>按模块调用 TDD 和专项 reviewer</td><td>错误代价高，额外验证开销合理</td></tr>
+          <tr><td>全新架构或团队没有共同方案</td><td>OpenSpec Explore/Propose；必要时人工架构评审</td><td>不要同时再生成一份 Superpowers spec 与 plan</td></tr>
+          <tr><td>测试体系很弱、团队刚开始使用 Agent</td><td>短期保留更多 Superpowers 门禁</td><td>确定性 Harness 尚不足，过程纪律能补位</td></tr>
+        </tbody>
+      </table></div>
+
+      <h2 id="试点方案"><a class="heading-anchor" href="#试点方案" aria-label="链接到本节">#</a>两周试点方案</h2>
+      <ol>
+        <li><strong>选择样本：</strong>挑 3～5 个真实 change，至少包含一个跨模块功能、一个 Bugfix 和一个低风险需求；不要先拿最危险的生产迁移试验。</li>
+        <li><strong>固定版本：</strong>团队和 CI 固定 OpenSpec 版本，不使用浮动 <code>@latest</code> 作为可重复基线；升级后再运行 <code>openspec update</code>。</li>
+        <li><strong>固定路由：</strong>OpenSpec 只运行 explore/propose/validate/sync/archive；实现提示明确禁止 Apply 与完整 Superpowers。</li>
+        <li><strong>固定审查频率：</strong>每个逻辑批次自测，分支完成后一次独立 review；只有安全、迁移或复杂并发再增加专项 review。</li>
+        <li><strong>比较历史：</strong>用过去同规模的 Superpowers 任务作为基线，比较中位数，不用单个任务下结论。</li>
+      </ol>
+      <div class="table-wrap"><table>
+        <thead><tr><th>指标</th><th>怎样记录</th><th>建议通过线</th></tr></thead>
+        <tbody>
+          <tr><td>总墙钟时间</td><td>从规格开始到可合并分支</td><td>中位数至少下降 30%</td></tr>
+          <tr><td>回测/修复轮次</td><td>同一失败的 repair cycles</td><td>普通问题不超过 2 轮</td></tr>
+          <tr><td>审查修复占比</td><td>review 后修复时间 ÷ 总时间</td><td>不超过 25%，且无严重缺陷遗漏</td></tr>
+          <tr><td>规格返工</td><td>写代码后修改 requirement/design 的次数</td><td>下降或至少可解释，重大需求漂移为 0</td></tr>
+          <tr><td>验证质量</td><td>CI 通过率、回归缺陷、人工验收问题</td><td>不得比 Superpowers 基线变差</td></tr>
+          <tr><td>人类干预</td><td>必要决策次数与无效确认次数分开记</td><td>无效确认显著下降，风险确认保留</td></tr>
+          <tr><td>Agent 消耗</td><td>token、子代理数、review 次数</td><td>下降 30% 以上作为期望，不作为质量替代指标</td></tr>
+        </tbody>
+      </table></div>
+      <p>如果速度提升但回归缺陷增加，先补 Harness 和验收场景，不要立即回到完整 Superpowers；如果复杂故障仍长时间循环，则对该类任务恢复 systematic debugging，而不是恢复所有技能。</p>
+
+      <h2 id="最终选型"><a class="heading-anchor" href="#最终选型" aria-label="链接到本节">#</a>最终选型</h2>
+      <p><strong>默认选型：</strong>OpenSpec 负责需求与规格，Codex 原生 Goal/Plan 负责开发，Worktree 负责隔离，<code>AGENTS.md</code> 固定完成标准，CI 提供确定性反馈，分支级 <code>/review</code> 建立第二视角。</p>
+      <p><strong>不要采用：</strong>OpenSpec Propose → OpenSpec Apply → Superpowers TDD/逐任务子代理/双审查 → Codex Review。这会形成三层执行编排，是当前十几小时问题的高概率延续。</p>
+      <p><strong>适用判断：</strong>只要项目已有可靠测试与 CI、能把 change 切到独立验收、公共契约清楚，这套组合足以把控大型单仓库或 Monorepo。多仓库、大规模数据库迁移、强合规或弱测试项目仍需要额外的发布编排、契约治理与人工门禁。</p>
+
+      <h2 id="相关页面"><a class="heading-anchor" href="#相关页面" aria-label="链接到本节">#</a>相关页面</h2>
+      <ul>
+        <li><a href="2026-07-28-Codex官方原生项目开发最佳路径.html">Codex 官方原生项目开发最佳路径</a> — 原生执行闭环、Worktree、权限、验证与 review。</li>
+        <li><a href="2026-07-24-OpenSpec-Superpowers-CI-Codex-CLI实战教程.html">OpenSpec + Superpowers + CI：Codex CLI 全栈实战教程</a> — 适合作为旧组合对照，不应与本文默认流程同时作为指挥者。</li>
+        <li><a href="2026-07-24-Superpowers详细介绍.html">Superpowers 详细介绍</a> — 完整技能链、价值与成本。</li>
+        <li><a href="2026-07-24-AI开发工作流选型与小团队沉淀指南.html">AI 开发工作流选型与小团队沉淀指南</a> — 从生命周期、规格、实现和自治四层看工具选型。</li>
+      </ul>
+
+      <h2 id="参考资料"><a class="heading-anchor" href="#参考资料" aria-label="链接到本节">#</a>参考资料</h2>
+      <h3 id="openspec-资料"><a class="heading-anchor" href="#openspec-资料" aria-label="链接到本节">#</a>OpenSpec</h3>
+      <ul>
+        <li><a href="https://github.com/Fission-AI/OpenSpec" target="_blank" rel="noopener noreferrer">OpenSpec 官方仓库</a> — 定位、Codex 技能调用、当前流程与项目状态，访问日期：2026-08-31。</li>
+        <li><a href="https://github.com/Fission-AI/OpenSpec/blob/main/docs/getting-started.md" target="_blank" rel="noopener noreferrer">Getting Started</a> — Explore、Propose、Apply、Sync、Archive 与产物结构，访问日期：2026-08-31。</li>
+        <li><a href="https://github.com/Fission-AI/OpenSpec/blob/main/docs/overview.md" target="_blank" rel="noopener noreferrer">Core Concepts</a> — specs、changes、delta、archive 与“enablers, not gates”，访问日期：2026-08-31。</li>
+        <li><a href="https://github.com/Fission-AI/OpenSpec/blob/main/schemas/spec-driven/schema.yaml" target="_blank" rel="noopener noreferrer">Spec-driven schema</a> — 需求、设计与任务的正式生成约束，访问日期：2026-08-31。</li>
+        <li><a href="https://github.com/Fission-AI/OpenSpec/blob/main/skills/openspec-apply-change/SKILL.md" target="_blank" rel="noopener noreferrer">OpenSpec Apply Change skill</a> — Codex 中负责实现任务的 OpenSpec 技能；本文推荐的原生实现模式明确不调用它，访问日期：2026-08-31。</li>
+        <li><a href="https://github.com/Fission-AI/OpenSpec/blob/main/docs/troubleshooting.md" target="_blank" rel="noopener noreferrer">Troubleshooting</a> — Codex 的 skill-based 调用与严格验证方式，访问日期：2026-08-31。</li>
+        <li><a href="https://github.com/Fission-AI/OpenSpec/blob/main/docs/stores-beta/user-guide.md" target="_blank" rel="noopener noreferrer">Stores / Worksets beta</a> — 跨仓库规划与本地工作集的当前边界，访问日期：2026-08-31。</li>
+        <li><a href="https://www.npmjs.com/package/@fission-ai/openspec" target="_blank" rel="noopener noreferrer">@fission-ai/openspec npm 包</a> — 本页通过 <code>npm view</code> 核对最新版本 <code>1.11.0</code>，核对日期：2026-08-31。</li>
+      </ul>
+      <h3 id="codex-官方资料"><a class="heading-anchor" href="#codex-官方资料" aria-label="链接到本节">#</a>Codex 官方资料</h3>
+      <ul>
+        <li><a href="https://learn.chatgpt.com/docs/long-running-work" target="_blank" rel="noopener noreferrer">Long-running work</a> — Goal 的 outcome、constraints、verification，以及并行任务写隔离，访问日期：2026-08-31。</li>
+        <li><a href="https://learn.chatgpt.com/docs/agent-configuration/agents-md" target="_blank" rel="noopener noreferrer">Custom instructions with AGENTS.md</a> — 分层项目规则和指令发现，访问日期：2026-08-31。</li>
+        <li><a href="https://learn.chatgpt.com/docs/agent-configuration/subagents" target="_blank" rel="noopener noreferrer">Subagents</a> — 上下文隔离、并行收益、token 成本和写任务冲突边界，访问日期：2026-08-31。</li>
+        <li><a href="https://learn.chatgpt.com/docs/environments/git-worktrees" target="_blank" rel="noopener noreferrer">Git worktrees</a> — 并行任务的独立 checkout 与 Handoff，访问日期：2026-08-31。</li>
+        <li><a href="https://learn.chatgpt.com/docs/code-review" target="_blank" rel="noopener noreferrer">Code review</a> — 分支、commit、未提交修改和自定义条件的独立审查，访问日期：2026-08-31。</li>
+        <li><a href="https://developers.openai.com/api/docs/guides/latest-model" target="_blank" rel="noopener noreferrer">OpenAI model guidance</a> — 精简提示、明确自治边界并在代表性任务上比较质量、延迟和成本，访问日期：2026-08-31。</li>
+      </ul>
+      <h3 id="superpowers-资料"><a class="heading-anchor" href="#superpowers-资料" aria-label="链接到本节">#</a>Superpowers</h3>
+      <ul>
+        <li><a href="https://github.com/obra/superpowers" target="_blank" rel="noopener noreferrer">Superpowers 官方仓库</a> — 基础工作流、TDD、逐任务子代理和 review，访问日期：2026-08-31。</li>
+        <li><a href="https://github.com/obra/superpowers/blob/main/skills/brainstorming/SKILL.md" target="_blank" rel="noopener noreferrer">Brainstorming</a> — 设计与用户确认硬门禁，访问日期：2026-08-31。</li>
+        <li><a href="https://github.com/obra/superpowers/blob/main/skills/writing-plans/SKILL.md" target="_blank" rel="noopener noreferrer">Writing Plans</a> — 细粒度计划、自检和执行交接，访问日期：2026-08-31。</li>
+        <li><a href="https://github.com/obra/superpowers/blob/main/skills/systematic-debugging/SKILL.md" target="_blank" rel="noopener noreferrer">Systematic Debugging</a> — 测试失败与意外行为的根因调查纪律，访问日期：2026-08-31。</li>
+      </ul>
+    </article>
+    <nav class="article-pager" aria-label="文档翻页"></nav>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/codex/2026-08-31-OpenSpec与Codex原生大型项目开发流程.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="2026-08-31-OpenSpec-Apply与Superpowers对比.html"><small>上一篇</small><span>OpenSpec + Apply 与 Superpowers：大型项目执行流程对比</span></a>
+        <span class="pager-spacer"></span>
+      </nav>
+    </footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#职责分层">推荐职责分层</a></li><li class="toc-level-2"><a href="#具体差异">具体差异：OpenSpec + Codex 原生 vs. 完整 Superpowers</a></li><li class="toc-level-2"><a href="#耗时原因">为什么 Superpowers 容易跑到十几小时</a></li><li class="toc-level-2"><a href="#推荐流程">推荐流程：OpenSpec 规划，Codex 原生开发</a></li><li class="toc-level-3"><a href="#阶段一需求与规格">阶段一：OpenSpec 整理需求</a></li><li class="toc-level-3"><a href="#阶段二原生执行">阶段二：Codex 原生执行</a></li><li class="toc-level-3"><a href="#阶段三验证与归档">阶段三：验证、审查和归档</a></li><li class="toc-level-2"><a href="#agents-md-建议">在 AGENTS.md 中固定单一指挥者</a></li><li class="toc-level-2"><a href="#大型项目控制条件">大型项目能否把控：取决于八个条件</a></li><li class="toc-level-2"><a href="#何时保留-superpowers">Superpowers 不必完全删除</a></li><li class="toc-level-2"><a href="#试点方案">两周试点方案</a></li><li class="toc-level-2"><a href="#最终选型">最终选型</a></li><li class="toc-level-2"><a href="#相关页面">相关页面</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li><li class="toc-level-3"><a href="#openspec-资料">OpenSpec</a></li><li class="toc-level-3"><a href="#codex-官方资料">Codex 官方资料</a></li><li class="toc-level-3"><a href="#superpowers-资料">Superpowers</a></li></ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+</body>
+</html>
