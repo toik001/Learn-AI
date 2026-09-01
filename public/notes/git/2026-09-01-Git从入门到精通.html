@@ -1,0 +1,619 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="面向 Java 全栈开发者的 Git 从入门到精通教程，系统讲解历史、对象模型、安装配置、分支合并、变基、撤销恢复、远程协作、worktree，以及 GitHub 与 GitLab。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="Git 与工程协作">
+  <meta name="study-date" content="2026-09-01">
+  <title>Git 从入门到精通｜AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../../index.html"><span class="brand-mark">G</span><span>AI 学习库</span></a>
+  <div class="topbar-actions"><button class="icon-button mobile-nav-toggle" type="button">文档</button><button class="icon-button theme-toggle" type="button">主题</button></div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <div class="sidebar-category-summary">
+      <span class="eyebrow">当前分类</span>
+      <a class="sidebar-category-link" href="../../../index.html#category-git-与工程协作-zh4o22">
+        <strong>Git 与工程协作</strong>
+        <small>1 篇文档</small>
+      </a>
+    </div>
+    <nav class="doc-nav" aria-label="当前分类文档">
+      <a class="doc-nav-item is-active" href="2026-09-01-Git从入门到精通.html" aria-current="page"><span>Git 从入门到精通</span><small>2026-09-01</small></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta"><a href="../../../index.html">知识库首页</a><span>·</span><span>Git 与工程协作</span><span>·</span><time datetime="2026-09-01">2026-09-01</time></div>
+    <article class="markdown-body">
+      <h1>Git 从入门到精通</h1>
+      <blockquote>
+        <p><strong>一句话心法：</strong>Git 不是“文件备份工具”，而是一个用不可变对象保存项目快照、用引用给提交命名、用有向无环图组织历史的分布式版本控制系统。</p>
+        <p><strong>适用读者：</strong>零基础开发者，以及会用 <code>add/commit/push</code>、但仍害怕分支、冲突、rebase、reset 和 worktree 的 Java 全栈开发者。示例默认使用现代 Git 2.x 命令，并以 Spring Boot 仓库作为工程语境。</p>
+        <p><strong>资料范围：</strong>内容检索并核对于 2026-09-01，主要依据 Git、GitHub 与 GitLab 官方文档。平台套餐、权限和界面会变化，实际采用前应复核对应官方页面。</p>
+      </blockquote>
+      <nav aria-label="本页快速目录"><strong>快速阅读：</strong> <a href="#核心结论">核心结论</a> · <a href="#git原理">原理</a> · <a href="#安装与配置">安装</a> · <a href="#分支">分支</a> · <a href="#合并与冲突">合并</a> · <a href="#变基">Rebase</a> · <a href="#worktree">Worktree</a> · <a href="#github与gitlab">GitHub/GitLab</a> · <a href="#实践路线">练习</a></nav>
+
+      <h2 id="核心结论">核心结论</h2>
+      <ol>
+        <li><strong>提交是快照，不是“保存按钮”。</strong>一次提交包含根 tree、父提交、作者、提交者、时间和说明；提交 ID 由内容计算而来，修改历史会产生新的 ID。</li>
+        <li><strong>分支只是可移动的提交引用。</strong>新建分支很轻，<code>HEAD</code> 表示当前检出的分支或提交；合并、变基和 cherry-pick 本质上都在改变提交图或引用。</li>
+        <li><strong>先分清三个区域。</strong>工作区是你正在编辑的文件，暂存区（index）是“下一次提交的候选快照”，仓库保存对象和引用。大多数 Git 困惑都来自混淆这三个区域。</li>
+        <li><strong>共享历史优先追加，个人历史可以整理。</strong>已经推送并被他人基于其开发的提交，通常用 <code>revert</code> 反做；尚未共享的个人提交可以用交互式 rebase、amend 或 reset 整理。</li>
+        <li><strong>合并与变基都能整合分支，但表达不同。</strong>merge 保留真实分叉并可能生成双亲提交；rebase 重放提交，形成更线性的历史，也会生成新的提交 ID。</li>
+        <li><strong>worktree 是同一仓库的多个工作目录。</strong>它们共享大部分对象与引用，但各自有工作区、index 和 <code>HEAD</code>，适合同时开发、紧急修复、并行测试和多个编码 Agent。</li>
+        <li><strong>GitHub/GitLab 不是 Git。</strong>Git 是本地版本控制引擎；两者是在 Git 之上提供远程托管、代码评审、权限、Issue、CI/CD、制品和安全能力的平台。</li>
+      </ol>
+
+      <h2 id="学习地图">学习地图：从命令记忆到提交图思维</h2>
+      <div class="table-wrap"><table><thead><tr><th>阶段</th><th>应该掌握</th><th>验收标准</th></tr></thead><tbody>
+        <tr><td>入门</td><td>安装、配置、init/clone、status、add、commit、log</td><td>能独立创建仓库并解释一次提交保存了什么</td></tr>
+        <tr><td>熟练</td><td>branch、switch、merge、冲突、remote、fetch/pull/push</td><td>能走完功能分支与代码评审流程</td></tr>
+        <tr><td>进阶</td><td>rebase、cherry-pick、reset、restore、revert、reflog、stash</td><td>能为不同撤销/整合场景选择安全命令</td></tr>
+        <tr><td>精通</td><td>对象、引用、DAG、worktree、bisect、签名、团队策略</td><td>能从提交图推导命令效果，并设计可审计的团队工作流</td></tr>
+      </tbody></table></div>
+      <p>学习时不要背“神奇命令”。每次操作前回答四个问题：<strong>我在哪个分支？工作区是否干净？哪个引用会移动？是否会重写已经共享的提交？</strong></p>
+
+      <h2 id="历史">Git 的历史：为什么它生来就是分布式的</h2>
+      <p>早期 Linux 内核开发主要通过补丁和归档文件协作；2002 年开始使用专有分布式版本控制系统 BitKeeper。2005 年合作关系变化后，免费使用安排终止，Linus Torvalds 和 Linux 社区开始设计 Git。初始目标包括速度、简单设计、强大的非线性开发、完全分布式，以及高效处理 Linux 内核这类大型项目。<a href="https://git-scm.com/book/en/v2/Getting-Started-A-Short-History-of-Git" target="_blank" rel="noopener noreferrer">Pro Git：A Short History of Git</a></p>
+      <div class="table-wrap"><table><thead><tr><th>时代/模式</th><th>代表形态</th><th>核心问题</th><th>Git 的回答</th></tr></thead><tbody>
+        <tr><td>本地版本控制</td><td>复制目录、补丁文件、本地数据库</td><td>难协作、易覆盖、不可审计</td><td>完整提交历史与内容寻址对象</td></tr>
+        <tr><td>集中式 VCS</td><td>CVS、Subversion</td><td>强依赖中央服务器；离线能力有限</td><td>每个 clone 都有完整仓库，可离线提交与查看历史</td></tr>
+        <tr><td>分布式 VCS</td><td>Git、Mercurial</td><td>需要高效同步、合并和并行开发</td><td>轻量分支、对象传输、远程引用与多种工作流</td></tr>
+      </tbody></table></div>
+      <p>“分布式”不等于“没有中心”。团队仍可约定 GitHub 或 GitLab 上的仓库为权威来源，但技术上你的本地仓库不只是客户端缓存：它拥有对象数据库、提交图和引用，可以离线提交、分支、合并、回退和查询历史。</p>
+
+      <h2 id="git原理">Git 原理：对象、引用与三个区域</h2>
+      <h3 id="三个区域">三个区域：工作区、暂存区、仓库</h3>
+      <div class="agent-call-flow" role="img" aria-label="Git 的三个区域：工作区通过 git add 写入暂存区，暂存区通过 git commit 写入本地仓库，本地仓库通过 git push 与远程仓库同步。">
+        <div class="agent-step"><strong>工作区</strong><span>正在编辑的文件</span></div>
+        <div class="agent-step"><strong>git add</strong><span>挑选下一提交内容</span></div>
+        <div class="agent-step"><strong>暂存区 / index</strong><span>候选快照</span></div>
+        <div class="agent-step"><strong>git commit</strong><span>生成不可变对象</span></div>
+        <div class="agent-step"><strong>本地仓库</strong><span>对象 + 引用 + 历史</span></div>
+      </div>
+      <p>暂存区不是“临时文件夹”，而是一份索引：它记录下一次提交要包含的路径、模式和 blob。正因为有 index，你可以只提交当前文件的一部分改动：<code>git add -p</code>。</p>
+
+      <h3 id="对象模型">四类核心对象</h3>
+      <div class="table-wrap"><table><thead><tr><th>对象</th><th>保存什么</th><th>不保存什么</th><th>查看方式</th></tr></thead><tbody>
+        <tr><td>blob</td><td>文件内容</td><td>文件名、目录路径</td><td><code>git cat-file -p &lt;id&gt;</code></td></tr>
+        <tr><td>tree</td><td>目录结构：名称、模式、blob/tree ID</td><td>作者、提交说明</td><td><code>git ls-tree &lt;commit&gt;</code></td></tr>
+        <tr><td>commit</td><td>根 tree、父提交、作者、提交者、时间、说明</td><td>“分支名”本身</td><td><code>git show --format=raw &lt;id&gt;</code></td></tr>
+        <tr><td>annotated tag</td><td>目标对象、标签者、说明、可选签名</td><td>自动移动能力</td><td><code>git show &lt;tag&gt;</code></td></tr>
+      </tbody></table></div>
+      <p>Git 官方将其核心描述为内容寻址文件系统：数据写入对象数据库后，会得到由内容计算出的键。高层的 <code>git add</code> 和 <code>git commit</code> 会创建 blob、更新 index、写 tree，再写指向 tree 和父提交的 commit。<a href="https://git-scm.com/book/en/v2/Git-Internals-Git-Objects" target="_blank" rel="noopener noreferrer">Pro Git：Git Objects</a></p>
+      <pre><code># 在练习仓库中观察对象，不要依赖 find 的目录结构猜类型
+git rev-parse HEAD
+git cat-file -t HEAD
+git cat-file -p HEAD
+git ls-tree -r HEAD
+git count-objects -v</code></pre>
+      <p>初始理解可把 commit 看成完整快照。为节省空间和加速传输，Git 后续会把对象打包（packfile）并使用增量压缩；“逻辑模型是快照”和“物理存储会压缩”并不矛盾。</p>
+
+      <h3 id="引用与head">引用、分支与 HEAD</h3>
+      <pre><code>refs/heads/main              # 本地分支引用
+refs/remotes/origin/main     # 上次 fetch 后看到的远程跟踪引用
+refs/tags/v1.0.0             # 标签引用
+HEAD                         # 当前分支的符号引用，或直接指向提交（detached HEAD）</code></pre>
+      <p>分支通常只是 <code>refs/heads/*</code> 下指向某个提交的名字。提交后，当前分支引用向新提交前进；其他分支不动。<code>HEAD</code> 通常指向当前分支，因此 Git 知道“下一次提交让谁前进”。这就是 Git 分支创建和切换非常轻量的根本原因。<a href="https://git-scm.com/book/en/v2/Git-Branching-Branches-in-a-Nutshell" target="_blank" rel="noopener noreferrer">Pro Git：Branches in a Nutshell</a></p>
+
+      <h3 id="提交图与可达性">提交图与可达性</h3>
+      <pre><code>          C---D  feature/order-export
+         /
+A---B---E---F    main
+         \
+          H      hotfix/payment</code></pre>
+      <p>每个提交通过 parent 指向过去，因此历史是有向无环图（DAG）。分支、标签和远程跟踪分支是图上的入口。所谓“删除分支”，只是删除一个引用；只要某提交仍可从其他引用或 reflog 到达，对象通常仍可恢复。Git 的许多动作都可归结为三类：<strong>移动引用、创建新提交、更新工作区/index</strong>。</p>
+
+      <h2 id="安装与配置">Git 安装与首次配置</h2>
+      <h3 id="安装git">Windows、macOS 与 Linux</h3>
+      <div class="table-wrap"><table><thead><tr><th>系统</th><th>推荐方式</th><th>命令或入口</th><th>说明</th></tr></thead><tbody>
+        <tr><td>Windows</td><td>Git for Windows 官方构建</td><td><a href="https://git-scm.com/download/win" target="_blank" rel="noopener noreferrer">git-scm.com/download/win</a></td><td>附带 Git Bash；安装器会询问 PATH、默认编辑器、换行和凭据管理等选项</td></tr>
+        <tr><td>macOS</td><td>Xcode Command Line Tools；需要更新版本时用 Homebrew</td><td><code>xcode-select --install</code><br><code>brew install git</code></td><td>第一次运行 <code>git</code> 也可能触发命令行工具安装</td></tr>
+        <tr><td>Ubuntu/Debian</td><td>系统包管理器</td><td><code>sudo apt update</code><br><code>sudo apt install git</code></td><td>发行版版本可能落后，但通常稳定</td></tr>
+        <tr><td>Fedora/RHEL 系</td><td>系统包管理器</td><td><code>sudo dnf install git</code></td><td>企业环境应遵循组织的软件源和补丁策略</td></tr>
+      </tbody></table></div>
+      <p>Git 官方安装章节列出了各平台入口，并说明 Git 2.x 对大多数日常命令保持良好兼容。生产团队不必盲目追逐最新版本，但应避免使用已停止安全维护的系统包。<a href="https://git-scm.com/book/en/v2/Getting-Started-Installing-Git" target="_blank" rel="noopener noreferrer">Pro Git：Installing Git</a></p>
+      <pre><code>git --version
+git --exec-path
+git help config
+git help switch</code></pre>
+
+      <h3 id="身份与默认配置">身份、默认分支与编辑器</h3>
+      <pre><code># 作者身份会写入后续提交；使用工作邮箱还是个人邮箱取决于组织政策
+git config --global user.name "Your Name"
+git config --global user.email "you@example.com"
+
+# 新仓库默认分支名
+git config --global init.defaultBranch main
+
+# 任选熟悉的编辑器；下面以 IntelliJ IDEA 的命令行启动器为例
+git config --global core.editor "idea --wait"
+
+# 查看最终值来自哪个配置文件
+git config --list --show-origin
+git config --get user.email</code></pre>
+      <p>配置按 system、global、local 等层级覆盖。公司仓库可以在仓库内用不带 <code>--global</code> 的配置覆盖个人默认值。作者身份并不是平台登录凭据；是否能 push 由 HTTPS token、SSH key、SSO 和平台权限决定。<a href="https://git-scm.com/book/en/v2/Getting-Started-First-Time-Git-Setup" target="_blank" rel="noopener noreferrer">Pro Git：First-Time Git Setup</a></p>
+
+      <h3 id="换行与凭据">换行符与凭据安全</h3>
+      <ul>
+        <li>优先用仓库中的 <code>.gitattributes</code> 统一文本规则，例如 <code>* text=auto</code>，不要只依赖每个人不同的 <code>core.autocrlf</code>。</li>
+        <li>不要把访问令牌写进 remote URL、脚本、IDE 配置示例或仓库文件；优先使用系统凭据管理器或 SSH agent。</li>
+        <li>提交前检查 <code>git diff --cached</code>；一旦秘密进入提交，即使后来删除，仍可能存在于历史和平台缓存中，应先吊销凭据，再按组织流程清理历史。</li>
+      </ul>
+
+      <h2 id="第一个仓库">第一个仓库：从文件到可审计提交</h2>
+      <h3 id="init与clone">init 与 clone</h3>
+      <pre><code># 把现有 Spring Boot 项目变成仓库
+cd order-service
+git init
+git status
+
+# 或复制一个已有远程仓库（获得工作区 + 完整本地仓库 + origin）
+git clone git@github.com:example/order-service.git
+cd order-service
+git remote -v</code></pre>
+      <p><code>git init</code> 不会自动提交现有文件；<code>git clone</code> 则会创建远程配置、下载对象、建立远程跟踪引用并检出默认分支。二者都只影响当前目录，不会自动把代码发布到互联网。</p>
+
+      <h3 id="一次规范提交">一次规范提交</h3>
+      <pre><code>git status --short
+git diff                          # 工作区 vs 暂存区
+git add src/main/java/com/example/order/Order.java
+git add -p                        # 按 hunk 挑选
+git diff --cached                 # 暂存区 vs HEAD
+git commit -m "feat(order): validate order total"
+git log --oneline --decorate --graph --all -10</code></pre>
+      <p>一次提交只表达一个可解释、可测试的逻辑变化。不要把代码格式化、依赖升级、功能修改和无关文件混进同一提交。提交信息重点回答“为什么改”，diff 已经展示“改了什么”。</p>
+
+      <h3 id="忽略文件">Java 项目的 .gitignore 起点</h3>
+      <pre><code># Maven / Gradle 输出
+target/
+build/
+.gradle/
+
+# IDE 用户状态（团队共享配置需单独讨论）
+.idea/workspace.xml
+*.iml
+
+# 本地环境与秘密
+.env
+*.local
+application-local.yml
+
+# 日志与系统文件
+*.log
+.DS_Store</code></pre>
+      <p><code>.gitignore</code> 只影响尚未被跟踪的文件。已经入库的文件要先用 <code>git rm --cached &lt;path&gt;</code> 从 index 移除，再提交；这不会自动从旧历史删除它。</p>
+
+      <h2 id="分支">Git 分支：轻量引用，不是目录副本</h2>
+      <h3 id="分支基本命令">创建、切换、查看与删除</h3>
+      <pre><code>git branch                              # 列出本地分支
+git branch -avv                         # 本地、远程跟踪、upstream 与领先/落后
+git switch -c feature/order-export      # 创建并切换
+git switch main                         # 切换已有分支
+git switch -                            # 回到上一个分支
+git branch -m feature/export-orders     # 重命名当前分支
+git branch -d feature/export-orders     # 仅删除已合并分支
+git branch -D abandoned-experiment      # 强制删除；先确认提交有其他引用或无需保留</code></pre>
+      <p>旧教程常写 <code>git checkout -b feature/x</code> 和 <code>git checkout main</code>；现代 Git 更推荐用职责清晰的 <code>switch</code> 切分支、<code>restore</code> 恢复文件。<code>checkout</code> 仍常见，但同时承担多种职责，初学者更容易误用。</p>
+
+      <h3 id="分支不是远程分支">本地分支、远程跟踪引用与 upstream</h3>
+      <div class="table-wrap"><table><thead><tr><th>名称</th><th>含义</th><th>谁会移动它</th></tr></thead><tbody>
+        <tr><td><code>main</code></td><td>本地分支</td><td>本地 commit、merge、rebase、reset 等</td></tr>
+        <tr><td><code>origin/main</code></td><td>本地记录的“最近一次 fetch 时远端 main 的位置”</td><td><code>fetch</code> 或成功的网络同步</td></tr>
+        <tr><td><code>origin</code></td><td>远程仓库的别名</td><td><code>git remote</code> 配置</td></tr>
+        <tr><td>upstream</td><td>当前分支默认 pull/push/比较的上游分支</td><td><code>push -u</code> 或 <code>branch -u</code></td></tr>
+      </tbody></table></div>
+      <pre><code>git fetch origin
+git switch -c feature/order-export --track origin/feature/order-export
+git push -u origin feature/order-export
+git branch -vv</code></pre>
+      <p><code>origin/main</code> 不是服务器上的实时指针，断网时也能查看；只有 fetch 等操作后才更新。先 fetch、再比较 <code>main..origin/main</code>，比把所有行为都藏在 <code>pull</code> 中更容易学习和排错。</p>
+
+      <h3 id="分支策略">分支策略怎么选</h3>
+      <div class="table-wrap"><table><thead><tr><th>策略</th><th>适合</th><th>优势</th><th>代价</th></tr></thead><tbody>
+        <tr><td>Trunk-based / 短分支</td><td>持续交付、成熟自动化测试</td><td>集成频繁、分叉时间短</td><td>依赖特性开关、快速评审和可靠流水线</td></tr>
+        <tr><td>GitHub Flow</td><td>Web/SaaS 与经常部署的团队</td><td>规则少：分支 → PR → 检查 → 合并</td><td>复杂版本线需补充发布策略</td></tr>
+        <tr><td>Release branches</td><td>同时维护多个生产版本</td><td>便于补丁回移和独立发布</td><td>需要明确 backport 和生命周期</td></tr>
+        <tr><td>Git Flow</td><td>严格版本发布、低频上线的特定场景</td><td>角色分支明确</td><td>分支多、合并多；不应因“经典”而默认采用</td></tr>
+      </tbody></table></div>
+
+      <h2 id="合并与冲突">分支间合并：fast-forward、三方合并与冲突</h2>
+      <h3 id="merge方向">先确认方向：把谁合并到谁</h3>
+      <pre><code># 目标：把 feature/order-export 合入 main
+git status --short                 # 工作区应干净
+git switch main                    # 先站到“接收方”
+git fetch origin
+git merge --ff-only origin/main    # 先安全更新本地 main
+git merge feature/order-export     # 再把功能分支合进当前分支
+git log --oneline --graph --decorate --all -15</code></pre>
+      <p><code>git merge X</code> 的主语是“当前分支”：把 X 可达而当前分支不可达的历史整合进当前分支。执行前先说完整句子“我在 main，要把 feature 合进来”，能避免绝大多数方向错误。</p>
+
+      <h3 id="三种合并结果">三种常见结果</h3>
+      <div class="table-wrap"><table><thead><tr><th>结果</th><th>何时发生</th><th>提交图效果</th><th>常用命令</th></tr></thead><tbody>
+        <tr><td>Fast-forward</td><td>当前分支是来源分支的祖先</td><td>仅向前移动当前分支引用，不创建合并提交</td><td><code>git merge --ff-only feature/x</code></td></tr>
+        <tr><td>Three-way merge</td><td>双方从共同祖先后都产生提交</td><td>创建有两个父提交的 merge commit</td><td><code>git merge --no-ff feature/x</code></td></tr>
+        <tr><td>Squash merge</td><td>只想保留最终改动，不保留来源分支拓扑</td><td>把差异放入 index，随后创建一个普通提交</td><td><code>git merge --squash feature/x</code></td></tr>
+      </tbody></table></div>
+      <p>三方合并使用两个分支尖端和共同祖先计算结果；产生的 merge commit 有两个父提交。<a href="https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging" target="_blank" rel="noopener noreferrer">Pro Git：Basic Branching and Merging</a></p>
+
+      <h3 id="冲突处理">冲突处理的完整闭环</h3>
+      <pre><code>git status
+git diff --name-only --diff-filter=U
+
+# 打开冲突文件，理解两边业务意图后编辑；不要机械删除标记
+# &lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+# 当前分支内容
+# =======
+# 被合入分支内容
+# &gt;&gt;&gt;&gt;&gt;&gt;&gt; feature/order-export
+
+git add src/main/java/com/example/order/OrderService.java
+mvn -q -DskipTests=false test
+git diff --cached
+git commit                          # 结束 merge
+
+# 如果发现方向或时机不对
+git merge --abort</code></pre>
+      <ol>
+        <li>用 <code>status</code> 确认正在进行的是 merge、rebase、cherry-pick 还是 revert；不同流程的继续/中止命令不同。</li>
+        <li>理解两边为何修改同一区域；冲突标记只展示文本，不告诉你业务上正确的组合。</li>
+        <li>编辑后用 <code>git add</code> 标记已解决；删除标记不等于 Git 已知冲突解决。</li>
+        <li>运行测试和静态检查，再结束操作；“能合并”不等于“业务正确”。</li>
+      </ol>
+
+      <h2 id="变基">Rebase：重放提交，让基线前移</h2>
+      <pre><code># 在尚未共享的 feature 分支上同步最新 main
+git switch feature/order-export
+git fetch origin
+git rebase origin/main
+
+# 冲突时：编辑 → add → 继续；或完整放弃
+git add &lt;resolved-files&gt;
+git rebase --continue
+git rebase --abort
+
+# 整理个人提交：改顺序、改说明、合并或拆分
+git rebase -i origin/main</code></pre>
+      <p>rebase 会找出当前分支相对 upstream 独有的提交，把分支临时放到新基线，再逐个重放这些改动，最后更新分支引用。因此结果中的提交虽然改动意图相似，但父提交、时间或元数据不同，ID 也会变化。<a href="https://git-scm.com/docs/git-rebase" target="_blank" rel="noopener noreferrer">Git 官方手册：git-rebase</a></p>
+      <div class="table-wrap"><table><thead><tr><th>选择</th><th>优点</th><th>风险</th><th>建议</th></tr></thead><tbody>
+        <tr><td>merge main into feature</td><td>不改已有提交 ID，保留真实整合点</td><td>频繁同步会产生较多 merge commits</td><td>共享功能分支、多人同时开发时更稳妥</td></tr>
+        <tr><td>rebase feature onto main</td><td>历史线性，便于逐提交审查和 bisect</td><td>重写提交；冲突可能逐个提交出现</td><td>个人、短期、尚未共享的分支适合</td></tr>
+      </tbody></table></div>
+      <p><strong>黄金规则：</strong>不要擅自 rebase 已被他人基于其开发的共享提交。如果团队明确允许重写 PR/MR 分支，推送时使用 <code>git push --force-with-lease</code>，它会在远端引用与本地预期不符时拒绝覆盖；不要习惯性使用无保护的 <code>--force</code>。</p>
+
+      <h2 id="跨分支动作">跨分支与撤销动作：如何选择正确工具</h2>
+      <div class="table-wrap"><table><thead><tr><th>目标</th><th>工具</th><th>改变什么</th><th>是否适合共享历史</th></tr></thead><tbody>
+        <tr><td>整合整个分支并保留拓扑</td><td><code>merge</code></td><td>移动引用或创建 merge commit</td><td>是</td></tr>
+        <tr><td>把一串提交重放到新基线</td><td><code>rebase</code></td><td>创建新提交并移动分支</td><td>通常否；除非团队协调</td></tr>
+        <tr><td>移植少数特定提交</td><td><code>cherry-pick</code></td><td>在当前分支创建等效的新提交</td><td>可以，但要记录来源和避免重复合并</td></tr>
+        <tr><td>反做一个已共享的坏提交</td><td><code>revert</code></td><td>追加一个反向提交</td><td>是，首选</td></tr>
+        <tr><td>移动本地分支并调整 index/工作区</td><td><code>reset</code></td><td>移动引用，按模式更新区域</td><td>不应直接用于重写共享历史</td></tr>
+        <tr><td>恢复文件内容或取消暂存</td><td><code>restore</code></td><td>更新工作区和/或 index，不移动分支</td><td>与提交历史无关，但可能丢未提交改动</td></tr>
+        <tr><td>临时收起未完成修改</td><td><code>stash</code></td><td>创建 stash 引用并清理选定区域</td><td>本地临时用途</td></tr>
+      </tbody></table></div>
+
+      <h3 id="cherry-pick">Cherry-pick：移植特定修复</h3>
+      <pre><code># 把 main 上已验证的修复回移到 release/2.4
+git switch release/2.4
+git cherry-pick -x a1b2c3d
+
+# 冲突处理
+git add &lt;resolved-files&gt;
+git cherry-pick --continue
+git cherry-pick --abort</code></pre>
+      <p><code>cherry-pick</code> 应用某提交引入的变化，并在当前分支记录新提交；<code>-x</code> 会在说明中记录来源 ID，适合公开分支之间的 backport 审计。<a href="https://git-scm.com/docs/git-cherry-pick" target="_blank" rel="noopener noreferrer">Git 官方手册：git-cherry-pick</a></p>
+
+      <h3 id="reset-restore-revert">Reset、restore 与 revert</h3>
+      <pre><code># 取消暂存，保留工作区修改
+git restore --staged src/main/java/com/example/order/Order.java
+
+# 丢弃某文件未提交修改（危险：先 diff）
+git restore src/main/java/com/example/order/Order.java
+
+# 本地撤销最后一次提交，保留修改和暂存状态
+git reset --soft HEAD~1
+
+# 本地撤销最后一次提交，保留工作区修改但取消暂存
+git reset --mixed HEAD~1
+
+# 为已共享提交创建反向提交
+git revert a1b2c3d</code></pre>
+      <p>理解 reset 的“三棵树”：<code>--soft</code> 只移动分支引用；默认的 <code>--mixed</code> 再更新 index；<code>--hard</code> 还覆盖工作区。未提交内容可能因此不可恢复，所以本文不把 <code>reset --hard</code> 当日常清理命令。<a href="https://git-scm.com/book/en/v2/Git-Tools-Reset-Demystified" target="_blank" rel="noopener noreferrer">Pro Git：Reset Demystified</a>；共享历史的撤销应优先使用会记录新提交的 <a href="https://git-scm.com/docs/git-revert" target="_blank" rel="noopener noreferrer">git-revert</a>。</p>
+
+      <h3 id="stash">Stash：短期切换上下文，不是长期仓库</h3>
+      <pre><code>git stash push -u -m "wip: order export validation"
+git stash list
+git stash show -p stash@{0}
+git stash apply stash@{0}     # 保留 stash，适合先验证
+git stash drop stash@{0}
+
+# 或一步应用并删除；有冲突时仍需手工处理
+git stash pop</code></pre>
+      <p>默认 stash 不包含未跟踪文件，<code>-u</code> 才包含；ignored 文件需要更强的选项，使用前先确认范围。重要工作不要长期只放在 stash 中，最好在明确命名的 WIP 分支提交。官方文档推荐使用 <code>git stash push</code>，旧的 <code>save</code> 形式已被弃用。<a href="https://git-scm.com/docs/git-stash" target="_blank" rel="noopener noreferrer">Git 官方手册：git-stash</a></p>
+
+      <h2 id="远程协作">远程协作：fetch、pull、push 与评审</h2>
+      <pre><code>git remote -v
+git remote get-url origin
+git fetch --prune origin
+git log --oneline --left-right --graph main...origin/main
+
+# 明确只允许快进，避免 pull 意外生成合并提交
+git pull --ff-only
+
+# 首次发布功能分支并设置 upstream
+git push -u origin feature/order-export
+
+# 删除远程功能分支
+git push origin --delete feature/order-export</code></pre>
+      <div class="table-wrap"><table><thead><tr><th>命令</th><th>网络行为</th><th>本地行为</th><th>学习建议</th></tr></thead><tbody>
+        <tr><td><code>fetch</code></td><td>下载对象与远程引用</td><td>通常不改当前工作区/本地分支</td><td>最适合先观察，再决定 merge/rebase</td></tr>
+        <tr><td><code>pull</code></td><td>先 fetch</td><td>随后按配置 merge 或 rebase</td><td>团队应显式约定 <code>--ff-only</code> 或 <code>--rebase</code></td></tr>
+        <tr><td><code>push</code></td><td>上传对象并请求更新远端引用</td><td>成功后更新相应远程跟踪状态</td><td>非快进通常会被拒绝，这是数据保护信号</td></tr>
+      </tbody></table></div>
+      <p>Pull Request / Merge Request 不是 Git 对象，而是平台上的协作记录：它把来源分支、目标分支、diff、评论、审批、检查结果与合并动作组织起来。Git 提交应保持可构建、可审查；平台规则应保护默认分支，要求必要检查通过再合并。</p>
+
+      <h2 id="worktree">Worktree：一个仓库，多套工作目录</h2>
+      <h3 id="worktree概念">核心概念</h3>
+      <p>普通 clone 创建一个主 worktree。<code>git worktree add</code> 可以给同一仓库增加 linked worktree，使你同时检出多个分支。它们共享大部分对象库和引用，因此比重复 clone 更节省空间、创建更快；每个 worktree 又有独立的工作区、index 和 <code>HEAD</code>，修改不会直接覆盖另一个目录。官方定义与管理命令见 <a href="https://git-scm.com/docs/git-worktree" target="_blank" rel="noopener noreferrer">git-worktree 手册</a>。</p>
+      <pre><code>order-service/                 # main worktree，当前在 main
+../order-service-export/      # linked worktree，feature/order-export
+../order-service-hotfix/      # linked worktree，hotfix/payment-timeout
+
+# 三个目录共享提交对象与大多数 refs，但工作区/index/HEAD 独立</code></pre>
+
+      <h3 id="worktree日常命令">创建、查看、移动与删除</h3>
+      <pre><code># 从当前 HEAD 创建新分支，并在新目录检出
+git worktree add -b feature/order-export ../order-service-export
+
+# 把已有但当前未被其他 worktree 检出的分支放到新目录
+git worktree add ../order-service-hotfix hotfix/payment-timeout
+
+# 临时实验：detached HEAD，不创建分支
+git worktree add --detach ../order-service-benchmark HEAD
+
+git worktree list --porcelain
+git worktree move ../order-service-benchmark ../bench-order-service
+git worktree lock --reason "external disk" ../bench-order-service
+git worktree unlock ../bench-order-service
+
+# 先确认目标目录没有需要保留的修改，再从任意 worktree 执行
+git worktree remove ../order-service-export
+git worktree prune --dry-run
+git worktree prune</code></pre>
+
+      <h3 id="worktree适用场景">适用场景与边界</h3>
+      <div class="table-wrap"><table><thead><tr><th>场景</th><th>为什么适合 worktree</th><th>注意</th></tr></thead><tbody>
+        <tr><td>主功能开发中插入生产 hotfix</td><td>无需 stash 或污染当前工作区</td><td>hotfix 合并后，功能分支仍需同步修复</td></tr>
+        <tr><td>同时维护 main 与 release</td><td>两个 IDE 窗口、两套构建目录可并行</td><td>本地服务端口、数据库 schema 和环境变量要隔离</td></tr>
+        <tr><td>多个编码 Agent 并行任务</td><td>每个 Agent 有独立工作区和分支，diff 边界清楚</td><td>不要让不同 Agent 编辑同一 worktree；合并仍需人工/测试验证</td></tr>
+        <tr><td>跨版本性能对比</td><td>两个提交可同时构建运行</td><td>Maven 本地仓库共享，项目输出目录各自独立</td></tr>
+        <tr><td>仅想节省一次 clone</td><td>共享对象库节省空间</td><td>不是权限或故障隔离；对象库损坏会影响所有 worktree</td></tr>
+      </tbody></table></div>
+      <ul>
+        <li>Git 默认拒绝把同一个分支同时检出到多个 worktree，这是防止两个工作区竞争移动同一引用的保护。</li>
+        <li>不要直接用文件管理器移动或删除 linked worktree。优先用 <code>worktree move/remove</code>；误移动后使用 <code>worktree repair</code>。</li>
+        <li>可移动磁盘或不常挂载路径可 <code>lock</code>，避免管理信息被 prune。</li>
+        <li>官方手册仍提示多 worktree 对 submodule 的支持不完整；含 submodule 的超级项目使用前应在练习仓库验证。</li>
+        <li>删除 worktree 不等于删除分支；两者按需分别执行，避免误以为历史已清理。</li>
+      </ul>
+
+      <h2 id="github与gitlab">GitHub 与 GitLab：同用 Git，不是同一个产品</h2>
+      <h3 id="git与平台的边界">先分清 Git 与托管平台</h3>
+      <div class="table-wrap"><table><thead><tr><th>能力</th><th>Git 本身</th><th>GitHub / GitLab</th></tr></thead><tbody>
+        <tr><td>本地提交、分支、合并、变基</td><td>提供</td><td>调用/展示 Git 能力</td></tr>
+        <tr><td>远程仓库协议</td><td>提供 SSH/HTTP 等传输机制</td><td>托管服务器、账号、权限和审计</td></tr>
+        <tr><td>代码评审</td><td>没有 PR/MR 对象</td><td>Pull Request / Merge Request、评论、审批、规则</td></tr>
+        <tr><td>项目管理</td><td>不提供 Issue/看板</td><td>Issue、里程碑、项目/工作项等</td></tr>
+        <tr><td>CI/CD</td><td>可用 hook 触发外部系统</td><td>GitHub Actions / GitLab CI/CD 与 runner</td></tr>
+        <tr><td>制品与安全</td><td>不直接提供</td><td>依套餐和部署形态提供包、容器、安全扫描等</td></tr>
+      </tbody></table></div>
+
+      <h3 id="github与gitlab对比">GitHub 与 GitLab 对比</h3>
+      <div class="table-wrap"><table><thead><tr><th>维度</th><th>GitHub</th><th>GitLab</th><th>选择建议</th></tr></thead><tbody>
+        <tr><td>评审术语</td><td>Pull Request（PR）</td><td>Merge Request（MR）</td><td>核心目的相同：提议、讨论、检查并合并分支</td></tr>
+        <tr><td>常见工作流</td><td>GitHub Flow 强调轻量、短分支和经常部署</td><td>常见受保护分支或 fork + MR 流程</td><td>先按团队交付模型选流程，不要被名称绑架</td></tr>
+        <tr><td>CI/CD 配置</td><td><code>.github/workflows/*.yml</code>，GitHub Actions</td><td>默认根目录 <code>.gitlab-ci.yml</code>，GitLab CI/CD</td><td>比较 runner、缓存、合规、复用方式和现有生态</td></tr>
+        <tr><td>部署形态</td><td>GitHub.com 与 GitHub Enterprise 等形态</td><td>GitLab.com、Self-Managed、Dedicated</td><td>强自托管/内网需求要评估运维成本与合规要求</td></tr>
+        <tr><td>生态侧重</td><td>开源社区、Marketplace、Actions 与广泛第三方集成强</td><td>项目、MR、CI/CD、制品、安全与部署链路高度集成</td><td>对现有组织工具做 PoC，不用单一功能下结论</td></tr>
+        <tr><td>迁移成本</td><td colspan="2">Git 对象和分支通常可迁移，但 Issue、评审评论、权限、流水线、密钥、制品与审计记录需要专门迁移</td><td>把“能 mirror 仓库”与“完整平台迁移”分开评估</td></tr>
+      </tbody></table></div>
+      <p>GitHub 官方把 GitHub Flow 定义为适合经常部署团队的轻量、基于分支的工作流；PR 将独立分支上的变化提交给他人评审。<a href="https://docs.github.com/en/get-started/git-basics/git-workflows" target="_blank" rel="noopener noreferrer">GitHub Docs：Git workflows</a>、<a href="https://docs.github.com/en/pull-requests/get-started/pull-request-quickstart" target="_blank" rel="noopener noreferrer">Pull request quickstart</a>。GitHub Actions 可在 GitHub 托管或自托管 runner 上执行 CI。<a href="https://docs.github.com/en/actions/get-started/continuous-integration" target="_blank" rel="noopener noreferrer">GitHub Docs：Continuous integration</a></p>
+      <p>GitLab 把 repository 作为 project 的组成部分，并在 project 中组合 Issue、MR、CI/CD 等能力；MR 集中展示代码变化、讨论、流水线、可合并性和提交。GitLab CI/CD 默认以根目录的 <code>.gitlab-ci.yml</code> 定义 stage 与 job，再由 runner 执行。<a href="https://docs.gitlab.com/user/project/organize_work_with_projects/" target="_blank" rel="noopener noreferrer">GitLab Docs：Projects</a>、<a href="https://docs.gitlab.com/user/project/merge_requests/" target="_blank" rel="noopener noreferrer">Merge requests</a>、<a href="https://docs.gitlab.com/ci/" target="_blank" rel="noopener noreferrer">GitLab CI/CD</a></p>
+
+      <h3 id="平台协作示例">同一套本地 Git，两个平台只改远程与评审入口</h3>
+      <pre><code># GitHub
+git remote add origin git@github.com:acme/order-service.git
+
+# GitLab（自托管域名示例）
+git remote add origin git@gitlab.example.com:acme/order-service.git
+
+# 后续本地动作一致
+git switch -c feature/order-export
+git add -p
+git commit -m "feat(order): export orders"
+git push -u origin feature/order-export
+
+# 然后分别在平台创建 PR 或 MR，等待检查与评审</code></pre>
+
+      <h2 id="java团队实战">Java 团队完整实战：从 Issue 到上线</h2>
+      <ol>
+        <li><strong>定义变更。</strong>Issue 明确订单导出 API 的验收标准、权限、数据量与兼容性。</li>
+        <li><strong>同步基线。</strong><code>git switch main &amp;&amp; git pull --ff-only</code>，确认测试通过。</li>
+        <li><strong>隔离工作。</strong><code>git switch -c feature/order-export</code>；若主工作区还有别的任务，用 worktree 新建目录。</li>
+        <li><strong>小步提交。</strong>按“接口契约 → 领域逻辑 → 持久化 → 测试/文档”拆分，每步运行 Maven 最小相关测试。</li>
+        <li><strong>发布分支。</strong><code>git push -u origin feature/order-export</code>，创建 PR/MR，关联 Issue。</li>
+        <li><strong>自动检查。</strong>编译、单元/集成测试、格式、静态分析、依赖与秘密扫描；不要把“流水线通过”等同于业务评审完成。</li>
+        <li><strong>处理反馈。</strong>个人分支可 amend/rebase 整理；多人共享分支优先追加提交，避免突然改写他人基线。</li>
+        <li><strong>合并。</strong>按仓库规则选择 merge、squash 或 rebase merge；平台保护 main 并要求必要审批。</li>
+        <li><strong>上线与追踪。</strong>部署应记录 commit/tag；故障时才能确定运行的是哪份源码，并选择 revert 或 hotfix。</li>
+        <li><strong>清理。</strong>删除已合并远程/本地功能分支和不用的 linked worktree；保留 release tag 与审计记录。</li>
+      </ol>
+
+      <h2 id="恢复与排错">恢复与排错：先停止扩大损失</h2>
+      <div class="table-wrap"><table><thead><tr><th>现象</th><th>第一步</th><th>恢复思路</th></tr></thead><tbody>
+        <tr><td>提交到了错误分支</td><td>记录提交 ID，确认是否已 push</td><td>在正确分支 cherry-pick；错误分支未共享可 reset，已共享则 revert</td></tr>
+        <tr><td>误删本地分支</td><td><code>git reflog --all</code></td><td>找到尖端提交后 <code>git branch recovered/&lt;name&gt; &lt;id&gt;</code></td></tr>
+        <tr><td>rebase 结果不对</td><td>进行中用 <code>rebase --abort</code></td><td>完成后查 reflog，给旧尖端建恢复分支，再比较</td></tr>
+        <tr><td>push 被 non-fast-forward 拒绝</td><td><code>git fetch</code> 后画图比较</td><td>判断是需要 merge/rebase，还是远端被意外改写；不要直接 force</td></tr>
+        <tr><td>合并冲突太复杂</td><td>保存现场并看 <code>status</code></td><td>必要时 abort，缩小分支差异、补测试后重新合并</td></tr>
+        <tr><td>不知道哪个提交引入问题</td><td>准备可重复的好/坏判定命令</td><td>用 <code>git bisect</code> 二分定位，再验证因果</td></tr>
+      </tbody></table></div>
+      <pre><code># reflog 记录本地引用变化，是误 reset/rebase 后的第一救援入口
+git reflog --date=iso
+git show &lt;suspected-id&gt;
+git branch recovered/pre-rebase &lt;old-id&gt;
+
+# 二分定位回归；脚本返回 0 表示 good，非 0 表示 bad
+git bisect start
+git bisect bad HEAD
+git bisect good v2.4.0
+git bisect run mvn -q -Dtest=OrderExportTest test
+git bisect reset</code></pre>
+      <p><strong>恢复原则：</strong>先创建恢复分支或 tag 固定仍可找到的提交，再尝试修改；不要在慌乱时连续执行 reset、clean、force push。reflog 主要是本地记录，不是跨机器备份，也有过期和垃圾回收边界。</p>
+
+      <h2 id="进阶工具">精通阶段的高价值工具</h2>
+      <div class="table-wrap"><table><thead><tr><th>工具</th><th>用途</th><th>示例</th></tr></thead><tbody>
+        <tr><td>精确日志</td><td>按路径、作者、时间和图查询历史</td><td><code>git log --graph --decorate --oneline --all</code></td></tr>
+        <tr><td>内容搜索</td><td>搜索当前或历史版本中的文本</td><td><code>git grep "OrderStatus"</code></td></tr>
+        <tr><td>追溯行</td><td>找到某行最后一次修改，作为调查入口</td><td><code>git blame -L 40,70 -- OrderService.java</code></td></tr>
+        <tr><td>范围比较</td><td>比较分支独有提交或共同祖先后的差异</td><td><code>git log main..feature</code>、<code>git diff main...feature</code></td></tr>
+        <tr><td>交互暂存</td><td>把混杂工作区拆成原子提交</td><td><code>git add -p</code></td></tr>
+        <tr><td>签名</td><td>让平台验证提交/tag 的签名身份</td><td><code>git commit -S</code>；需先配置并保护密钥</td></tr>
+        <tr><td>维护</td><td>优化对象存储并检查仓库</td><td><code>git maintenance run</code>、<code>git fsck</code></td></tr>
+      </tbody></table></div>
+      <p><code>blame</code> 只告诉你最后修改者，不自动等于缺陷责任人；应结合 commit、PR/MR、需求和后续重构理解上下文。<code>bisect</code> 的结论也依赖判定测试是否稳定。</p>
+
+      <h2 id="团队规范">推荐的团队安全基线</h2>
+      <ul>
+        <li>保护默认分支：禁止直接 push，要求 PR/MR、必要审批和 CI 检查。</li>
+        <li>明确合并策略：仓库统一使用 merge、squash 或 rebase merge，不让每个人临时决定。</li>
+        <li>分支短生命周期、命名含目的；长期 release 分支明确负责人、支持期限和回移规则。</li>
+        <li>禁止无审计 force push；确需改写功能分支时使用 <code>--force-with-lease</code> 并通知协作者。</li>
+        <li>提交前本地运行最小相关测试；合并前由 CI 运行团队定义的完整门禁。</li>
+        <li>秘密不入库，大文件评估 Git LFS 或制品仓库；构建产物和 IDE 用户状态通常忽略。</li>
+        <li>发布使用不可变 commit ID 或 annotated tag；版本、制品和部署记录应能互相追溯。</li>
+        <li>为 hotfix、revert、灾难恢复和 worktree 清理编写团队 runbook，并定期演练。</li>
+      </ul>
+
+      <h2 id="实践路线">四阶段实践路线与验收</h2>
+      <h3 id="第一阶段">第一阶段：30 分钟建立对象感</h3>
+      <ol>
+        <li>创建临时仓库，提交两个版本的 <code>Order.java</code>。</li>
+        <li>用 <code>cat-file</code>、<code>ls-tree</code> 找到 commit → tree → blob 的关系。</li>
+        <li>用 <code>restore --staged</code> 和 <code>add -p</code> 操作 index，并解释三种 diff。</li>
+      </ol>
+      <p><strong>验收：</strong>不用背命令，能画出工作区、index、HEAD commit 和当前分支引用。</p>
+
+      <h3 id="第二阶段">第二阶段：60 分钟掌握分支整合</h3>
+      <ol>
+        <li>制造一次 fast-forward、一次 <code>--no-ff</code> 三方合并。</li>
+        <li>让两个分支修改同一行，完整解决冲突并运行测试。</li>
+        <li>重复场景改用 rebase，对比提交 ID 与图结构。</li>
+      </ol>
+      <p><strong>验收：</strong>看到提交图就能预测 merge/rebase 后哪些引用移动、是否产生新提交。</p>
+
+      <h3 id="第三阶段">第三阶段：60 分钟练习恢复</h3>
+      <ol>
+        <li>在练习仓库误删分支，用 reflog 恢复。</li>
+        <li>分别用 restore、reset --soft、reset --mixed、revert 完成指定撤销。</li>
+        <li>把修复 cherry-pick 到 release 分支，制造并解决一次冲突。</li>
+      </ol>
+      <p><strong>验收：</strong>能说明为什么共享分支选择 revert，而不是 reset 后强推。</p>
+
+      <h3 id="第四阶段">第四阶段：90 分钟模拟团队交付</h3>
+      <ol>
+        <li>用两个 worktree 同时检出 feature 与 hotfix，分别运行 Spring Boot 测试。</li>
+        <li>在 GitHub 或 GitLab 建立受保护默认分支、评审和 CI 门禁。</li>
+        <li>走完 Issue → 分支 → 小步提交 → PR/MR → 冲突 → 合并 → tag → 清理。</li>
+      </ol>
+      <p><strong>验收：</strong>提交图可解释、流水线通过、评审记录完整、worktree 和临时分支已安全清理，并能从 tag 追溯发布源码。</p>
+
+      <h2 id="速查表">日常命令速查表</h2>
+      <pre><code># 观察：先看再改
+git status --short
+git diff
+git diff --cached
+git log --oneline --graph --decorate --all -20
+
+# 提交
+git add -p
+git commit -m "type(scope): concise reason"
+
+# 分支与同步
+git switch -c feature/name
+git fetch --prune origin
+git rebase origin/main             # 仅在适合重写的功能分支
+git push -u origin feature/name
+
+# 合并与中止
+git switch main
+git merge --ff-only feature/name   # 或按团队策略 merge --no-ff
+git merge --abort
+git rebase --abort
+git cherry-pick --abort
+
+# 安全撤销与恢复
+git restore --staged &lt;file&gt;
+git revert &lt;commit&gt;
+git reflog
+
+# worktree
+git worktree add -b feature/name ../repo-feature
+git worktree list
+git worktree remove ../repo-feature</code></pre>
+
+      <h2 id="常见问题">常见问题</h2>
+      <div class="table-wrap"><table><thead><tr><th>问题</th><th>简短回答</th></tr></thead><tbody>
+        <tr><td>commit 后文件是否上传了？</td><td>没有。commit 只写本地仓库；push 才尝试更新远端。</td></tr>
+        <tr><td>branch 会复制整个项目吗？</td><td>不会。分支本质上是提交引用；切换时 Git 更新 index 和工作区。</td></tr>
+        <tr><td>pull 等于下载代码吗？</td><td>不止。它通常是 fetch 后再 merge 或 rebase，行为应由参数/配置明确。</td></tr>
+        <tr><td>merge 后能删功能分支吗？</td><td>通常可以；提交仍可从目标分支到达。先确认合并策略、远端状态和未合入提交。</td></tr>
+        <tr><td>rebase 会丢代码吗？</td><td>正常重放不会故意丢代码，但错误解决冲突或跳过提交会改变结果；用测试、range-diff 和 reflog 验证。</td></tr>
+        <tr><td>worktree 与 clone 有何区别？</td><td>worktree 共享同一仓库的大部分对象/引用；clone 是独立仓库，有独立对象库和远程状态。</td></tr>
+        <tr><td>GitHub 和 GitLab 能互相 push 吗？</td><td>Git 仓库可配置多个 remote；但 PR/MR、Issue、权限、CI/CD 等平台数据不会随 Git push 自动同步。</td></tr>
+        <tr><td>GUI/IDE 能替代命令行吗？</td><td>能覆盖大部分日常动作，但仍应理解提交图、三个区域和危险操作；发生复杂冲突与恢复时原理比界面更重要。</td></tr>
+      </tbody></table></div>
+
+      <h2 id="参考资料">参考资料</h2>
+      <ul>
+        <li><a href="https://git-scm.com/book/en/v2/Getting-Started-A-Short-History-of-Git" target="_blank" rel="noopener noreferrer">Pro Git：A Short History of Git</a> — Git 的起源与初始设计目标；检索日期：2026-09-01。</li>
+        <li><a href="https://git-scm.com/book/en/v2/Getting-Started-Installing-Git" target="_blank" rel="noopener noreferrer">Pro Git：Installing Git</a> 与 <a href="https://git-scm.com/book/en/v2/Getting-Started-First-Time-Git-Setup" target="_blank" rel="noopener noreferrer">First-Time Git Setup</a> — 平台安装与配置层级；检索日期：2026-09-01。</li>
+        <li><a href="https://git-scm.com/book/en/v2/Git-Internals-Git-Objects" target="_blank" rel="noopener noreferrer">Pro Git：Git Objects</a> — 内容寻址、blob、tree 与 commit；检索日期：2026-09-01。</li>
+        <li><a href="https://git-scm.com/book/en/v2/Git-Branching-Branches-in-a-Nutshell" target="_blank" rel="noopener noreferrer">Pro Git：Branches in a Nutshell</a> 与 <a href="https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging" target="_blank" rel="noopener noreferrer">Basic Branching and Merging</a> — 分支引用、fast-forward、三方合并与冲突；检索日期：2026-09-01。</li>
+        <li><a href="https://git-scm.com/docs/git-rebase" target="_blank" rel="noopener noreferrer">git-rebase</a>、<a href="https://git-scm.com/docs/git-cherry-pick" target="_blank" rel="noopener noreferrer">git-cherry-pick</a>、<a href="https://git-scm.com/docs/git-revert" target="_blank" rel="noopener noreferrer">git-revert</a>、<a href="https://git-scm.com/docs/git-stash" target="_blank" rel="noopener noreferrer">git-stash</a> — 变基、移植、反做和临时保存；检索日期：2026-09-01。</li>
+        <li><a href="https://git-scm.com/book/en/v2/Git-Tools-Reset-Demystified" target="_blank" rel="noopener noreferrer">Pro Git：Reset Demystified</a> — HEAD、index、工作区与 reset 模式；检索日期：2026-09-01。</li>
+        <li><a href="https://git-scm.com/docs/git-worktree" target="_blank" rel="noopener noreferrer">Git 官方手册：git-worktree</a> — linked worktree 的模型、命令、管理信息与限制；检索日期：2026-09-01。</li>
+        <li><a href="https://docs.github.com/en/get-started/git-basics/git-workflows" target="_blank" rel="noopener noreferrer">GitHub Docs：Git workflows</a>、<a href="https://docs.github.com/en/pull-requests/get-started/pull-request-quickstart" target="_blank" rel="noopener noreferrer">Pull request quickstart</a>、<a href="https://docs.github.com/en/actions/get-started/continuous-integration" target="_blank" rel="noopener noreferrer">Continuous integration</a> — GitHub Flow、PR 与 Actions；检索日期：2026-09-01。</li>
+        <li><a href="https://docs.gitlab.com/user/project/organize_work_with_projects/" target="_blank" rel="noopener noreferrer">GitLab Docs：Projects</a>、<a href="https://docs.gitlab.com/user/project/merge_requests/" target="_blank" rel="noopener noreferrer">Merge requests</a>、<a href="https://docs.gitlab.com/ci/" target="_blank" rel="noopener noreferrer">GitLab CI/CD</a> — Project、MR、pipeline 与 runner；检索日期：2026-09-01。</li>
+      </ul>
+    </article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/git/2026-09-01-Git从入门到精通.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <span class="pager-spacer"></span>
+        <span class="pager-spacer"></span>
+      </nav>
+    </footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#学习地图">学习地图：从命令记忆到提交图思维</a></li><li class="toc-level-2"><a href="#历史">Git 的历史：为什么它生来就是分布式的</a></li><li class="toc-level-2"><a href="#git原理">Git 原理：对象、引用与三个区域</a></li><li class="toc-level-3"><a href="#三个区域">三个区域：工作区、暂存区、仓库</a></li><li class="toc-level-3"><a href="#对象模型">四类核心对象</a></li><li class="toc-level-3"><a href="#引用与head">引用、分支与 HEAD</a></li><li class="toc-level-3"><a href="#提交图与可达性">提交图与可达性</a></li><li class="toc-level-2"><a href="#安装与配置">Git 安装与首次配置</a></li><li class="toc-level-3"><a href="#安装git">Windows、macOS 与 Linux</a></li><li class="toc-level-3"><a href="#身份与默认配置">身份、默认分支与编辑器</a></li><li class="toc-level-3"><a href="#换行与凭据">换行符与凭据安全</a></li><li class="toc-level-2"><a href="#第一个仓库">第一个仓库：从文件到可审计提交</a></li><li class="toc-level-3"><a href="#init与clone">init 与 clone</a></li><li class="toc-level-3"><a href="#一次规范提交">一次规范提交</a></li><li class="toc-level-3"><a href="#忽略文件">Java 项目的 .gitignore 起点</a></li><li class="toc-level-2"><a href="#分支">Git 分支：轻量引用，不是目录副本</a></li><li class="toc-level-3"><a href="#分支基本命令">创建、切换、查看与删除</a></li><li class="toc-level-3"><a href="#分支不是远程分支">本地分支、远程跟踪引用与 upstream</a></li><li class="toc-level-3"><a href="#分支策略">分支策略怎么选</a></li><li class="toc-level-2"><a href="#合并与冲突">分支间合并：fast-forward、三方合并与冲突</a></li><li class="toc-level-3"><a href="#merge方向">先确认方向：把谁合并到谁</a></li><li class="toc-level-3"><a href="#三种合并结果">三种常见结果</a></li><li class="toc-level-3"><a href="#冲突处理">冲突处理的完整闭环</a></li><li class="toc-level-2"><a href="#变基">Rebase：重放提交，让基线前移</a></li><li class="toc-level-2"><a href="#跨分支动作">跨分支与撤销动作：如何选择正确工具</a></li><li class="toc-level-3"><a href="#cherry-pick">Cherry-pick：移植特定修复</a></li><li class="toc-level-3"><a href="#reset-restore-revert">Reset、restore 与 revert</a></li><li class="toc-level-3"><a href="#stash">Stash：短期切换上下文，不是长期仓库</a></li><li class="toc-level-2"><a href="#远程协作">远程协作：fetch、pull、push 与评审</a></li><li class="toc-level-2"><a href="#worktree">Worktree：一个仓库，多套工作目录</a></li><li class="toc-level-3"><a href="#worktree概念">核心概念</a></li><li class="toc-level-3"><a href="#worktree日常命令">创建、查看、移动与删除</a></li><li class="toc-level-3"><a href="#worktree适用场景">适用场景与边界</a></li><li class="toc-level-2"><a href="#github与gitlab">GitHub 与 GitLab：同用 Git，不是同一个产品</a></li><li class="toc-level-3"><a href="#git与平台的边界">先分清 Git 与托管平台</a></li><li class="toc-level-3"><a href="#github与gitlab对比">GitHub 与 GitLab 对比</a></li><li class="toc-level-3"><a href="#平台协作示例">同一套本地 Git，两个平台只改远程与评审入口</a></li><li class="toc-level-2"><a href="#java团队实战">Java 团队完整实战：从 Issue 到上线</a></li><li class="toc-level-2"><a href="#恢复与排错">恢复与排错：先停止扩大损失</a></li><li class="toc-level-2"><a href="#进阶工具">精通阶段的高价值工具</a></li><li class="toc-level-2"><a href="#团队规范">推荐的团队安全基线</a></li><li class="toc-level-2"><a href="#实践路线">四阶段实践路线与验收</a></li><li class="toc-level-3"><a href="#第一阶段">第一阶段：30 分钟建立对象感</a></li><li class="toc-level-3"><a href="#第二阶段">第二阶段：60 分钟掌握分支整合</a></li><li class="toc-level-3"><a href="#第三阶段">第三阶段：60 分钟练习恢复</a></li><li class="toc-level-3"><a href="#第四阶段">第四阶段：90 分钟模拟团队交付</a></li><li class="toc-level-2"><a href="#速查表">日常命令速查表</a></li><li class="toc-level-2"><a href="#常见问题">常见问题</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+<div class="mobile-backdrop" hidden></div>
+</body>
+</html>

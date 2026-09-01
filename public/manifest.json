@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-08-31T00:00:00.000Z",
-  "documentCount": 41,
+  "generatedAt": "2026-09-01T00:00:00.000Z",
+  "documentCount": 42,
   "documents": [
     {
       "output": "notes/agent/2026-07-27-01-Agent基础概念与边界.html",
@@ -288,6 +288,13 @@
       "category": "编码 Agent",
       "date": "2026-08-10",
       "sections": 16
+    },
+    {
+      "output": "notes/git/2026-09-01-Git从入门到精通.html",
+      "title": "Git 从入门到精通",
+      "category": "Git 与工程协作",
+      "date": "2026-09-01",
+      "sections": 50
     },
     {
       "output": "notes/project/2026-07-29-GitHub-Pages部署与项目结构.html",
