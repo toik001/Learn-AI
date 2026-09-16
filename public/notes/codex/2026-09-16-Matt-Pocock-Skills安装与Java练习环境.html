@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="study-category" content="Codex 与 AI 工程"><meta name="study-date" content="2026-09-16">
+<meta name="description" content="固定技能版本，提取并运行 Java 25 / Spring Boot 4.0.8 订单基础项目，准备本地任务系统与真实 HTTP 测试。"><title>Matt Pocock Skills 安装与 Java 练习环境｜Java 全栈 AI 学习库</title>
+<link rel="stylesheet" href="../../assets/style.css"><script defer src="../../assets/app.js"></script></head>
+<body class="document-page"><header class="topbar"><a class="brand" href="../../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a><div class="topbar-actions"><button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button><button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button></div></header>
+<div class="reader-layout"><aside class="doc-sidebar"><div class="sidebar-header">
+      <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <div class="sidebar-category-summary">
+      <span class="eyebrow">当前分类</span>
+      <a class="sidebar-category-link" href="../../../index.html#category-codex-与-ai-工程-1ubbp3w">
+        <strong>Codex 与 AI 工程</strong>
+        <small>15 篇文档</small>
+      </a>
+    </div><nav class="doc-nav" aria-label="当前分类文档">
+      <a class="doc-nav-item" href="2026-07-24-AI开发工作流选型与小团队沉淀指南.html"><span>AI 开发工作流选型与小团队沉淀指南</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC详细介绍.html"><span>AIDLC 详细介绍：从 AI 辅助编码到可审计的软件交付生命周期</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC与Superpowers差异分析.html"><span>AIDLC 与 Superpowers 差异分析：生命周期治理与工程 Inner Loop</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-Codex全栈开发最佳实践.html"><span>Codex 全栈开发最佳实践：Vibe Coding、Harness 与 Loop</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-OpenSpec-Superpowers-CI-Codex-CLI实战教程.html"><span>OpenSpec + Superpowers + CI：Codex CLI 全栈实战教程</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-Superpowers大型Java微服务Monorepo使用指南.html"><span>Superpowers 大型 Java 微服务 Monorepo 使用指南</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-Superpowers详细介绍.html"><span>Superpowers 详细介绍：Codex 的技能化软件开发方法</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-28-Codex官方原生项目开发最佳路径.html"><span>Codex 官方原生项目开发最佳路径</span><small>2026-07-28</small></a><a class="doc-nav-item" href="2026-08-07-Harness-Loop-Graph与Codex-Superpowers开发模式.html"><span>Harness、Loop、Graph 与 Codex + Superpowers 开发模式</span><small>2026-08-07</small></a><a class="doc-nav-item" href="2026-08-31-OpenSpec-Apply与Superpowers对比.html"><span>OpenSpec + Apply 与 Superpowers：大型项目执行流程对比</span><small>2026-08-31</small></a><a class="doc-nav-item" href="2026-08-31-OpenSpec与Codex原生大型项目开发流程.html"><span>OpenSpec + Codex 原生：大型项目开发流程与 Superpowers 差异</span><small>2026-08-31</small></a><a class="doc-nav-item is-active" href="2026-09-16-Matt-Pocock-Skills安装与Java练习环境.html" aria-current="page"><span>Matt Pocock Skills 安装与 Java 练习环境</span><small>2026-09-16</small></a><a class="doc-nav-item" href="2026-09-16-Matt-Pocock-Skills订单取消实战教程.html"><span>Matt Pocock Skills 订单取消实战教程</span><small>2026-09-16</small></a><a class="doc-nav-item" href="2026-09-16-Matt-Pocock-Skills工作流详解.html"><span>Matt Pocock Skills：整套工作流、原理与教程设计</span><small>2026-09-16</small></a><a class="doc-nav-item" href="2026-09-16-Matt-Pocock-Skills工作流原理与设计取舍.html"><span>Matt Pocock Skills 工作流原理与设计取舍</span><small>2026-09-16</small></a>
+    </nav></aside>
+  <main class="article-column"><div class="article-meta"><a href="../../../index.html">知识库首页</a><span>·</span><span>Codex 与 AI 工程</span><span>·</span><time datetime="2026-09-16">2026-09-16</time></div><article class="markdown-body">
+<h1 id="title">Matt Pocock Skills 安装与 Java 练习环境</h1><nav aria-label="系列阅读顺序"><a href="2026-09-16-Matt-Pocock-Skills工作流详解.html">总览</a> · <a href="2026-09-16-Matt-Pocock-Skills安装与Java练习环境.html">安装与环境</a> · <a href="2026-09-16-Matt-Pocock-Skills订单取消实战教程.html">完整实战</a> · <a href="2026-09-16-Matt-Pocock-Skills工作流原理与设计取舍.html">原理说明</a></nav>
+<blockquote><p><strong>第 1 课：</strong>准备一个独立的 Java 练习仓库，安装固定版本技能，跑通基础订单系统。预计 45～90 分钟，首次依赖下载另计。</p><p><strong>资料核验：</strong>2026-09-16；skills 固定到 <code>959a8e9f1edc3adbe2f7e3054bb6fbefa6696260</code>。教程代码为本课程编写，不是 Matt 官方 Java 示例。</p></blockquote>
+<h2 id="核心结论">核心结论</h2>
+<p>先证明工程能运行，再用技能增加功能。基础版已经有登录、订单查询、模拟支付和数据库；第二课只增加取消订单，便于观察每一步如何改变产物。</p>
+<p>源代码保存在本页与下一页的 HTML 代码块里。提取器读取代码块，在知识库外生成普通 Maven 项目；本知识库不保存第二份 Java 源码或 Markdown 学习笔记。<strong>所有练习命令都在生成的订单项目执行，只有提取命令在 Learn-AI 根目录执行。</strong></p>
+<h2 id="environment">1. 环境与固定版本</h2>
+<div class="table-wrap"><table><thead><tr><th>组件</th><th>教程固定值或要求</th><th>用途</th></tr></thead><tbody><tr><td>Java</td><td>JDK 25；本次验证运行时 25.0.2</td><td>record、虚拟线程与 Spring Boot 运行</td></tr><tr><td>Spring Boot</td><td>4.0.8</td><td>由 pom.xml 固定；这是教程版本，不宣称最新版本</td></tr><tr><td>Maven</td><td>3.9.12（本次验证版本）</td><td>构建、测试、打包</td></tr><tr><td>Node.js</td><td>24+</td><td>运行知识库提取器；订单服务运行时不需要 Node.js</td></tr><tr><td>Git</td><td>可运行 git 命令</td><td>固定技能提交、练习分支与审查基线</td></tr><tr><td>数据库</td><td>Boot 依赖管理提供的 H2</td><td>开发使用文件库；测试使用隔离内存库</td></tr><tr><td>宿主</td><td>已配置并可使用的 Codex</td><td>按技能指导执行工具；模型费用与登录由宿主处理</td></tr></tbody></table></div>
+<p>选择 H2 是为了让第一次实践不依赖 Docker。它足以验证本课程中的行锁与事务示例，但不能替代部署目标数据库上的兼容性验证。支付接口只是模拟状态迁移，不连接真实支付平台。</p>
+<div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code>java -version
+mvn -version
+node --version
+git --version</code></pre></div>
+<h2 id="extract">2. 提取并启动基础项目</h2>
+<p>在 Learn-AI 根目录执行。输出目录必须不存在或为空；提取器拒绝覆盖已有工作，也拒绝写进知识库目录。</p>
+<div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code>node scripts/matt-pocock-java-workshop.mjs starter ../matt-orders-lab
+cd ../matt-orders-lab
+mvn test
+git init -b main
+git add .
+git commit -m &quot;Initialize runnable order workshop&quot;
+git tag workshop-start
+git switch -c codex/order-cancellation</code></pre></div>
+<p>预期基础测试全部通过。<code>workshop-start</code> 是初始代码基线；安装和 setup 完成后还会建立一次工作流基线。若你只想读代码，不必创建 Git 仓库。</p>
+<p>为本地用户设置练习密码，再启动服务。下面用隐藏输入避免把密码写进 shell 历史；它们是本地练习账户，测试使用单独的测试凭据。</p>
+<div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code># macOS 默认 zsh
+read -s &#x27;DEMO_ALICE_PASSWORD?设置 alice 的练习密码：&#x27;
+read -s &#x27;DEMO_BOB_PASSWORD?设置 bob 的练习密码：&#x27;
+export DEMO_ALICE_PASSWORD DEMO_BOB_PASSWORD
+mvn spring-boot:run</code></pre></div>
+<p>在浏览器打开 <code>http://127.0.0.1:8080/</code>，使用 alice 登录。应看到订单 101（UNPAID）与 102（PAID）；bob 只能看到 103。先不要支付 101，第二课将用它练习取消。页面使用普通 HTML/JavaScript，避免把学习工作流变成前端构建课程。</p>
+<p>使用 Bash 时把两条读取命令改为 <code>read -r -s -p '提示：' DEMO_ALICE_PASSWORD</code> 和对应 bob 变量。重新打开终端时需要再次提供环境变量。</p>
+<h2 id="install">3. 安装固定提交的技能</h2>
+<p>本文采用源码复制方式锁定版本。它遵循 Codex 的 <code>.agents/skills/&lt;name&gt;/SKILL.md</code> 发现结构，同时保留技能的参考文件和 <code>agents/openai.yaml</code>。不执行远程脚本。请在刚生成的独立练习目录执行：</p>
+<div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code>git clone --filter=blob:none --no-checkout https://github.com/mattpocock/skills.git .skills-source
+git -C .skills-source checkout --detach 959a8e9f1edc3adbe2f7e3054bb6fbefa6696260
+mkdir -p .agents/skills
+for skill in ask-matt setup-matt-pocock-skills grill-with-docs to-spec to-tickets implement tdd domain-modeling codebase-design code-review; do
+  cp -R &quot;.skills-source/skills/engineering/$skill&quot; .agents/skills/
+done
+for skill in grilling handoff; do
+  cp -R &quot;.skills-source/skills/productivity/$skill&quot; .agents/skills/
+done
+cp .skills-source/LICENSE .agents/skills/MATT-POCOCK-LICENSE.txt
+git -C .skills-source rev-parse HEAD &gt; skills-source.txt</code></pre></div>
+<p>这是面向本课主线的 12 个技能，已包含其关键复用依赖。可选功能随后按需添加。首次安装只在空的 <code>.agents/skills</code> 中执行；升级时先比较差异，不把复制命令当成无条件覆盖脚本。</p>
+<p>在 Codex 中打开这个独立目录，检查技能能被发现。CLI/IDE 可用 <code>/skills</code> 或输入 <code>$</code> 选择；桌面端用其当前技能选择入口。下文 <code>$技能名</code> 表示显式选用技能。若宿主没有发现新技能，重新打开会话。安装后的技能来源和触发策略也应核对。</p>
+<h2 id="setup">4. 配置练习仓库</h2>
+<p>把下面的请求交给练习目录中的 Codex。它是教程操作，不需要在本知识库执行：</p>
+<div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code>$setup-matt-pocock-skills
+这是单一业务上下文的 Java 订单练习仓库。
+任务系统使用本地文件，不创建远程 Issue。
+领域术语放 CONTEXT.md，重要取舍放 docs/adr/。
+保留现有 AGENTS.md 的测试、权限、CSRF 和审查范围约定。
+本课没有安装 triage，无需配置分诊标签。</code></pre></div>
+<p>预期 setup 在 <code>AGENTS.md</code> 增加入口指针，生成 <code>docs/agents/issue-tracker.md</code> 与 <code>docs/agents/domain.md</code>。领域术语表可以等到第一个术语明确时再创建。这里允许 Markdown，因为它是独立练习仓库；Learn-AI 的 HTML 规则仍保持不变。</p>
+<p>检查文件后提交工作流基础配置：</p>
+<div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code>git status --short
+git add .
+git commit -m &quot;Configure pinned Matt Pocock skills&quot;
+git tag workshop-ready</code></pre></div>
+<p><strong>验收：</strong>宿主能显式调用技能；setup 指向本地任务文件；基础测试仍通过；当前分支为 <code>codex/order-cancellation</code>。setup 与技能文件不要算进后面取消功能的代码审查范围。</p>
+<h2 id="structure">5. 基础工程怎样组织</h2>
+<div class="table-wrap"><table><thead><tr><th>位置</th><th>责任</th></tr></thead><tbody><tr><td>OrderController</td><td>HTTP 输入、认证用户身份、返回结构</td></tr><tr><td>OrderService</td><td>订单所有权、状态转移、事务与数据库行锁</td></tr><tr><td>SecurityConfig</td><td>本地练习账号、表单登录、会话认证与默认 CSRF 防护</td></tr><tr><td>schema.sql / data.sql</td><td>建表与首次种子数据；重启不重置已有订单</td></tr><tr><td>static/index.html / app.js</td><td>查看订单与模拟支付；通过 CSRF token 发起写请求</td></tr><tr><td>HttpFixture / StarterHttpTest</td><td>启动真实 HTTP 服务，使用 H2，准备夹具并通过接口断言</td></tr></tbody></table></div>
+<p>这次刻意复用已有事务与所有权检查。下一课增加取消行为时，应该优先利用这些切入点，不引入没有必要的新层。类中注释与少量 package-private 方法遵循练习项目规模。</p>
+<h2 id="starter-source">6. 完整基础源码：starter</h2>
+<p>以下 16 个文件由提取器原样解码，不需要手工复制。展开即可阅读；启动前需要两个密码环境变量。</p>
+<details><summary><strong>pom.xml</strong></summary><div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code data-stage="starter" data-file="pom.xml">&lt;project xmlns=&quot;http://maven.apache.org/POM/4.0.0&quot; xmlns:xsi=&quot;http://www.w3.org/2001/XMLSchema-instance&quot; xsi:schemaLocation=&quot;http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd&quot;&gt;
+  &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+  &lt;parent&gt;&lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;&lt;artifactId&gt;spring-boot-starter-parent&lt;/artifactId&gt;&lt;version&gt;4.0.8&lt;/version&gt;&lt;relativePath/&gt;&lt;/parent&gt;
+  &lt;groupId&gt;study&lt;/groupId&gt;&lt;artifactId&gt;order-workshop&lt;/artifactId&gt;&lt;version&gt;1.0.0&lt;/version&gt;
+  &lt;properties&gt;&lt;java.version&gt;25&lt;/java.version&gt;&lt;/properties&gt;
+  &lt;dependencies&gt;
+    &lt;dependency&gt;&lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;&lt;artifactId&gt;spring-boot-starter-webmvc&lt;/artifactId&gt;&lt;/dependency&gt;
+    &lt;dependency&gt;&lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;&lt;artifactId&gt;spring-boot-starter-jdbc&lt;/artifactId&gt;&lt;/dependency&gt;
+    &lt;dependency&gt;&lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;&lt;artifactId&gt;spring-boot-starter-security&lt;/artifactId&gt;&lt;/dependency&gt;
+    &lt;dependency&gt;&lt;groupId&gt;com.h2database&lt;/groupId&gt;&lt;artifactId&gt;h2&lt;/artifactId&gt;&lt;scope&gt;runtime&lt;/scope&gt;&lt;/dependency&gt;
+    &lt;dependency&gt;&lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;&lt;artifactId&gt;spring-boot-starter-test&lt;/artifactId&gt;&lt;scope&gt;test&lt;/scope&gt;&lt;/dependency&gt;
+  &lt;/dependencies&gt;
+  &lt;build&gt;&lt;plugins&gt;&lt;plugin&gt;&lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;&lt;artifactId&gt;spring-boot-maven-plugin&lt;/artifactId&gt;&lt;/plugin&gt;&lt;/plugins&gt;&lt;/build&gt;
+&lt;/project&gt;
+</code></pre></div></details>
+<details><summary><strong>.gitignore</strong></summary><div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code data-stage="starter" data-file=".gitignore">target/
+data/
+.env
+.skills-source/
+.idea/
+*.log
+.DS_Store
+</code></pre></div></details>
+<details><summary><strong>AGENTS.md</strong></summary><div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code data-stage="starter" data-file="AGENTS.md"># Order workshop
+
+Use Java 25, Spring Boot 4.0.8 and Maven. Read pom.xml and the existing code first.
+Run mvn test for verification; run a focused test while implementing one behavior.
+The agreed test seam is the authenticated HTTP API backed by the actual H2 database.
+Use JDBC only to prepare fixtures; assert observable behavior through HTTP.
+Preserve authentication, ownership checks, CSRF protection and transaction boundaries.
+This is a local teaching application; payment is a simulated state transition.
+For the tutorial, do not commit automatically during implement: first show the tests and
+review all changes relative to HEAD, including new files. Commit when requested.
+For code-review before commit, use git diff HEAD plus the contents of untracked files
+from git ls-files --others --exclude-standard; the committed-only three-dot diff is
+not sufficient. Keep Standards and Spec findings separate.
+</code></pre></div></details>
+<details><summary><strong>src/main/java/study/orders/OrderApplication.java</strong></summary><div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code data-stage="starter" data-file="src/main/java/study/orders/OrderApplication.java">package study.orders;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class OrderApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(OrderApplication.class, args);
+    }
+}
+</code></pre></div></details>
+<details><summary><strong>src/main/java/study/orders/OrderView.java</strong></summary><div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code data-stage="starter" data-file="src/main/java/study/orders/OrderView.java">package study.orders;
+
+public record OrderView(long id, String owner, String status, long version) {}
+</code></pre></div></details>
+<details><summary><strong>src/main/java/study/orders/SecurityConfig.java</strong></summary><div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code data-stage="starter" data-file="src/main/java/study/orders/SecurityConfig.java">package study.orders;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.util.matcher.RequestMatcher;
+
+@Configuration
+public class SecurityConfig {
+    @Bean PasswordEncoder passwords() {
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+    }
+
+    @Bean UserDetailsService users(PasswordEncoder encoder,
+            @Value(&quot;${demo.alice-password}&quot;) String alice,
+            @Value(&quot;${demo.bob-password}&quot;) String bob) {
+        return new InMemoryUserDetailsManager(
+            User.withUsername(&quot;alice&quot;).password(encoder.encode(alice)).roles(&quot;USER&quot;).build(),
+            User.withUsername(&quot;bob&quot;).password(encoder.encode(bob)).roles(&quot;USER&quot;).build());
+    }
+
+    @Bean SecurityFilterChain web(HttpSecurity http) throws Exception {
+        RequestMatcher api = request -&gt; request.getServletPath().startsWith(&quot;/api/&quot;);
+        return http
+            .authorizeHttpRequests(auth -&gt; auth.requestMatchers(&quot;/api/csrf&quot;).permitAll()
+                .anyRequest().authenticated())
+            .formLogin(Customizer.withDefaults())
+            .exceptionHandling(errors -&gt; errors.defaultAuthenticationEntryPointFor(
+                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED), api))
+            .build(); // Default CSRF protection remains enabled.
+    }
+}
+</code></pre></div></details>
+<details><summary><strong>src/main/java/study/orders/OrderService.java</strong></summary><div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code data-stage="starter" data-file="src/main/java/study/orders/OrderService.java">package study.orders;
+
+import java.util.List;
+import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+@Service
+public class OrderService {
+    private final JdbcTemplate jdbc;
+    private static final RowMapper&lt;OrderView&gt; ROW = (rs, row) -&gt; new OrderView(
+        rs.getLong(&quot;id&quot;), rs.getString(&quot;owner&quot;), rs.getString(&quot;status&quot;), rs.getLong(&quot;version&quot;));
+
+    public OrderService(JdbcTemplate jdbc) { this.jdbc = jdbc; }
+
+    public List&lt;OrderView&gt; list(String owner) {
+        return jdbc.query(&quot;SELECT * FROM customer_order WHERE owner = ? ORDER BY id&quot;, ROW, owner);
+    }
+
+    public OrderView get(long id, String owner) { return find(id, owner, false); }
+
+    @Transactional
+    public OrderView pay(long id, String owner) { return transition(id, owner, &quot;PAID&quot;); }
+
+    private OrderView transition(long id, String owner, String target) {
+        OrderView current = find(id, owner, true);
+        if (current.status().equals(target)) return current;
+        if (!current.status().equals(&quot;UNPAID&quot;)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, &quot;STATE_CONFLICT&quot;);
+        }
+        jdbc.update(&quot;UPDATE customer_order SET status = ?, version = version + 1 WHERE id = ? AND owner = ?&quot;,
+            target, id, owner);
+        return find(id, owner, false);
+    }
+
+    private OrderView find(long id, String owner, boolean lock) {
+        List&lt;OrderView&gt; found = jdbc.query(
+            &quot;SELECT * FROM customer_order WHERE id = ? AND owner = ?&quot; + (lock ? &quot; FOR UPDATE&quot; : &quot;&quot;),
+            ROW, id, owner);
+        if (found.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, &quot;ORDER_NOT_FOUND&quot;);
+        return found.getFirst();
+    }
+}
+</code></pre></div></details>
+<details><summary><strong>src/main/java/study/orders/OrderController.java</strong></summary><div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code data-stage="starter" data-file="src/main/java/study/orders/OrderController.java">package study.orders;
+
+import java.security.Principal;
+import java.util.List;
+import java.util.Map;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class OrderController {
+    private final OrderService orders;
+    public OrderController(OrderService orders) { this.orders = orders; }
+
+    @GetMapping(&quot;/api/csrf&quot;)
+    Map&lt;String, String&gt; csrf(CsrfToken token) {
+        return Map.of(&quot;headerName&quot;, token.getHeaderName(), &quot;token&quot;, token.getToken());
+    }
+
+    @GetMapping(&quot;/api/orders&quot;)
+    List&lt;OrderView&gt; list(Principal user) { return orders.list(user.getName()); }
+
+    @GetMapping(&quot;/api/orders/{id}&quot;)
+    OrderView get(@PathVariable long id, Principal user) { return orders.get(id, user.getName()); }
+
+    @PostMapping(&quot;/api/orders/{id}/pay&quot;)
+    OrderView pay(@PathVariable long id, Principal user) { return orders.pay(id, user.getName()); }
+}
+</code></pre></div></details>
+<details><summary><strong>src/main/java/study/orders/ApiErrors.java</strong></summary><div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code data-stage="starter" data-file="src/main/java/study/orders/ApiErrors.java">package study.orders;
+
+import org.springframework.http.ProblemDetail;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
+
+@RestControllerAdvice
+public class ApiErrors {
+    @ExceptionHandler(ResponseStatusException.class)
+    ProblemDetail status(ResponseStatusException error) {
+        return ProblemDetail.forStatusAndDetail(error.getStatusCode(), error.getReason());
+    }
+}
+</code></pre></div></details>
+<details><summary><strong>src/main/resources/application.properties</strong></summary><div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code data-stage="starter" data-file="src/main/resources/application.properties">spring.application.name=order-workshop
+server.address=127.0.0.1
+server.port=${PORT:8080}
+spring.datasource.url=jdbc:h2:file:./data/orders;DB_CLOSE_ON_EXIT=FALSE
+spring.datasource.username=sa
+spring.datasource.password=
+spring.sql.init.mode=always
+spring.mvc.problemdetails.enabled=true
+server.servlet.session.cookie.http-only=true
+server.servlet.session.cookie.same-site=lax
+demo.alice-password=${DEMO_ALICE_PASSWORD}
+demo.bob-password=${DEMO_BOB_PASSWORD}
+</code></pre></div></details>
+<details><summary><strong>src/main/resources/schema.sql</strong></summary><div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code data-stage="starter" data-file="src/main/resources/schema.sql">CREATE TABLE IF NOT EXISTS customer_order (
+    id BIGINT PRIMARY KEY,
+    owner VARCHAR(40) NOT NULL,
+    status VARCHAR(16) NOT NULL CHECK (status IN (&#x27;UNPAID&#x27;, &#x27;PAID&#x27;, &#x27;CANCELLED&#x27;)),
+    version BIGINT NOT NULL DEFAULT 0 CHECK (version &gt;= 0)
+);
+</code></pre></div></details>
+<details><summary><strong>src/main/resources/data.sql</strong></summary><div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code data-stage="starter" data-file="src/main/resources/data.sql">INSERT INTO customer_order (id, owner, status, version)
+SELECT 101, &#x27;alice&#x27;, &#x27;UNPAID&#x27;, 0 WHERE NOT EXISTS (SELECT 1 FROM customer_order WHERE id = 101);
+INSERT INTO customer_order (id, owner, status, version)
+SELECT 102, &#x27;alice&#x27;, &#x27;PAID&#x27;, 0 WHERE NOT EXISTS (SELECT 1 FROM customer_order WHERE id = 102);
+INSERT INTO customer_order (id, owner, status, version)
+SELECT 103, &#x27;bob&#x27;, &#x27;UNPAID&#x27;, 0 WHERE NOT EXISTS (SELECT 1 FROM customer_order WHERE id = 103);
+</code></pre></div></details>
+<details><summary><strong>src/main/resources/static/index.html</strong></summary><div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code data-stage="starter" data-file="src/main/resources/static/index.html">&lt;!doctype html&gt;
+&lt;html lang=&quot;zh-CN&quot;&gt;&lt;head&gt;&lt;meta charset=&quot;utf-8&quot;&gt;&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width,initial-scale=1&quot;&gt;&lt;title&gt;订单工作流练习&lt;/title&gt;
+&lt;style&gt;body{font:16px/1.6 system-ui;max-width:850px;margin:40px auto;padding:0 20px;background:#f5f7fb;color:#152238}table{width:100%;border-collapse:collapse;background:white}td,th{padding:12px;text-align:left;border-bottom:1px solid #ddd}button{padding:7px 12px;margin:3px;cursor:pointer}#message{min-height:2em}small{color:#526174}&lt;/style&gt;&lt;/head&gt;
+&lt;body&gt;&lt;header&gt;&lt;h1&gt;订单工作流练习&lt;/h1&gt;&lt;p&gt;查看自己的订单，观察状态与版本变化。&lt;/p&gt;&lt;/header&gt;
+&lt;main&gt;&lt;p&gt;&lt;button id=&quot;refresh&quot;&gt;刷新订单&lt;/button&gt;&lt;button id=&quot;logout&quot;&gt;退出登录&lt;/button&gt;&lt;/p&gt;&lt;p id=&quot;message&quot; role=&quot;status&quot; aria-live=&quot;polite&quot;&gt;&lt;/p&gt;&lt;div style=&quot;overflow:auto&quot;&gt;&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;订单&lt;/th&gt;&lt;th&gt;所有者&lt;/th&gt;&lt;th&gt;状态&lt;/th&gt;&lt;th&gt;版本&lt;/th&gt;&lt;th&gt;操作&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody id=&quot;orders&quot;&gt;&lt;/tbody&gt;&lt;/table&gt;&lt;/div&gt;&lt;p&gt;&lt;small&gt;模拟支付只改变本地订单状态，没有接入支付机构。&lt;/small&gt;&lt;/p&gt;&lt;/main&gt;
+&lt;script src=&quot;app.js&quot; defer&gt;&lt;/script&gt;&lt;/body&gt;&lt;/html&gt;
+</code></pre></div></details>
+<details><summary><strong>src/main/resources/static/app.js</strong></summary><div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code data-stage="starter" data-file="src/main/resources/static/app.js">const message = document.getElementById(&#x27;message&#x27;);
+let csrf;
+async function request(url, method = &#x27;GET&#x27;) {
+  const response = await fetch(url, {
+    method,
+    headers: method === &#x27;GET&#x27; ? {} : { [csrf.headerName]: csrf.token },
+    credentials: &#x27;same-origin&#x27;
+  });
+  if (response.redirected || response.status === 401) {
+    location.assign(&#x27;/login&#x27;);
+    throw new Error(&#x27;请重新登录&#x27;);
+  }
+  if (!response.ok) throw new Error(`请求失败：HTTP ${response.status}`);
+  return response.status === 204 ? null : response.json();
+}
+async function loadOrders() {
+  const orders = await request(&#x27;/api/orders&#x27;);
+  const body = document.getElementById(&#x27;orders&#x27;);
+  body.replaceChildren();
+  for (const order of orders) {
+    const row = document.createElement(&#x27;tr&#x27;);
+    for (const value of [order.id, order.owner, order.status, order.version]) {
+      const cell = document.createElement(&#x27;td&#x27;);
+      cell.textContent = String(value);
+      row.append(cell);
+    }
+    const actions = document.createElement(&#x27;td&#x27;);
+    addAction(actions, order, &#x27;pay&#x27;, &#x27;模拟支付&#x27;, order.status === &#x27;UNPAID&#x27;);
+    row.append(actions);
+    body.append(row);
+  }
+}
+function addAction(cell, order, action, label, enabled) {
+  const button = document.createElement(&#x27;button&#x27;);
+  button.textContent = label;
+  button.disabled = !enabled;
+  button.addEventListener(&#x27;click&#x27;, async () =&gt; {
+    button.disabled = true;
+    try {
+      const result = await request(`/api/orders/${order.id}/${action}`, &#x27;POST&#x27;);
+      message.textContent = `订单 ${result.id}：${result.status}，版本 ${result.version}`;
+    } catch (error) { message.textContent = error.message; }
+    finally { await loadOrders().catch(error =&gt; { message.textContent = error.message; }); }
+  });
+  cell.append(button);
+}
+document.getElementById(&#x27;refresh&#x27;).addEventListener(&#x27;click&#x27;, () =&gt; {
+  loadOrders().catch(error =&gt; { message.textContent = error.message; });
+});
+document.getElementById(&#x27;logout&#x27;).addEventListener(&#x27;click&#x27;, async () =&gt; {
+  if (!csrf) return;
+  await fetch(&#x27;/logout&#x27;, { method: &#x27;POST&#x27;, headers: { [csrf.headerName]: csrf.token } });
+  location.assign(&#x27;/login&#x27;);
+});
+(async () =&gt; {
+  csrf = await request(&#x27;/api/csrf&#x27;);
+  await loadOrders();
+})().catch(error =&gt; { message.textContent = error.message; });
+</code></pre></div></details>
+<details><summary><strong>src/test/java/study/orders/HttpFixture.java</strong></summary><div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code data-stage="starter" data-file="src/test/java/study/orders/HttpFixture.java">package study.orders;
+
+import java.net.CookieManager;
+import java.net.CookiePolicy;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import com.jayway.jsonpath.JsonPath;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.jdbc.core.JdbcTemplate;
+
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
+    &quot;spring.datasource.url=jdbc:h2:mem:workshop;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=5000&quot;,
+    &quot;demo.alice-password=alice-test-only&quot;, &quot;demo.bob-password=bob-test-only&quot;
+})
+abstract class HttpFixture {
+    @LocalServerPort int port;
+    @Autowired JdbcTemplate jdbc;
+    Actor alice;
+    Actor bob;
+    record Actor(HttpClient client, String csrfHeader, String csrfToken) {}
+
+    @BeforeEach void prepare() throws Exception {
+        jdbc.update(&quot;DELETE FROM customer_order&quot;);
+        jdbc.update(&quot;INSERT INTO customer_order VALUES (101, &#x27;alice&#x27;, &#x27;UNPAID&#x27;, 0), (102, &#x27;alice&#x27;, &#x27;PAID&#x27;, 0), (103, &#x27;bob&#x27;, &#x27;UNPAID&#x27;, 0)&quot;);
+        alice = actor(&quot;alice&quot;, &quot;alice-test-only&quot;);
+        bob = actor(&quot;bob&quot;, &quot;bob-test-only&quot;);
+    }
+
+    URI url(String path) { return URI.create(&quot;http://127.0.0.1:&quot; + port + path); }
+
+    Actor actor(String user, String password) throws Exception {
+        HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5))
+            .cookieHandler(new CookieManager(null, CookiePolicy.ACCEPT_ALL)).build();
+        var beforeLogin = csrf(client);
+        String header = json(beforeLogin, &quot;$.headerName&quot;);
+        String token = json(beforeLogin, &quot;$.token&quot;);
+        String form = &quot;username=&quot; + URLEncoder.encode(user, StandardCharsets.UTF_8)
+            + &quot;&amp;password=&quot; + URLEncoder.encode(password, StandardCharsets.UTF_8);
+        var login = client.send(HttpRequest.newBuilder(url(&quot;/login&quot;))
+            .header(&quot;Content-Type&quot;, &quot;application/x-www-form-urlencoded&quot;).header(header, token)
+            .timeout(Duration.ofSeconds(10)).POST(HttpRequest.BodyPublishers.ofString(form)).build(),
+            HttpResponse.BodyHandlers.ofString());
+        if (login.statusCode() != 302 || login.headers().firstValue(&quot;Location&quot;).orElse(&quot;&quot;).contains(&quot;error&quot;)) {
+            throw new IllegalStateException(&quot;Login failed: &quot; + login.statusCode());
+        }
+        // Authentication rotates the CSRF token, so fetch a fresh token with the session cookie.
+        var afterLogin = csrf(client);
+        return new Actor(client, json(afterLogin, &quot;$.headerName&quot;), json(afterLogin, &quot;$.token&quot;));
+    }
+
+    private HttpResponse&lt;String&gt; csrf(HttpClient client) throws Exception {
+        var response = client.send(HttpRequest.newBuilder(url(&quot;/api/csrf&quot;))
+            .timeout(Duration.ofSeconds(10)).build(), HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() != 200) throw new IllegalStateException(&quot;CSRF setup failed: &quot; + response.statusCode());
+        return response;
+    }
+
+    HttpResponse&lt;String&gt; send(Actor actor, String method, String path) throws Exception {
+        return send(actor, method, path, true);
+    }
+
+    HttpResponse&lt;String&gt; send(Actor actor, String method, String path, boolean token) throws Exception {
+        var request = HttpRequest.newBuilder(url(path)).timeout(Duration.ofSeconds(10))
+            .header(&quot;Accept&quot;, &quot;application/json&quot;).method(method, HttpRequest.BodyPublishers.noBody());
+        if (token &amp;&amp; !method.equals(&quot;GET&quot;)) request.header(actor.csrfHeader(), actor.csrfToken());
+        return actor.client().send(request.build(), HttpResponse.BodyHandlers.ofString());
+    }
+
+    &lt;T&gt; T json(HttpResponse&lt;String&gt; response, String expression) {
+        return JsonPath.read(response.body(), expression);
+    }
+
+    String statusOf(Actor actor, long id) throws Exception {
+        return json(send(actor, &quot;GET&quot;, &quot;/api/orders/&quot; + id), &quot;$.status&quot;);
+    }
+
+    int versionOf(Actor actor, long id) throws Exception {
+        Number value = json(send(actor, &quot;GET&quot;, &quot;/api/orders/&quot; + id), &quot;$.version&quot;);
+        return value.intValue();
+    }
+}
+</code></pre></div></details>
+<details><summary><strong>src/test/java/study/orders/StarterHttpTest.java</strong></summary><div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code data-stage="starter" data-file="src/test/java/study/orders/StarterHttpTest.java">package study.orders;
+
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+
+class StarterHttpTest extends HttpFixture {
+    @Test void listsOnlyOwnedOrders() throws Exception {
+        var response = send(alice, &quot;GET&quot;, &quot;/api/orders&quot;);
+        assertThat(response.statusCode()).isEqualTo(200);
+        List&lt;String&gt; owners = json(response, &quot;$[*].owner&quot;);
+        assertThat(owners).containsExactly(&quot;alice&quot;, &quot;alice&quot;);
+    }
+
+    @Test void readsOwnedOrder() throws Exception {
+        assertThat(statusOf(alice, 101)).isEqualTo(&quot;UNPAID&quot;);
+    }
+
+    @Test void hidesOtherOwnersOrder() throws Exception {
+        assertThat(send(bob, &quot;GET&quot;, &quot;/api/orders/101&quot;).statusCode()).isEqualTo(404);
+    }
+
+    @Test void requiresLogin() throws Exception {
+        var response = HttpClient.newHttpClient().send(HttpRequest.newBuilder(url(&quot;/api/orders&quot;))
+            .header(&quot;Accept&quot;, &quot;application/json&quot;).build(), HttpResponse.BodyHandlers.ofString());
+        assertThat(response.statusCode()).isEqualTo(401);
+    }
+
+    @Test void paymentIsIdempotent() throws Exception {
+        assertThat(send(alice, &quot;POST&quot;, &quot;/api/orders/101/pay&quot;).statusCode()).isEqualTo(200);
+        assertThat(send(alice, &quot;POST&quot;, &quot;/api/orders/101/pay&quot;).statusCode()).isEqualTo(200);
+        assertThat(statusOf(alice, 101)).isEqualTo(&quot;PAID&quot;);
+        assertThat(versionOf(alice, 101)).isEqualTo(1);
+    }
+
+    @Test void rejectsMutationWithoutCsrf() throws Exception {
+        assertThat(send(alice, &quot;POST&quot;, &quot;/api/orders/101/pay&quot;, false).statusCode()).isEqualTo(403);
+        assertThat(statusOf(alice, 101)).isEqualTo(&quot;UNPAID&quot;);
+    }
+}
+</code></pre></div></details>
+
+<p>测试客户端先取得 CSRF token，再提交登录表单并保留 Cookie，登录成功后重新获取 token。<code>/api/csrf</code> 允许匿名取得 token，但订单接口仍必须认证；它不会赋予订单访问权限。</p>
+<h2 id="troubleshooting">7. 常见问题</h2>
+<div class="table-wrap"><table><thead><tr><th>现象</th><th>定位与恢复</th></tr></thead><tbody><tr><td>输出目录非空</td><td>换一个空目录；不要为重试删除已有练习成果。</td></tr><tr><td>Java 版本不对</td><td>检查 mvn -version 实际使用的 JDK；pom.xml 要求 Java 25。</td></tr><tr><td>依赖下载失败</td><td>检查 Maven 网络/镜像；先跑基础测试，避免把网络失败当成业务测试的红灯。</td></tr><tr><td>启动提示缺少密码</td><td>在同一终端导出 DEMO_ALICE_PASSWORD、DEMO_BOB_PASSWORD。</td></tr><tr><td>8080 被占用</td><td>使用 PORT=8081 mvn spring-boot:run，并访问相应端口。</td></tr><tr><td>POST 返回 403</td><td>先检查登录态与 CSRF token；不要通过禁用 CSRF 修复测试。</td></tr><tr><td>演示订单已改变</td><td>使用新的练习目录，或显式备份并更换开发数据库路径；不要删除来源不明的数据。</td></tr><tr><td>技能无法找到其他技能</td><td>检查 grilling、domain-modeling、codebase-design 和 agents/openai.yaml 是否一起复制。</td></tr></tbody></table></div>
+<h3 id="maven-mirror">镜像故障恢复：隔离全局与用户 Maven 设置</h3><p>本次验证确实遇到本机全局镜像下载超时。若你也遇到依赖下载失败，可在独立练习目录创建以下临时配置，显式直连 Maven Central；不要改动全局配置。<code>-s</code> 只替代用户配置，仍可能受到全局镜像影响，因此这里同时指定 <code>-gs</code>。单位网络若要求使用其镜像，应按本单位网络规则修复镜像。</p><div class="code-block"><div class="code-toolbar"><span>镜像故障恢复</span><button class="copy-code" type="button">复制</button></div><pre><code>cat &gt; maven-central.xml &lt;&lt;&#x27;XML&#x27;
+&lt;settings xmlns=&quot;http://maven.apache.org/SETTINGS/1.2.0&quot;&gt;
+  &lt;mirrors&gt;
+    &lt;mirror&gt;
+      &lt;id&gt;tutorial-central&lt;/id&gt;&lt;mirrorOf&gt;*&lt;/mirrorOf&gt;
+      &lt;url&gt;https://repo.maven.apache.org/maven2&lt;/url&gt;
+    &lt;/mirror&gt;
+  &lt;/mirrors&gt;
+&lt;/settings&gt;
+XML
+mvn -gs maven-central.xml -s maven-central.xml test</code></pre></div><p>后续把命令末尾的 <code>test</code> 换成 <code>package</code> 或 <code>spring-boot:run</code>。本次验证另加 <code>-Dmaven.repo.local=/tmp/matt-workshop-m2</code> 隔离缓存；你可换成自己的临时目录。</p>
+<h2 id="参考资料">参考资料</h2><ul><li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/setup-matt-pocock-skills/SKILL.md" target="_blank" rel="noopener noreferrer">setup-matt-pocock-skills 源码</a></li><li><a href="https://learn.chatgpt.com/docs/build-skills" target="_blank" rel="noopener noreferrer">OpenAI：技能目录、显式调用与元数据</a></li><li><a href="https://docs.spring.io/spring-boot/4.0/reference/web/servlet.html" target="_blank" rel="noopener noreferrer">Spring Boot 4.0：MVC 与静态资源</a></li><li><a href="https://docs.spring.io/spring-security/reference/servlet/exploits/csrf.html" target="_blank" rel="noopener noreferrer">Spring Security：CSRF</a></li></ul>
+
+</article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/codex/2026-09-16-Matt-Pocock-Skills安装与Java练习环境.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="2026-08-31-OpenSpec与Codex原生大型项目开发流程.html"><small>上一篇</small><span>OpenSpec + Codex 原生：大型项目开发流程与 Superpowers 差异</span></a>
+        <a class="pager-link next" href="2026-09-16-Matt-Pocock-Skills订单取消实战教程.html"><small>下一篇</small><span>Matt Pocock Skills 订单取消实战教程</span></a>
+      </nav>
+    </footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#environment">1. 环境与固定版本</a></li><li class="toc-level-2"><a href="#extract">2. 提取并启动基础项目</a></li><li class="toc-level-2"><a href="#install">3. 安装固定提交的技能</a></li><li class="toc-level-2"><a href="#setup">4. 配置练习仓库</a></li><li class="toc-level-2"><a href="#structure">5. 基础工程怎样组织</a></li><li class="toc-level-2"><a href="#starter-source">6. 完整基础源码：starter</a></li><li class="toc-level-2"><a href="#troubleshooting">7. 常见问题</a></li><li class="toc-level-3"><a href="#maven-mirror">镜像故障恢复：隔离全局与用户 Maven 设置</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div></body></html>

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="study-category" content="Codex 与 AI 工程"><meta name="study-date" content="2026-09-16">
+<meta name="description" content="从技能加载、决策依赖、产物职责、垂直切片、seam、红绿反馈和双轴审查解释工作流，明确 Java 适配与边界。"><title>Matt Pocock Skills 工作流原理与设计取舍｜Java 全栈 AI 学习库</title>
+<link rel="stylesheet" href="../../assets/style.css"><script defer src="../../assets/app.js"></script></head>
+<body class="document-page"><header class="topbar"><a class="brand" href="../../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a><div class="topbar-actions"><button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button><button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button></div></header>
+<div class="reader-layout"><aside class="doc-sidebar"><div class="sidebar-header">
+      <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <div class="sidebar-category-summary">
+      <span class="eyebrow">当前分类</span>
+      <a class="sidebar-category-link" href="../../../index.html#category-codex-与-ai-工程-1ubbp3w">
+        <strong>Codex 与 AI 工程</strong>
+        <small>15 篇文档</small>
+      </a>
+    </div><nav class="doc-nav" aria-label="当前分类文档">
+      <a class="doc-nav-item" href="2026-07-24-AI开发工作流选型与小团队沉淀指南.html"><span>AI 开发工作流选型与小团队沉淀指南</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC详细介绍.html"><span>AIDLC 详细介绍：从 AI 辅助编码到可审计的软件交付生命周期</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC与Superpowers差异分析.html"><span>AIDLC 与 Superpowers 差异分析：生命周期治理与工程 Inner Loop</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-Codex全栈开发最佳实践.html"><span>Codex 全栈开发最佳实践：Vibe Coding、Harness 与 Loop</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-OpenSpec-Superpowers-CI-Codex-CLI实战教程.html"><span>OpenSpec + Superpowers + CI：Codex CLI 全栈实战教程</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-Superpowers大型Java微服务Monorepo使用指南.html"><span>Superpowers 大型 Java 微服务 Monorepo 使用指南</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-Superpowers详细介绍.html"><span>Superpowers 详细介绍：Codex 的技能化软件开发方法</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-28-Codex官方原生项目开发最佳路径.html"><span>Codex 官方原生项目开发最佳路径</span><small>2026-07-28</small></a><a class="doc-nav-item" href="2026-08-07-Harness-Loop-Graph与Codex-Superpowers开发模式.html"><span>Harness、Loop、Graph 与 Codex + Superpowers 开发模式</span><small>2026-08-07</small></a><a class="doc-nav-item" href="2026-08-31-OpenSpec-Apply与Superpowers对比.html"><span>OpenSpec + Apply 与 Superpowers：大型项目执行流程对比</span><small>2026-08-31</small></a><a class="doc-nav-item" href="2026-08-31-OpenSpec与Codex原生大型项目开发流程.html"><span>OpenSpec + Codex 原生：大型项目开发流程与 Superpowers 差异</span><small>2026-08-31</small></a><a class="doc-nav-item" href="2026-09-16-Matt-Pocock-Skills安装与Java练习环境.html"><span>Matt Pocock Skills 安装与 Java 练习环境</span><small>2026-09-16</small></a><a class="doc-nav-item" href="2026-09-16-Matt-Pocock-Skills订单取消实战教程.html"><span>Matt Pocock Skills 订单取消实战教程</span><small>2026-09-16</small></a><a class="doc-nav-item" href="2026-09-16-Matt-Pocock-Skills工作流详解.html"><span>Matt Pocock Skills：整套工作流、原理与教程设计</span><small>2026-09-16</small></a><a class="doc-nav-item is-active" href="2026-09-16-Matt-Pocock-Skills工作流原理与设计取舍.html" aria-current="page"><span>Matt Pocock Skills 工作流原理与设计取舍</span><small>2026-09-16</small></a>
+    </nav></aside>
+  <main class="article-column"><div class="article-meta"><a href="../../../index.html">知识库首页</a><span>·</span><span>Codex 与 AI 工程</span><span>·</span><time datetime="2026-09-16">2026-09-16</time></div><article class="markdown-body">
+<h1 id="title">Matt Pocock Skills 工作流原理与设计取舍</h1><nav aria-label="系列阅读顺序"><a href="2026-09-16-Matt-Pocock-Skills工作流详解.html">总览</a> · <a href="2026-09-16-Matt-Pocock-Skills安装与Java练习环境.html">安装与环境</a> · <a href="2026-09-16-Matt-Pocock-Skills订单取消实战教程.html">完整实战</a> · <a href="2026-09-16-Matt-Pocock-Skills工作流原理与设计取舍.html">原理说明</a></nav>
+<blockquote><p><strong>第 3 课：</strong>解释工作流为什么这样设计，以及什么情况下应该删减或调整。最好先运行一次前两课，再回来看原理。预计 40～60 分钟。</p><p><strong>研究基线：</strong>Matt Pocock skills 固定提交 <code>959a8e9</code>；检索日期 2026-09-16。工程解释属于本文归纳；作者自己的提示词设计观点会单独标明。</p></blockquote>
+<h2 id="核心结论">核心结论</h2>
+<p>这套工作流通过一系列信息变换降低不确定性：需求对话变成决定，决定变成规格，规格变成可验收任务，任务变成代码与执行证据。每种产物承担不同责任，技能负责约束转换过程。</p>
+<p>它依赖的是模型可读的规程、持久化上下文、宿主工具与工程反馈。测试、Git 和任务系统提供可观察结果；模型仍负责解释规则并选择动作，因此不存在仅靠安装 skills 就获得的确定性执行保证。</p>
+<h2 id="runtime">1. 执行时发生了什么</h2>
+<div class="diagram-lane" role="img" aria-label="用户明确选阶段，宿主发现并加载技能，模型读取项目知识后调用工具，观察工具结果并继续循环。"><strong>一次技能执行</strong><div class="agent-step">用户目标 + 项目规则 + 技能目录</div><div class="agent-step">发现技能 → 加载正文 → 按条件读取参考文件</div><div class="agent-step">模型选择动作 → 宿主执行文件/终端/任务系统工具</div><div class="agent-step">读取反馈 → 对照完成条件 → 继续、提问或交付</div></div>
+<p>在 Codex 中，技能名称、描述及路径用于发现，详细正文按需加载。模型选择技能不会自动安装数据库、获得 GitHub 权限或创建一个独立 Agent；这些取决于宿主提供的工具与实际调用。</p>
+<div class="table-wrap"><table><thead><tr><th>Java 类比</th><th>有帮助的部分</th><th>类比的边界</th></tr></thead><tbody><tr><td>操作规程与策略对象</td><td>相同任务可以选择不同步骤和规则</td><td>规程是自然语言，不具有 Java 方法调用那样的确定性语义</td></tr><tr><td>依赖注入</td><td>技能依赖宿主提供终端、文件、Issue 等能力</td><td>声明依赖不代表授权已经具备</td></tr><tr><td>持久化状态</td><td>决定和任务可在后续会话重新读取</td><td>文件存在不代表每次都会被正确加载，需要明确入口指针</td></tr><tr><td>断言与反馈循环</td><td>编译、测试能拒绝某些错误结果</td><td>测试只能验证已覆盖的行为，不能替人决定业务需求</td></tr></tbody></table></div>
+<h2 id="invocation">2. 为什么分手动入口与可复用能力</h2>
+<p>主线阶段需要人理解自己正在做什么，所以 <code>grill-with-docs</code>、<code>to-spec</code>、<code>to-tickets</code>、<code>implement</code> 被设计为用户显式入口。<code>grilling</code>、<code>domain-modeling</code>、<code>tdd</code> 等则可由其他技能复用。</p>
+<p>当前 <code>grill-with-docs</code> 正文就是调用访谈与领域建模两个能力。这种分解把“怎样问”与“怎样维护业务概念”放在各自的权威文件中。入口不必复制整套底层规则。</p>
+<p>在 Codex 配置里，<code>agents/openai.yaml</code> 的 <code>allow_implicit_invocation: false</code> 控制语义匹配时的自动选用；显式调用仍可用。上游的调用分类是设计意图，具体保证还要以宿主的实现为准。不要据此推断所有宿主都完全隐藏手动技能的元数据。</p>
+<h2 id="decision-tree">3. 访谈怎样沿决策依赖推进</h2>
+<p>“支付后是否允许取消”决定了是否需要讨论退款与支付网关补偿。当前置问题未回答时，提前深挖退款接口会消耗时间并暗中带入范围假设。</p>
+<p>当前 grilling 把可问的问题组织成 frontier：只询问前置决定已经明确的问题；一轮中可以有多个互不依赖的问题。回答后重新计算下一轮。</p>
+<div class="table-wrap"><table><thead><tr><th>第一轮已知前提</th><th>可以问</th><th>暂时不用问</th></tr></thead><tbody><tr><td>要加取消能力</td><td>允许哪些状态？谁可以操作？</td><td>未知是否涉及退款时，不先定退款重试队列</td></tr><tr><td>只取消 UNPAID</td><td>重复请求怎样返回？与支付竞争谁成功？</td><td>不继续设计已排除的退款流程</td></tr><tr><td>确定数据库控制终态</td><td>现有事务和测试能否覆盖竞争？</td><td>工程事实先读代码，不再要求用户猜</td></tr></tbody></table></div>
+<p>其作用是让隐藏假设显露。结束条件应是影响当前实现的关键决定已解决，而不是规定必须问满多少个问题。真实工程中要限制范围，避免把未来所有可能性都展开。</p>
+<h2 id="artifacts">4. 产物怎样接住信息，又避免重复真相</h2>
+<div class="table-wrap"><table><thead><tr><th>产物</th><th>主要回答</th><th>变化节奏</th><th>本课例子</th></tr></thead><tbody><tr><td>术语表</td><td>这个业务词是什么意思</td><td>相对慢</td><td>Cancellation 不包含退款</td></tr><tr><td>ADR</td><td>为什么选这项长期设计</td><td>有重要取舍时</td><td>是否使用数据库锁管理订单迁移</td></tr><tr><td>Spec</td><td>本次交付什么行为</td><td>需求范围变化时</td><td>取消、幂等、所有权、并发契约</td></tr><tr><td>Ticket</td><td>这段工作怎样验收，受谁阻塞</td><td>实现推进时</td><td>完成本人取消与页面闭环</td></tr><tr><td>代码与测试</td><td>系统实际上怎样运行</td><td>频繁</td><td>真实 HTTP 返回、最终状态与版本</td></tr><tr><td>交接记录</td><td>下一会话从哪里继续</td><td>会话/工具切换时</td><td>引用任务路径与未解决问题</td></tr></tbody></table></div>
+<p>文档互相引用，避免把相同决定复制成多份。一条规则在 Spec、Ticket、测试和代码中可能有不同表示，但应能追溯到同一业务决定。需求变化时，需要检查这些表示是否仍一致。</p>
+<p>上下文窗口是有限的工作区。保留访谈到拆任务的连续上下文，有助于保存决策理由；任务变得自包含后，可以为实现开启新会话。压缩和 handoff 都可能丢信息，应该在阶段边界执行，并带上原始产物的路径。</p>
+<h2 id="vertical-slices">5. 垂直切片同时解决交付与上下文规模</h2>
+<p>“先做全部数据库，再做全部接口”能按技术层组织工作，却难以尽早看到完整用户行为。“取消一笔自己的订单”则能贯穿请求、权限、事务、数据库、响应与页面反馈。</p>
+<p>从 Agent 的角度，一张自包含任务需要携带的上下文更可控；从人的角度，每张任务都有可检查的结果。两者相互支持。但大小不能只按代码行数衡量：一个跨数据库的字段重命名可能代码简单、影响范围却极大。</p>
+<p>当前上游对宽范围重构给出例外：先扩展兼容新旧接口，再分批迁移，最后收缩删除旧接口。不要为了坚持“垂直切片”而让每一批都无法独立通过构建。</p>
+<h2 id="seam-depth">6. seam 与深模块怎样影响测试</h2>
+<p><strong>Seam 是可以观察或替换行为的位置。</strong>本课选择 HTTP + H2，因为验收要求包括登录、CSRF、参数映射、事务、SQL 和状态竞争。只 mock Service 的控制器测试无法提供同等证据。</p>
+<p><strong>深模块的价值是把必要复杂性留在内部。</strong>调用方只需请求“取消自己的订单”，不必自己按顺序锁行、检查状态、改 version。本例 OrderService 已经把这些责任集中起来，因此增加功能主要是复用现有能力。</p>
+<p>这不是要求所有 Java 程序减少类数，也不表示纯函数单元测试失去价值。如果风险是折扣计算，纯函数测试可能是更便宜、更精确的 seam；如果风险是数据库竞争，则需要真实并发环境。选择测试切入点应由验收风险决定。</p>
+<h2 id="feedback-loop">7. 红绿循环与双轴审查提供不同证据</h2>
+<p>红灯首先证明测试能够拒绝缺失的行为；绿灯证明该实现满足这个断言。只看到一个一直为绿的测试，不能知道它是否真的能抓住目标错误。</p>
+<p>本课 red 快照在真实认证、CSRF 和数据库环境中访问尚不存在的取消接口，得到 404；期望是 200。这比因依赖下载失败而无法启动更接近所要验证的需求缺口。</p>
+<p>Standards 审查负责项目约定和设计判断；Spec 审查负责遗漏、错误和范围扩张。它们的职责不同，所以要分别报告。两个子代理能隔离部分上下文，但可能共享同一模型偏差，不能当成两位完全独立的人类专家。</p>
+<p>当前上游把重构放入 review 阶段，这是该版本的策略。传统红绿重构仍是广泛使用的实践；教程保留版本事实，不把作者的一次流程调整推广为通用定义。</p>
+<h2 id="concurrency">8. 两种「并发」不要混淆</h2>
+<div class="table-wrap"><table><thead><tr><th>维度</th><th>本课怎样处理</th><th>不能据此推断</th></tr></thead><tbody><tr><td>业务请求并发</td><td>两个 HTTP 请求竞争同一订单行锁，检查终态和 version</td><td>通过 H2 测试不等于所有数据库、超时条件或分布式支付都正确</td></tr><tr><td>Agent 开发并发</td><td>本课三张任务串行执行；原版审查可用双子代理</td><td>任务没有阻塞依赖不代表两个 Agent 不会修改同一文件</td></tr></tbody></table></div>
+<p>如果以后采用并行实现，还需要分支或 worktree 隔离、集成顺序、契约检查与共享状态管理。正式主线的 to-tickets 只提供依赖信息，并不是完整调度引擎；实验区 implement-spec 的能力也不能默认算进稳定主线。</p>
+<h2 id="adaptation">9. 上游规则、课程适配与真实约束</h2>
+<div class="table-wrap"><table><thead><tr><th>事项</th><th>上游固定提交</th><th>本课选择</th></tr></thead><tbody><tr><td>实现后提交</td><td>implement 包含提交到当前分支</td><td>练习 AGENTS 明确先审查工作区，再按任务提交</td></tr><tr><td>审查差异</td><td>code-review 默认比较固定点到 HEAD 的已提交差异</td><td>提交前用 git diff HEAD 并读取未跟踪文件；最终分支审查再用三点式</td></tr><tr><td>产物格式</td><td>默认 Markdown 术语表、ADR 和本地任务</td><td>独立练习仓库沿用；本知识库只保存 HTML</td></tr><tr><td>测试纪律</td><td>在事先确认的 seam 上逐行为推进</td><td>确认 HTTP + H2；查询结果经接口断言，JDBC 仅准备夹具</td></tr><tr><td>范围</td><td>可覆盖很多工程场景</td><td>先完成一个单体中的取消闭环，进阶能力另开专题</td></tr></tbody></table></div>
+<p>这些适配应写成可检查的项目规则。若宿主或技能仍忽略它，明确指出具体文件与冲突，修正实际步骤。不要把“原版宣称可组合”理解为任意组合都没有衔接问题。</p>
+<h2 id="choosing">10. 什么时候用完整流程，什么时候缩短</h2>
+<div class="table-wrap"><table><thead><tr><th>任务</th><th>建议路径</th><th>原因</th></tr></thead><tbody><tr><td>明确的单行为小修复</td><td>直接 implement 或 tdd</td><td>已有需求与测试 seam，可以快速获得反馈</td></tr><tr><td>普通新功能</td><td>grill-with-docs → 需要时 to-spec/to-tickets → implement</td><td>存在业务分歧或跨会话交付</td></tr><tr><td>大型且充满未知的项目</td><td>wayfinder → to-spec → to-tickets → implement</td><td>先解决影响路线的决策，再拆交付</td></tr><tr><td>难复现的 Bug</td><td>diagnosing-bugs</td><td>先建立可识别目标故障的反馈，再讨论原因</td></tr><tr><td>频繁改动时架构阻力大</td><td>improve-codebase-architecture → 选择候选 → 澄清与实施</td><td>把改造投入集中在真实摩擦与常改区域</td></tr></tbody></table></div>
+<p>评估效果时记录：需求返工次数、第一次可运行结果的时间、测试发现的缺陷、审查遗漏、上下文恢复成本。比较前尽量控制任务难度、模型和工程环境；本课没有提供足以证明某个工具普遍更快的对照实验。</p>
+<h2 id="exercise">11. 自测与下一步</h2>
+<ol><li>为什么表里已有 CANCELLED，不代表取消功能已经完成？</li><li>如果重复取消每次 version 都加 1，哪条验收失败？</li><li>为什么“先查状态再更新”在没有事务锁时可能出错？</li><li>为什么 git diff main...HEAD 会漏掉尚未提交的新文件？</li><li>什么材料齐全后，下一张任务可以在新会话实现？</li><li>如果要加入真实支付退款，哪些已排除的决定必须重新讨论？</li></ol>
+<details><summary>核对思路</summary><p>①状态只是数据能力，还缺入口、业务行为与验证；②幂等验收；③两个请求可同时读到旧状态并覆盖结果；④该命令比较提交，不包含工作区和新增文件；⑤规格、任务验收与依赖、领域术语、必要 ADR 和运行方式；⑥支付结果确认、退款时机、失败补偿、幂等键、状态机与审计。</p></details>
+<p>下一次可以有意识引入一个“去掉事务”的缺陷，观察竞争测试是否抓到，再用 diagnosing-bugs 恢复。实验要在独立练习分支进行，并记录红灯证据；不要把一次偶然通过当成并发正确性的证明。</p>
+<h2 id="参考资料">参考资料</h2><ul><li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/ask-matt/SKILL.md" target="_blank" rel="noopener noreferrer">ask-matt 源码</a></li><li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/grill-with-docs/SKILL.md" target="_blank" rel="noopener noreferrer">grill-with-docs 源码</a></li><li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/productivity/grilling/SKILL.md" target="_blank" rel="noopener noreferrer">grilling 源码</a></li><li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/domain-modeling/SKILL.md" target="_blank" rel="noopener noreferrer">domain-modeling 源码</a></li><li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/to-tickets/SKILL.md" target="_blank" rel="noopener noreferrer">to-tickets 源码</a></li><li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/codebase-design/SKILL.md" target="_blank" rel="noopener noreferrer">codebase-design 源码</a></li><li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/tdd/SKILL.md" target="_blank" rel="noopener noreferrer">tdd 源码</a></li><li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/code-review/SKILL.md" target="_blank" rel="noopener noreferrer">code-review 源码</a></li><li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/productivity/writing-for-agents/SKILL.md" target="_blank" rel="noopener noreferrer">writing-for-agents 源码</a></li><li><a href="https://developers.openai.com/plugins/concepts/skills" target="_blank" rel="noopener noreferrer">OpenAI：Skills 的作用与宿主边界</a></li><li><a href="https://learn.chatgpt.com/docs/build-skills" target="_blank" rel="noopener noreferrer">OpenAI：渐进加载与调用策略</a></li><li><a href="https://git-scm.com/docs/git-diff" target="_blank" rel="noopener noreferrer">Git diff 的比较对象</a></li></ul>
+
+</article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/codex/2026-09-16-Matt-Pocock-Skills工作流原理与设计取舍.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="2026-09-16-Matt-Pocock-Skills工作流详解.html"><small>上一篇</small><span>Matt Pocock Skills：整套工作流、原理与教程设计</span></a>
+        <span class="pager-spacer"></span>
+      </nav>
+    </footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#runtime">1. 执行时发生了什么</a></li><li class="toc-level-2"><a href="#invocation">2. 为什么分手动入口与可复用能力</a></li><li class="toc-level-2"><a href="#decision-tree">3. 访谈怎样沿决策依赖推进</a></li><li class="toc-level-2"><a href="#artifacts">4. 产物怎样接住信息，又避免重复真相</a></li><li class="toc-level-2"><a href="#vertical-slices">5. 垂直切片同时解决交付与上下文规模</a></li><li class="toc-level-2"><a href="#seam-depth">6. seam 与深模块怎样影响测试</a></li><li class="toc-level-2"><a href="#feedback-loop">7. 红绿循环与双轴审查提供不同证据</a></li><li class="toc-level-2"><a href="#concurrency">8. 两种「并发」不要混淆</a></li><li class="toc-level-2"><a href="#adaptation">9. 上游规则、课程适配与真实约束</a></li><li class="toc-level-2"><a href="#choosing">10. 什么时候用完整流程，什么时候缩短</a></li><li class="toc-level-2"><a href="#exercise">11. 自测与下一步</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div></body></html>

@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-09-01T00:00:00.000Z",
-  "documentCount": 42,
+  "generatedAt": "2026-09-16T00:00:00.000Z",
+  "documentCount": 46,
   "documents": [
     {
       "output": "notes/agent/2026-07-27-01-Agent基础概念与边界.html",
@@ -239,6 +239,34 @@
       "category": "Codex 与 AI 工程",
       "date": "2026-08-31",
       "sections": 18
+    },
+    {
+      "output": "notes/codex/2026-09-16-Matt-Pocock-Skills安装与Java练习环境.html",
+      "title": "Matt Pocock Skills 安装与 Java 练习环境",
+      "category": "Codex 与 AI 工程",
+      "date": "2026-09-16",
+      "sections": 10
+    },
+    {
+      "output": "notes/codex/2026-09-16-Matt-Pocock-Skills订单取消实战教程.html",
+      "title": "Matt Pocock Skills 订单取消实战教程",
+      "category": "Codex 与 AI 工程",
+      "date": "2026-09-16",
+      "sections": 13
+    },
+    {
+      "output": "notes/codex/2026-09-16-Matt-Pocock-Skills工作流详解.html",
+      "title": "Matt Pocock Skills：整套工作流、原理与教程设计",
+      "category": "Codex 与 AI 工程",
+      "date": "2026-09-16",
+      "sections": 22
+    },
+    {
+      "output": "notes/codex/2026-09-16-Matt-Pocock-Skills工作流原理与设计取舍.html",
+      "title": "Matt Pocock Skills 工作流原理与设计取舍",
+      "category": "Codex 与 AI 工程",
+      "date": "2026-09-16",
+      "sections": 13
     },
     {
       "output": "notes/coding-agent/2026-08-10-Pi安装配置与使用教程.html",

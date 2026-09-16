@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="light dark"><meta name="study-category" content="Codex 与 AI 工程"><meta name="study-date" content="2026-09-16">
+<meta name="description" content="从需求访谈到双轴审查，使用可运行 Spring Boot 示例验证本人取消、幂等、权限、CSRF 与支付并发；附完整源码和真实测试记录。"><title>Matt Pocock Skills 订单取消实战教程｜Java 全栈 AI 学习库</title>
+<link rel="stylesheet" href="../../assets/style.css"><script defer src="../../assets/app.js"></script></head>
+<body class="document-page"><header class="topbar"><a class="brand" href="../../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a><div class="topbar-actions"><button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button><button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button></div></header>
+<div class="reader-layout"><aside class="doc-sidebar"><div class="sidebar-header">
+      <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <div class="sidebar-category-summary">
+      <span class="eyebrow">当前分类</span>
+      <a class="sidebar-category-link" href="../../../index.html#category-codex-与-ai-工程-1ubbp3w">
+        <strong>Codex 与 AI 工程</strong>
+        <small>15 篇文档</small>
+      </a>
+    </div><nav class="doc-nav" aria-label="当前分类文档">
+      <a class="doc-nav-item" href="2026-07-24-AI开发工作流选型与小团队沉淀指南.html"><span>AI 开发工作流选型与小团队沉淀指南</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC详细介绍.html"><span>AIDLC 详细介绍：从 AI 辅助编码到可审计的软件交付生命周期</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC与Superpowers差异分析.html"><span>AIDLC 与 Superpowers 差异分析：生命周期治理与工程 Inner Loop</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-Codex全栈开发最佳实践.html"><span>Codex 全栈开发最佳实践：Vibe Coding、Harness 与 Loop</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-OpenSpec-Superpowers-CI-Codex-CLI实战教程.html"><span>OpenSpec + Superpowers + CI：Codex CLI 全栈实战教程</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-Superpowers大型Java微服务Monorepo使用指南.html"><span>Superpowers 大型 Java 微服务 Monorepo 使用指南</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-Superpowers详细介绍.html"><span>Superpowers 详细介绍：Codex 的技能化软件开发方法</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-28-Codex官方原生项目开发最佳路径.html"><span>Codex 官方原生项目开发最佳路径</span><small>2026-07-28</small></a><a class="doc-nav-item" href="2026-08-07-Harness-Loop-Graph与Codex-Superpowers开发模式.html"><span>Harness、Loop、Graph 与 Codex + Superpowers 开发模式</span><small>2026-08-07</small></a><a class="doc-nav-item" href="2026-08-31-OpenSpec-Apply与Superpowers对比.html"><span>OpenSpec + Apply 与 Superpowers：大型项目执行流程对比</span><small>2026-08-31</small></a><a class="doc-nav-item" href="2026-08-31-OpenSpec与Codex原生大型项目开发流程.html"><span>OpenSpec + Codex 原生：大型项目开发流程与 Superpowers 差异</span><small>2026-08-31</small></a><a class="doc-nav-item" href="2026-09-16-Matt-Pocock-Skills安装与Java练习环境.html"><span>Matt Pocock Skills 安装与 Java 练习环境</span><small>2026-09-16</small></a><a class="doc-nav-item is-active" href="2026-09-16-Matt-Pocock-Skills订单取消实战教程.html" aria-current="page"><span>Matt Pocock Skills 订单取消实战教程</span><small>2026-09-16</small></a><a class="doc-nav-item" href="2026-09-16-Matt-Pocock-Skills工作流详解.html"><span>Matt Pocock Skills：整套工作流、原理与教程设计</span><small>2026-09-16</small></a><a class="doc-nav-item" href="2026-09-16-Matt-Pocock-Skills工作流原理与设计取舍.html"><span>Matt Pocock Skills 工作流原理与设计取舍</span><small>2026-09-16</small></a>
+    </nav></aside>
+  <main class="article-column"><div class="article-meta"><a href="../../../index.html">知识库首页</a><span>·</span><span>Codex 与 AI 工程</span><span>·</span><time datetime="2026-09-16">2026-09-16</time></div><article class="markdown-body">
+<h1 id="title">Matt Pocock Skills 订单取消实战教程</h1><nav aria-label="系列阅读顺序"><a href="2026-09-16-Matt-Pocock-Skills工作流详解.html">总览</a> · <a href="2026-09-16-Matt-Pocock-Skills安装与Java练习环境.html">安装与环境</a> · <a href="2026-09-16-Matt-Pocock-Skills订单取消实战教程.html">完整实战</a> · <a href="2026-09-16-Matt-Pocock-Skills工作流原理与设计取舍.html">原理说明</a></nav>
+<blockquote><p><strong>第 2 课：</strong>在已有订单项目中增加取消能力，用同一条产物链串起访谈、规格、任务、TDD、审查与交付。预计 2～4 小时，可分两次会话。</p><p><strong>证据边界：</strong>页面中的提示词、示范规格和任务是教学设计，不是 Agent 会话实录。基础版测试、单个预期失败测试、完成版测试与打包均已通过真实命令核验，结果见第 9 节；这些验证不代表已经测量整套 Agent 工作流的成功率。</p></blockquote>
+<h2 id="核心结论">核心结论</h2>
+<p>本课成功的标准是：一个新会话只读取任务和领域资料，也能理解要实现什么，并用接口结果证明它完成了。你负责业务决策，Agent 查事实、实现、验证并呈现证据。</p>
+<p>先完成上一课，保留 <code>workshop-ready</code> 标签。完整答案用于对照，先按主线练习；不要在自己正在修改的项目上覆盖答案。</p>
+<h2 id="contract">1. 先给出业务目标，逐轮解决分歧</h2>
+<div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code>$grill-with-docs
+我们已有订单查询和模拟支付，现在要增加“取消自己的未支付订单”。
+请先读取代码确认现有行为，再按当前技能的分轮访谈方式推进。
+查得到的工程事实由你查；业务取舍给我建议后由我回答。
+把已确认的术语写入 CONTEXT.md，符合条件的重要取舍才写 ADR。
+这一阶段先把需求说清楚。</code></pre></div>
+<p>Agent 应发现系统已有 UNPAID、PAID、CANCELLED 三个数据库状态；已有登录、所有权过滤、版本字段和付款行锁。状态枚举已经存在并不表示取消功能已实现。随后访谈聚焦业务决定。</p>
+<div class="table-wrap"><table><thead><tr><th>决策</th><th>本课选定答案</th><th>对实现的影响</th></tr></thead><tbody><tr><td>谁能取消</td><td>登录的订单所有者</td><td>身份取自 Principal，不接受请求传入 owner</td></tr><tr><td>哪些状态</td><td>UNPAID 可取消；PAID 拒绝</td><td>成功 200，非法状态 409</td></tr><tr><td>重复取消</td><td>对已经 CANCELLED 的订单返回现状</td><td>不再递增 version</td></tr><tr><td>不存在或他人订单</td><td>统一 404</td><td>不通过差异透露订单归属</td></tr><tr><td>支付与取消竞态</td><td>数据库串行化状态转移，先取得锁并完成合法迁移者成功</td><td>另一动作 409；version 只增加一次</td></tr><tr><td>取消是否退款</td><td>本课不退款，支付为本地模拟</td><td>没有外部支付副作用、事件总线或退款流程</td></tr><tr><td>界面与保护</td><td>页面提供按钮，后端保留鉴权、所有权与 CSRF</td><td>按钮禁用仅是交互提示，服务端仍独立判断</td></tr></tbody></table></div>
+<p>这张表是可直接采用的教学决策，不是假设所有业务都应如此。真实项目若存在发货、部分取消或支付网关回调，需要重新访谈。<strong>阶段完成条件：</strong>没有遗漏的关键业务决定，并且你确认这些决定。</p>
+<h2 id="domain-artifacts">2. 观察领域知识怎样沉淀</h2>
+<p><code>CONTEXT.md</code> 的示意内容如下；它只记录概念，不存 SQL、控制器路径或实现步骤：</p>
+<div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code># Domain glossary
+- Order：归属于一个用户、具有当前状态的订单。
+- Cancellation：未支付订单转为已取消；不涉及退款。
+- Simulated Payment：本地把未支付订单标为已支付的练习动作。
+- Terminal State：本课中的 PAID 或 CANCELLED；不再转为另一终态。</code></pre></div>
+<p>并发方案在本小项目中可以先写进规格；只有当数据库锁成为未来需要解释、修改成本明显且有真实替代方案的长期选择时，再建 ADR。不要为了展示技能强行为每个字段写 ADR。</p>
+<h2 id="specification">3. 从讨论生成规格</h2>
+<div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code>$to-spec
+请将刚才确认的取消需求整理成规格，保存到本地任务系统。
+本课规格路径约定为 .scratch/order-cancellation/spec.md。
+测试切入点已确认：真实认证 HTTP API + H2；使用数据库只准备夹具，
+通过 HTTP 观察结果。保留现有基础测试。
+写清所有权、幂等、状态冲突、CSRF 与支付并发验收；不引入退款。</code></pre></div>
+<p>检查产物包含：Problem、Solution、User Stories、Implementation Decisions、Testing Decisions、Out of Scope。以下是验收摘要，便于逐条核对，不替代完整 Spec。</p>
+<div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code>A1. alice 取消自己的 UNPAID 订单：200，查询为 CANCELLED，version 从 0 变 1。
+A2. 再次取消：200，状态与 version 保持不变。
+A3. 对 PAID 订单取消：409，状态与 version 不变。
+A4. bob 取消 alice 的订单：404，alice 查询原订单未改变。
+A5. 不存在的订单：404。
+A6. 已登录但缺失 CSRF 的写请求：403，订单不改变；未认证读取为 401。
+A7. 支付与取消同时到达：一个 200、另一个 409，最终终态合法、version 为 1。
+A8. 两个取消同时到达：都 200，version 为 1。
+A9. 页面显示操作结果、失败状态，刷新能看到服务器真实状态。</code></pre></div>
+<p>HTTP、事务与安全约定是规范；具体类名和代码可由实现阶段查找。课程源码是一个参考答案，Agent 可以实现出不同但满足约定的结构。</p>
+<h2 id="ticket-plan">4. 拆成三张能验收的任务</h2>
+<div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code>$to-tickets
+以 .scratch/order-cancellation/spec.md 为准拆分任务。
+每张任务应在一次新的会话中完成，包含端到端验收与真实依赖。
+先给我拆分建议，确认后再写入本地 issues 目录。</code></pre></div><div class="table-wrap"><table><thead><tr><th>任务</th><th>交付行为</th><th>依赖</th><th>验收范围</th></tr></thead><tbody><tr><td>01：本人取消与页面闭环</td><td>新增取消动作、查询持久结果、显示页面反馈，并保留访问控制</td><td>无</td><td>A1、A4、A5、A6、A9</td></tr><tr><td>02：重复操作与状态冲突</td><td>重复取消无额外迁移；支付后的订单不可取消</td><td>01</td><td>A2、A3；取消后支付也冲突</td></tr><tr><td>03：并发状态转移</td><td>支付/取消与取消/取消竞争保持一致性</td><td>01、02</td><td>A7、A8；真实 HTTP 竞争与数据库锁</td></tr></tbody></table></div>
+<p>本例任务有意串行，便于学习与审查。源码实现可能在第一张任务中顺便满足幂等或并发规则，但后续任务仍负责用独立验收证明这些行为；已经满足的行为不应再造一套实现。</p>
+<p>单个本地任务的示意内容：</p>
+<div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code># 01：本人取消与页面闭环
+What to build: 用户取消自己的未支付订单，并在页面与查询中看到结果。
+Blocked by: None
+Status: ready-for-agent
+- [ ] POST 取消动作返回 200，查询为 CANCELLED，version 增加一次。
+- [ ] 他人/不存在订单返回 404，原订单不变。
+- [ ] 保留认证与 CSRF；不要接受请求参数指定 owner。
+- [ ] 页面显示按钮与成功/错误反馈。
+- [ ] 基础测试和本任务新增 HTTP 验收测试通过。
+Context: .scratch/order-cancellation/spec.md；CONTEXT.md；相关 ADR。</code></pre></div>
+<p>默认文件位置形如 <code>.scratch/order-cancellation/issues/01-owner-cancellation.md</code>。检查任务是否能脱离聊天记录独立阅读，再启动新会话。</p>
+<h2 id="implementation">5. 执行第一张任务，取得一个真实红灯</h2>
+<div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code>$implement
+实现 .scratch/order-cancellation/issues/01-owner-cancellation.md。
+先读 AGENTS.md、任务、规格和领域资料。
+我们已确认测试 seam 为真实 HTTP + H2，不必重新确认同一个 seam。
+逐行为推进：先运行一个失败用例，再做使它通过的最小修改。
+沿用仓库约定：审查前先不要提交；审查包含工作区及未跟踪文件。
+给出实际测试命令与结果，不要把预期结果当成已执行结果。</code></pre></div>
+<p>如果想先体验红灯，回到 Learn-AI 根目录，将专门的 red 快照提取到另一个空目录：</p>
+<div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code>node scripts/matt-pocock-java-workshop.mjs red ../matt-orders-red
+cd ../matt-orders-red
+mvn -Dtest=CancellationHttpTest#cancelsUnpaidOrder test</code></pre></div>
+<p>red 快照只在基础项目上加一个新测试，没有取消实现。应出现“期待 200、实际 404”的业务失败。编译错误、Maven 下载错误、服务启动错误都不算这次红灯。回到真正的练习项目后再让 Agent 实现。</p>
+<h3 id="red-source">红灯快照的新增测试</h3>
+<details><summary><strong>src/test/java/study/orders/CancellationHttpTest.java</strong></summary><div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code data-stage="red" data-file="src/test/java/study/orders/CancellationHttpTest.java">package study.orders;
+
+import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+
+class CancellationHttpTest extends HttpFixture {
+    @Test void cancelsUnpaidOrder() throws Exception {
+        var response = send(alice, &quot;POST&quot;, &quot;/api/orders/101/cancel&quot;);
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(statusOf(alice, 101)).isEqualTo(&quot;CANCELLED&quot;);
+        assertThat(versionOf(alice, 101)).isEqualTo(1);
+    }
+}
+</code></pre></div></details>
+
+<h2 id="green">6. 用反馈推动实现，而不是一次补齐想象中的代码</h2>
+<p>一个合理实现会复用已存在的订单锁与状态迁移逻辑：先在事务中按 id 和 owner 查询并锁住行；如果已经是目标状态，直接返回；如果不是 UNPAID，报告冲突；否则更新状态并递增 version。外部 HTTP 请求通过 Spring 管理的 Bean 调用 <code>@Transactional</code> 方法。</p>
+<p>注意 Spring 的代理事务边界：本例 <code>cancel</code> 与 <code>pay</code> 都是 Controller 从外部调用的 public 方法；不要把事务注解仅放在被同类内部调用的私有方法上。</p>
+<div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code>mvn -Dtest=CancellationHttpTest#cancelsUnpaidOrder test
+mvn -Dtest=StarterHttpTest test
+# 完成三张任务后再执行完整测试
+mvn test</code></pre></div>
+<p>一次 red → green 验证一项行为，随后进入下一项。完成版快照汇总了最终测试，便于复核；它不是要求你在开发开始时一次写完全部测试。当前上游 tdd 的正文把重构安排到 review 阶段。</p>
+<h2 id="review-scope">7. 审查前先明确 diff 覆盖范围</h2>
+<p>固定提交中的 <code>implement</code> 要求审查后提交，而 <code>code-review</code> 默认使用三点式已提交 diff。两者直接照搬可能漏掉刚写的代码。本课在练习仓库的 <code>AGENTS.md</code> 显式适配：<strong>提交前审查 HEAD 到当前工作区的所有改动，并读取新增文件。</strong>这是课程适配，不是声称上游原版已经处理。</p>
+<div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code>git status --short
+git diff HEAD --stat
+git diff HEAD
+git ls-files --others --exclude-standard</code></pre></div>
+<p><code>git diff HEAD</code> 包含暂存与未暂存的已跟踪文件；最后一条列出它不包含的新增文件，审查时还要逐一读内容。不要把“diff 为空”直接解释为无问题。</p>
+<div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code>$code-review
+按本仓库 AGENTS.md 的提交前审查约定执行。
+规格是 .scratch/order-cancellation/spec.md，基线 HEAD。
+这次目标包含已跟踪改动和全部未跟踪文件；不要仅用 HEAD 的已提交 diff。
+Standards 与 Spec 分开报告；能够通过构建工具检查的机械规则交给工具。
+请注明实际审查了哪些文件、是否有没覆盖的范围。</code></pre></div>
+<p>支持子代理的宿主可以按原技能分两路审查；如果不可用，就明确采用顺序双轴检查，不能宣称已经进行了独立并行审查。对会影响交付的问题修复后重新运行相关测试；必要时再做全量测试。</p>
+<p>每张任务确认完成后，在练习仓库提交对应改动并更新任务状态。整项功能的已提交审查可以用 <code>git diff workshop-ready...HEAD</code>，同时确认工作区干净。多个不同基线不能在报告中混用。</p>
+<h2 id="reference-solution">8. 完成版参考答案与对照方式</h2>
+<p>先完成自己的实现，再提取参考答案到另一个空目录：</p>
+<div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code># 在 Learn-AI 根目录
+node scripts/matt-pocock-java-workshop.mjs complete ../matt-orders-answer
+cd ../matt-orders-answer
+mvn test
+mvn package
+# 同一终端设置两个 DEMO_*_PASSWORD 后运行
+java -jar target/order-workshop-1.0.0.jar</code></pre></div>
+<p>完成版由 starter + red + 以下四个覆盖文件构成，共 17 个文件。行锁负责串行化同一订单迁移；version 记录实际迁移次数，不是本例的乐观锁条件。</p>
+<details><summary><strong>src/main/java/study/orders/OrderService.java</strong></summary><div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code data-stage="complete" data-file="src/main/java/study/orders/OrderService.java">package study.orders;
+
+import java.util.List;
+import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+
+@Service
+public class OrderService {
+    private final JdbcTemplate jdbc;
+    private static final RowMapper&lt;OrderView&gt; ROW = (rs, row) -&gt; new OrderView(
+        rs.getLong(&quot;id&quot;), rs.getString(&quot;owner&quot;), rs.getString(&quot;status&quot;), rs.getLong(&quot;version&quot;));
+
+    public OrderService(JdbcTemplate jdbc) { this.jdbc = jdbc; }
+
+    public List&lt;OrderView&gt; list(String owner) {
+        return jdbc.query(&quot;SELECT * FROM customer_order WHERE owner = ? ORDER BY id&quot;, ROW, owner);
+    }
+
+    public OrderView get(long id, String owner) { return find(id, owner, false); }
+
+    @Transactional
+    public OrderView pay(long id, String owner) { return transition(id, owner, &quot;PAID&quot;); }
+
+    @Transactional
+    public OrderView cancel(long id, String owner) { return transition(id, owner, &quot;CANCELLED&quot;); }
+
+    private OrderView transition(long id, String owner, String target) {
+        OrderView current = find(id, owner, true);
+        if (current.status().equals(target)) return current;
+        if (!current.status().equals(&quot;UNPAID&quot;)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, &quot;STATE_CONFLICT&quot;);
+        }
+        jdbc.update(&quot;UPDATE customer_order SET status = ?, version = version + 1 WHERE id = ? AND owner = ?&quot;,
+            target, id, owner);
+        return find(id, owner, false);
+    }
+
+    private OrderView find(long id, String owner, boolean lock) {
+        List&lt;OrderView&gt; found = jdbc.query(
+            &quot;SELECT * FROM customer_order WHERE id = ? AND owner = ?&quot; + (lock ? &quot; FOR UPDATE&quot; : &quot;&quot;),
+            ROW, id, owner);
+        if (found.isEmpty()) throw new ResponseStatusException(HttpStatus.NOT_FOUND, &quot;ORDER_NOT_FOUND&quot;);
+        return found.getFirst();
+    }
+}
+</code></pre></div></details>
+<details><summary><strong>src/main/java/study/orders/OrderController.java</strong></summary><div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code data-stage="complete" data-file="src/main/java/study/orders/OrderController.java">package study.orders;
+
+import java.security.Principal;
+import java.util.List;
+import java.util.Map;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class OrderController {
+    private final OrderService orders;
+    public OrderController(OrderService orders) { this.orders = orders; }
+
+    @GetMapping(&quot;/api/csrf&quot;)
+    Map&lt;String, String&gt; csrf(CsrfToken token) {
+        return Map.of(&quot;headerName&quot;, token.getHeaderName(), &quot;token&quot;, token.getToken());
+    }
+
+    @GetMapping(&quot;/api/orders&quot;)
+    List&lt;OrderView&gt; list(Principal user) { return orders.list(user.getName()); }
+
+    @GetMapping(&quot;/api/orders/{id}&quot;)
+    OrderView get(@PathVariable long id, Principal user) { return orders.get(id, user.getName()); }
+
+    @PostMapping(&quot;/api/orders/{id}/cancel&quot;)
+    OrderView cancel(@PathVariable long id, Principal user) { return orders.cancel(id, user.getName()); }
+
+    @PostMapping(&quot;/api/orders/{id}/pay&quot;)
+    OrderView pay(@PathVariable long id, Principal user) { return orders.pay(id, user.getName()); }
+}
+</code></pre></div></details>
+<details><summary><strong>src/main/resources/static/app.js</strong></summary><div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code data-stage="complete" data-file="src/main/resources/static/app.js">const message = document.getElementById(&#x27;message&#x27;);
+let csrf;
+async function request(url, method = &#x27;GET&#x27;) {
+  const response = await fetch(url, {
+    method,
+    headers: method === &#x27;GET&#x27; ? {} : { [csrf.headerName]: csrf.token },
+    credentials: &#x27;same-origin&#x27;
+  });
+  if (response.redirected || response.status === 401) {
+    location.assign(&#x27;/login&#x27;);
+    throw new Error(&#x27;请重新登录&#x27;);
+  }
+  if (!response.ok) throw new Error(`请求失败：HTTP ${response.status}`);
+  return response.status === 204 ? null : response.json();
+}
+async function loadOrders() {
+  const orders = await request(&#x27;/api/orders&#x27;);
+  const body = document.getElementById(&#x27;orders&#x27;);
+  body.replaceChildren();
+  for (const order of orders) {
+    const row = document.createElement(&#x27;tr&#x27;);
+    for (const value of [order.id, order.owner, order.status, order.version]) {
+      const cell = document.createElement(&#x27;td&#x27;);
+      cell.textContent = String(value);
+      row.append(cell);
+    }
+    const actions = document.createElement(&#x27;td&#x27;);
+    addAction(actions, order, &#x27;pay&#x27;, &#x27;模拟支付&#x27;, order.status === &#x27;UNPAID&#x27;);
+    addAction(actions, order, &#x27;cancel&#x27;, &#x27;取消订单&#x27;, [&#x27;UNPAID&#x27;, &#x27;CANCELLED&#x27;].includes(order.status));
+    row.append(actions);
+    body.append(row);
+  }
+}
+function addAction(cell, order, action, label, enabled) {
+  const button = document.createElement(&#x27;button&#x27;);
+  button.textContent = label;
+  button.disabled = !enabled;
+  button.addEventListener(&#x27;click&#x27;, async () =&gt; {
+    button.disabled = true;
+    try {
+      const result = await request(`/api/orders/${order.id}/${action}`, &#x27;POST&#x27;);
+      message.textContent = `订单 ${result.id}：${result.status}，版本 ${result.version}`;
+    } catch (error) { message.textContent = error.message; }
+    finally { await loadOrders().catch(error =&gt; { message.textContent = error.message; }); }
+  });
+  cell.append(button);
+}
+document.getElementById(&#x27;refresh&#x27;).addEventListener(&#x27;click&#x27;, () =&gt; {
+  loadOrders().catch(error =&gt; { message.textContent = error.message; });
+});
+document.getElementById(&#x27;logout&#x27;).addEventListener(&#x27;click&#x27;, async () =&gt; {
+  if (!csrf) return;
+  await fetch(&#x27;/logout&#x27;, { method: &#x27;POST&#x27;, headers: { [csrf.headerName]: csrf.token } });
+  location.assign(&#x27;/login&#x27;);
+});
+(async () =&gt; {
+  csrf = await request(&#x27;/api/csrf&#x27;);
+  await loadOrders();
+})().catch(error =&gt; { message.textContent = error.message; });
+</code></pre></div></details>
+<details><summary><strong>src/test/java/study/orders/CancellationHttpTest.java</strong></summary><div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code data-stage="complete" data-file="src/test/java/study/orders/CancellationHttpTest.java">package study.orders;
+
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
+
+class CancellationHttpTest extends HttpFixture {
+    @Test void cancelsUnpaidOrder() throws Exception {
+        var response = send(alice, &quot;POST&quot;, &quot;/api/orders/101/cancel&quot;);
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(statusOf(alice, 101)).isEqualTo(&quot;CANCELLED&quot;);
+        assertThat(versionOf(alice, 101)).isEqualTo(1);
+    }
+
+    @Test void repeatedCancellationKeepsSameVersion() throws Exception {
+        assertThat(send(alice, &quot;POST&quot;, &quot;/api/orders/101/cancel&quot;).statusCode()).isEqualTo(200);
+        assertThat(send(alice, &quot;POST&quot;, &quot;/api/orders/101/cancel&quot;).statusCode()).isEqualTo(200);
+        assertThat(versionOf(alice, 101)).isEqualTo(1);
+    }
+
+    @Test void paidOrderCannotBeCancelled() throws Exception {
+        var response = send(alice, &quot;POST&quot;, &quot;/api/orders/102/cancel&quot;);
+        assertThat(response.statusCode()).isEqualTo(409);
+        String reason = json(response, &quot;$.detail&quot;);
+        assertThat(reason).isEqualTo(&quot;STATE_CONFLICT&quot;);
+        assertThat(statusOf(alice, 102)).isEqualTo(&quot;PAID&quot;);
+        assertThat(versionOf(alice, 102)).isZero();
+    }
+
+    @Test void cannotCancelSomeoneElsesOrder() throws Exception {
+        assertThat(send(bob, &quot;POST&quot;, &quot;/api/orders/101/cancel&quot;).statusCode()).isEqualTo(404);
+        assertThat(statusOf(alice, 101)).isEqualTo(&quot;UNPAID&quot;);
+        assertThat(versionOf(alice, 101)).isZero();
+    }
+
+    @Test void nonexistentOrderIsNotFound() throws Exception {
+        assertThat(send(alice, &quot;POST&quot;, &quot;/api/orders/999/cancel&quot;).statusCode()).isEqualTo(404);
+    }
+
+    @Test void cancellationRequiresCsrf() throws Exception {
+        assertThat(send(alice, &quot;POST&quot;, &quot;/api/orders/101/cancel&quot;, false).statusCode()).isEqualTo(403);
+        assertThat(statusOf(alice, 101)).isEqualTo(&quot;UNPAID&quot;);
+    }
+
+    @Test void cannotPayAfterCancellation() throws Exception {
+        assertThat(send(alice, &quot;POST&quot;, &quot;/api/orders/101/cancel&quot;).statusCode()).isEqualTo(200);
+        assertThat(send(alice, &quot;POST&quot;, &quot;/api/orders/101/pay&quot;).statusCode()).isEqualTo(409);
+        assertThat(statusOf(alice, 101)).isEqualTo(&quot;CANCELLED&quot;);
+        assertThat(versionOf(alice, 101)).isEqualTo(1);
+    }
+
+    @Test void concurrentCancellationsAreIdempotent() throws Exception {
+        assertThat(race(&quot;cancel&quot;, &quot;cancel&quot;)).containsExactlyInAnyOrder(200, 200);
+        assertThat(statusOf(alice, 101)).isEqualTo(&quot;CANCELLED&quot;);
+        assertThat(versionOf(alice, 101)).isEqualTo(1);
+    }
+
+    @RepeatedTest(5) void paymentAndCancellationHaveOneWinner() throws Exception {
+        assertThat(race(&quot;pay&quot;, &quot;cancel&quot;)).containsExactlyInAnyOrder(200, 409);
+        assertThat(statusOf(alice, 101)).isIn(&quot;PAID&quot;, &quot;CANCELLED&quot;);
+        assertThat(versionOf(alice, 101)).isEqualTo(1);
+    }
+
+    private List&lt;Integer&gt; race(String first, String second) throws Exception {
+        // Separate authenticated sessions allow two real HTTP requests to race.
+        Actor otherSession = actor(&quot;alice&quot;, &quot;alice-test-only&quot;);
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try (var pool = Executors.newVirtualThreadPerTaskExecutor()) {
+            var a = pool.submit(() -&gt; {
+                ready.countDown();
+                if (!start.await(5, TimeUnit.SECONDS)) throw new IllegalStateException(&quot;start timeout&quot;);
+                return send(alice, &quot;POST&quot;, &quot;/api/orders/101/&quot; + first).statusCode();
+            });
+            var b = pool.submit(() -&gt; {
+                ready.countDown();
+                if (!start.await(5, TimeUnit.SECONDS)) throw new IllegalStateException(&quot;start timeout&quot;);
+                return send(otherSession, &quot;POST&quot;, &quot;/api/orders/101/&quot; + second).statusCode();
+            });
+            if (!ready.await(5, TimeUnit.SECONDS)) throw new IllegalStateException(&quot;ready timeout&quot;);
+            start.countDown();
+            return List.of(a.get(15, TimeUnit.SECONDS), b.get(15, TimeUnit.SECONDS));
+        }
+    }
+}
+</code></pre></div></details>
+
+<h2 id="verification">9. 实际验证记录与手工验收</h2>
+<!-- VERIFIED-RESULTS -->
+<p><strong>执行日期：</strong>2026-09-16；macOS arm64，JDK 25.0.2，Maven 3.9.12，Spring Boot 4.0.8。测试对象均由本教程 HTML 提取，未使用另行维护的源码副本。</p>
+<div class="table-wrap"><table><thead><tr><th>对象</th><th>实际执行</th><th>实际结果</th></tr></thead><tbody>
+<tr><td>starter 基础版</td><td><code>mvn test</code></td><td>6 项测试通过；0 失败、0 错误。</td></tr>
+<tr><td>red 失败快照</td><td><code>mvn -Dtest=CancellationHttpTest#cancelsUnpaidOrder test</code></td><td>1 项按预期失败：expected 200 / actual 404。不是编译或启动失败。</td></tr>
+<tr><td>complete 完成版</td><td><code>mvn package</code></td><td>19 项测试通过，其中取消相关 13 次执行包含 5 次支付/取消竞争；可执行 JAR 打包成功。</td></tr>
+<tr><td>真实浏览器</td><td>表单登录、取消、重复取消、刷新、注销、换用户</td><td>alice 的 101 变为 CANCELLED / version 1，重复取消与刷新保持不变；bob 只看见 103。</td></tr>
+<tr><td>页面与提取器</td><td>浏览器阅读、代码展开、站点链接校验、提取器测试</td><td>桌面与窄屏阅读已检查；源码可提取，拒绝覆盖、目录穿越与写入知识库。</td></tr>
+</tbody></table></div>
+<p>上述 Maven 命令在本机执行时还传入临时 <code>-gs</code>、<code>-s</code> 和 <code>-Dmaven.repo.local</code> 参数：本机原有全局镜像下载失败，验证改用 Maven Central 与临时缓存，没有修改用户原有 Maven 配置。具体恢复命令见安装页“镜像故障恢复”。</p>
+<p><strong>验证中实际修正的问题：</strong>最初测试仅携带 Basic 凭据，缺少 CSRF 时返回 401；最终测试改为完整表单登录并保存 Cookie，在登录后重新获取 CSRF token，确认已登录无 token 请求返回 403。最终示例只使用会话认证，CSRF 防护保持启用。</p>
+<p><strong>验证边界：</strong>并发测试在真实 HTTP + H2 环境中执行；未验证其他数据库或分布式支付。示范提示词没有被包装成真实访谈记录；这里也没有宣称已运行 Matt 技能的双子代理审查或统计其成功率。</p>
+<!-- END-VERIFIED-RESULTS -->
+<p><strong>自己操作时再走一遍：</strong>alice 登录 → 取消 101 → 状态变 CANCELLED、version 为 1 → 再次取消版本不变 → 刷新仍为 CANCELLED → 注销后以 bob 登录，只能看到 103。浏览器按钮不能代替服务器的授权与状态检查。</p>
+<p><strong>本地运行形态：</strong>Spring Boot 可执行 JAR + 文件 H2，绑定回环地址；同一个开发数据库只启动一个实例。迁移到生产环境需要生产身份系统、TLS、外部数据库迁移、连接池与锁超时策略、审计及目标数据库验收。本课没有把 H2 测试结果扩张为生产部署证明。</p>
+<h2 id="recover">10. 偏离流程时怎样恢复</h2>
+<div class="table-wrap"><table><thead><tr><th>偏差</th><th>恢复方式</th></tr></thead><tbody><tr><td>Agent 跳过访谈直接编码</td><td>先检查业务表是否都已决定；缺失的决定回到 grill-with-docs，已清楚的事实不用重复问。</td></tr><tr><td>to-spec 重新问了一整轮需求</td><td>指向已确认的规格素材；只补真正缺失的决定。测试 seam 已确认时直接引用。</td></tr><tr><td>任务只写“实现 Service”</td><td>要求以一个可通过 HTTP/界面验收的行为重新拆分。</td></tr><tr><td>测试 mock 了整个 Service</td><td>恢复真实 HTTP + H2 seam，保留数据库夹具准备，但通过接口断言状态。</td></tr><tr><td>并发测试只顺序调用两个接口</td><td>增加同步起跑的两个真实请求；同时检查结果组合、最终状态和版本。</td></tr><tr><td>出现 session/token 错误</td><td>分别检查认证 Cookie 与 CSRF token；不要用关闭安全功能让测试通过。</td></tr><tr><td>审查说没有 diff</td><td>核对基线、未提交改动和未跟踪文件。</td></tr><tr><td>上下文快满了</td><td>先让任务、规格和关键决定落到持久产物；在阶段边界交接，下一会话读取明确路径。</td></tr></tbody></table></div>
+<h2 id="参考资料">参考资料</h2><ul><li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/grill-with-docs/SKILL.md" target="_blank" rel="noopener noreferrer">grill-with-docs 源码</a></li><li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/domain-modeling/SKILL.md" target="_blank" rel="noopener noreferrer">domain-modeling 源码</a></li><li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/to-spec/SKILL.md" target="_blank" rel="noopener noreferrer">to-spec 源码</a></li><li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/to-tickets/SKILL.md" target="_blank" rel="noopener noreferrer">to-tickets 源码</a></li><li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/implement/SKILL.md" target="_blank" rel="noopener noreferrer">implement 源码</a></li><li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/tdd/SKILL.md" target="_blank" rel="noopener noreferrer">tdd 源码</a></li><li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/code-review/SKILL.md" target="_blank" rel="noopener noreferrer">code-review 源码</a></li><li><a href="https://git-scm.com/docs/git-diff" target="_blank" rel="noopener noreferrer">Git：工作区、暂存区与提交比较</a></li><li><a href="https://docs.spring.io/spring-framework/reference/data-access/jdbc/core.html" target="_blank" rel="noopener noreferrer">Spring JDBC：参数化查询与更新</a></li><li><a href="https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/annotations.html" target="_blank" rel="noopener noreferrer">Spring：声明式事务与代理调用</a></li></ul><p>核验日期：2026-09-16。源码以固定提交为准，外部产品文档可能继续更新。</p>
+
+</article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/codex/2026-09-16-Matt-Pocock-Skills订单取消实战教程.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="2026-09-16-Matt-Pocock-Skills安装与Java练习环境.html"><small>上一篇</small><span>Matt Pocock Skills 安装与 Java 练习环境</span></a>
+        <a class="pager-link next" href="2026-09-16-Matt-Pocock-Skills工作流详解.html"><small>下一篇</small><span>Matt Pocock Skills：整套工作流、原理与教程设计</span></a>
+      </nav>
+    </footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#contract">1. 先给出业务目标，逐轮解决分歧</a></li><li class="toc-level-2"><a href="#domain-artifacts">2. 观察领域知识怎样沉淀</a></li><li class="toc-level-2"><a href="#specification">3. 从讨论生成规格</a></li><li class="toc-level-2"><a href="#ticket-plan">4. 拆成三张能验收的任务</a></li><li class="toc-level-2"><a href="#implementation">5. 执行第一张任务，取得一个真实红灯</a></li><li class="toc-level-3"><a href="#red-source">红灯快照的新增测试</a></li><li class="toc-level-2"><a href="#green">6. 用反馈推动实现，而不是一次补齐想象中的代码</a></li><li class="toc-level-2"><a href="#review-scope">7. 审查前先明确 diff 覆盖范围</a></li><li class="toc-level-2"><a href="#reference-solution">8. 完成版参考答案与对照方式</a></li><li class="toc-level-2"><a href="#verification">9. 实际验证记录与手工验收</a></li><li class="toc-level-2"><a href="#recover">10. 偏离流程时怎样恢复</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div></body></html>

@@ -73,6 +73,16 @@ git diff --check
 
 `verify-site.mjs` 会检查根入口、本地链接、资源路径、片段锚点、重复 ID、知识页元数据、语义标签、根路径引用和外部链接安全属性。最后两条生成检查保证入口与导航已经提交且可重复生成。
 
+## Matt Pocock Skills Java 实操
+
+从[工作流总览](public/notes/codex/2026-09-16-Matt-Pocock-Skills工作流详解.html)进入安装环境、订单取消实战和原理说明。Java 25 / Spring Boot 4.0.8 示例直接维护在 HTML 代码块中，可提取到知识库外的空目录：
+
+```bash
+node scripts/matt-pocock-java-workshop.mjs starter ../matt-orders-lab
+```
+
+将 `starter` 换成 `red` 可取得只加入一个失败用例的快照，换成 `complete` 可取得完成版。提取器不会覆盖已有目录内容。进入生成目录执行 `mvn test`；安装技能、启动服务和验证步骤见教程。Maven 验证需要 Java 25、Maven 及依赖下载能力，站点的 Node.js 检查不代替 Java 集成测试。
+
 ## GitHub Pages 部署
 
 仓库不使用自定义 Actions workflow，直接从 `main` 分支发布：

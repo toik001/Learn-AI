@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="基于 Matt Pocock skills 官方源码，梳理需求访谈、领域建模、规格、任务拆分、TDD 与审查工作流，解释原理并讨论 Java 实操教程方案。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="Codex 与 AI 工程">
+  <meta name="study-date" content="2026-09-16">
+  <title>Matt Pocock Skills：整套工作流、原理与教程设计｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
+  <div class="topbar-actions"><button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button><button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button></div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <div class="sidebar-category-summary">
+      <span class="eyebrow">当前分类</span>
+      <a class="sidebar-category-link" href="../../../index.html#category-codex-与-ai-工程-1ubbp3w">
+        <strong>Codex 与 AI 工程</strong>
+        <small>15 篇文档</small>
+      </a>
+    </div>
+    <nav class="doc-nav" aria-label="当前分类文档">
+      <a class="doc-nav-item" href="2026-07-24-AI开发工作流选型与小团队沉淀指南.html"><span>AI 开发工作流选型与小团队沉淀指南</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC详细介绍.html"><span>AIDLC 详细介绍：从 AI 辅助编码到可审计的软件交付生命周期</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-AIDLC与Superpowers差异分析.html"><span>AIDLC 与 Superpowers 差异分析：生命周期治理与工程 Inner Loop</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-Codex全栈开发最佳实践.html"><span>Codex 全栈开发最佳实践：Vibe Coding、Harness 与 Loop</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-OpenSpec-Superpowers-CI-Codex-CLI实战教程.html"><span>OpenSpec + Superpowers + CI：Codex CLI 全栈实战教程</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-Superpowers大型Java微服务Monorepo使用指南.html"><span>Superpowers 大型 Java 微服务 Monorepo 使用指南</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-24-Superpowers详细介绍.html"><span>Superpowers 详细介绍：Codex 的技能化软件开发方法</span><small>2026-07-24</small></a><a class="doc-nav-item" href="2026-07-28-Codex官方原生项目开发最佳路径.html"><span>Codex 官方原生项目开发最佳路径</span><small>2026-07-28</small></a><a class="doc-nav-item" href="2026-08-07-Harness-Loop-Graph与Codex-Superpowers开发模式.html"><span>Harness、Loop、Graph 与 Codex + Superpowers 开发模式</span><small>2026-08-07</small></a><a class="doc-nav-item" href="2026-08-31-OpenSpec-Apply与Superpowers对比.html"><span>OpenSpec + Apply 与 Superpowers：大型项目执行流程对比</span><small>2026-08-31</small></a><a class="doc-nav-item" href="2026-08-31-OpenSpec与Codex原生大型项目开发流程.html"><span>OpenSpec + Codex 原生：大型项目开发流程与 Superpowers 差异</span><small>2026-08-31</small></a><a class="doc-nav-item" href="2026-09-16-Matt-Pocock-Skills安装与Java练习环境.html"><span>Matt Pocock Skills 安装与 Java 练习环境</span><small>2026-09-16</small></a><a class="doc-nav-item" href="2026-09-16-Matt-Pocock-Skills订单取消实战教程.html"><span>Matt Pocock Skills 订单取消实战教程</span><small>2026-09-16</small></a><a class="doc-nav-item is-active" href="2026-09-16-Matt-Pocock-Skills工作流详解.html" aria-current="page"><span>Matt Pocock Skills：整套工作流、原理与教程设计</span><small>2026-09-16</small></a><a class="doc-nav-item" href="2026-09-16-Matt-Pocock-Skills工作流原理与设计取舍.html"><span>Matt Pocock Skills 工作流原理与设计取舍</span><small>2026-09-16</small></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta"><a href="../../../index.html">知识库首页</a><span>·</span><span>Codex 与 AI 工程</span><span>·</span><time datetime="2026-09-16">2026-09-16</time></div>
+    <article class="markdown-body">
+
+<h1 id="matt-pocock-skills">Matt Pocock Skills：整套工作流、原理与教程设计</h1>
+<blockquote><p><strong>阅读目标：</strong>先理解这套工作流怎样组织 AI 开发，再讨论如何制作适合 Java 开发者的使用教程与原理说明。</p><p><strong>核验日期：</strong>2026-09-16。源码快照 <code>959a8e9</code>，提交时间 2026-09-15 UTC；该快照的 Claude 插件清单版本为 <code>1.2.3</code>。这里描述的是固定提交，不保证今后的安装结果与本文完全一致。</p><p><strong>本次范围：</strong>本页提供介绍和路线导航；配套教程已生成独立练习环境、订单取消实战与原理说明。真实代码验证记录见实战页；示范提示词不代表已经执行过整套 Agent 会话。</p></blockquote>
+<nav aria-label="快速阅读"><a href="#核心结论">核心结论</a> · <a href="#主线流程">主线流程</a> · <a href="#技能地图">技能地图</a> · <a href="#工作原理">工作原理</a> · <a href="#java案例">Java 案例</a> · <a href="#教程方案">教程方案</a> · <a href="#参考资料">参考资料</a></nav>
+
+<h2 id="核心结论">核心结论</h2>
+<ol>
+<li><strong>研究对象是 Matt Pocock 的官方 <code>mattpocock/skills</code>。</strong>它把需求澄清、领域建模、任务拆分、测试和审查等工程做法写成可组合的 Agent Skills。主流程由人选择阶段，Agent 在阶段内部执行具体工作。<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/README.md" target="_blank" rel="noopener noreferrer">官方 README</a></li>
+<li><strong>常见大需求路线：</strong><code>setup → grill-with-docs → to-spec → to-tickets → implement</code>，其中实现阶段调用 <code>tdd</code> 和 <code>code-review</code>。小功能可在澄清后直接 <code>implement</code>；跨很多会话且尚不清晰的大项目，先走 <code>wayfinder</code>。<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/ask-matt/SKILL.md" target="_blank" rel="noopener noreferrer">ask-matt</a></li>
+<li><strong>值得学的是五种约束：</strong>先消除歧义；保持统一术语；按完整行为切任务；用真实反馈修正实现；把需求符合性与代码质量分开审查。</li>
+<li><strong>技能正文是给模型执行的操作规程。</strong>真正读文件、运行命令、访问 Issue、调用子代理的是宿主 Agent。执行效果仍取决于模型、工具权限、项目测试及人工决策。<a href="https://developers.openai.com/plugins/concepts/skills" target="_blank" rel="noopener noreferrer">OpenAI：Skills 概念</a></li>
+<li><strong>教程应固定源码版本。</strong>当前实现与旧文章已有差别，包括命名、访谈节奏和 TDD 的重构时机。本文把源码事实、教学解释和个人建议分开标注。</li>
+</ol>
+
+<h2 id="版本变化">先对齐版本：旧教程为什么看起来不一样</h2>
+<p>Matt 的早期官方介绍仍可看到 <code>domain-model → to-prd → to-issues → tdd</code>。它能帮助理解思路，但具体操作应以当前技能文件及变更记录为准。<a href="https://www.aihero.dev/skills-post" target="_blank" rel="noopener noreferrer">Matt 早期官方工作流介绍</a> <a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/CHANGELOG.md" target="_blank" rel="noopener noreferrer">官方变更记录</a></p>
+<div class="table-wrap"><table><thead><tr><th>旧文章或旧版本常见写法</th><th>本次核对的当前形态</th><th>阅读时如何理解</th></tr></thead><tbody>
+<tr><td><code>domain-model</code></td><td><code>grill-with-docs</code> 配合 <code>domain-modeling</code></td><td>按职责对应理解，不能简单假设只是改名；现在访谈与领域知识维护是两个可复用能力。</td></tr>
+<tr><td><code>to-prd</code></td><td><code>to-spec</code></td><td>变更记录明确说明改名，规格仍包含问题、方案、用户故事、实现与测试决策。</td></tr>
+<tr><td><code>to-plan</code>、<code>to-issues</code></td><td><code>to-tickets</code></td><td>已合并，任务支持本地文件或外部任务系统，并写明依赖。</td></tr>
+<tr><td>一次问一个问题</td><td>按依赖关系分轮提问</td><td>每轮询问前置条件已明确的所有问题；依赖本轮答案的问题放到下一轮。</td></tr>
+<tr><td>TDD 红 → 绿 → 重构</td><td>当前技能正文：红 → 绿；重构归入 review 阶段</td><td>这是该版本的安排，不应写成所有 TDD 实践的统一定义。README 的介绍性文字仍保留旧说法。</td></tr>
+<tr><td><code>implement-spec</code> 自动跑完整规格</td><td>位于 <code>in-progress/</code></td><td>不能把实验性并行执行能力写成稳定主线的默认行为。</td></tr>
+</tbody></table></div>
+<p>核对依据：<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/productivity/grilling/SKILL.md" target="_blank" rel="noopener noreferrer">grilling</a>、<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/tdd/SKILL.md" target="_blank" rel="noopener noreferrer">tdd</a>、<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/in-progress/README.md" target="_blank" rel="noopener noreferrer">实验技能范围</a>。作者网站与 README 能说明定位；精确行为以这次固定提交里的对应 <code>SKILL.md</code> 为依据。</p>
+
+<h2 id="主线流程">主线流程：从模糊想法到可验证的代码</h2>
+<div class="diagram-lane" role="img" aria-label="先配置；澄清后，小功能直接实现，大需求经过规格和任务拆分再实现；实现阶段通过测试与双轴审查交付。">
+<strong>按需求大小选择路径</strong>
+<div class="agent-step">首次使用：setup-matt-pocock-skills</div>
+<div class="agent-step">grill-with-docs：澄清目标、术语、边界和决策</div>
+<div class="agent-step">小功能 → implement<br>跨会话需求 → to-spec → to-tickets → 逐任务 implement</div>
+<div class="agent-step">实现内部：TDD 红 → 绿 → code-review → 处理发现的问题 → 验证</div>
+</div>
+<p>这是阅读导航，代表建议的阶段关系，并非输入第一条命令后自动串完全部阶段的脚本。当前路由技能 <code>ask-matt</code> 用于建议你选哪条路线。<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/ask-matt/SKILL.md" target="_blank" rel="noopener noreferrer">ask-matt</a></p>
+
+<h3 id="setup">1. setup：让所有技能遵守项目的实际约定</h3>
+<p><code>setup-matt-pocock-skills</code> 先检查仓库已有配置，再确定任务放在哪里、标签怎么映射、术语表和 ADR 怎么布局。当前有 GitHub、GitLab、本地 Markdown 模板；其他系统可以记录自定义操作方式。其输出包括项目规则中的入口指针，以及任务系统、领域文档、可选分诊标签的说明。<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/setup-matt-pocock-skills/SKILL.md" target="_blank" rel="noopener noreferrer">setup-matt-pocock-skills</a></p>
+<p>对 Java 开发者，可以类比为“为一组业务服务提供共享配置”：后面的技能不用各自猜测该调用哪个任务系统。但 setup 是提示词驱动的配置流程，不是具备事务回滚保证的安装程序。安装技能文件与运行项目 setup 是两个步骤。</p>
+
+<h3 id="grill">2. grill-with-docs：把「我大概想要」变成共同理解</h3>
+<p>例如你说“给订单加取消功能”，Agent 需要弄清楚：取消与退款是否相同；哪些状态可取消；谁能操作；重复请求如何处理；支付与取消同时发生时谁成功。</p>
+<p>当前 <code>grill-with-docs</code> 的正文非常短：组合 <code>grilling</code> 与 <code>domain-modeling</code>。前者推进决策树，后者核对代码与业务术语，并及时更新术语表和必要的 ADR。两者组合让访谈的结果能延续到后续会话。<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/grill-with-docs/SKILL.md" target="_blank" rel="noopener noreferrer">grill-with-docs</a> <a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/domain-modeling/SKILL.md" target="_blank" rel="noopener noreferrer">domain-modeling</a></p>
+<p><strong>职责分工：</strong>项目已有状态枚举、数据库约束等事实由 Agent 查；取消政策、业务范围等决策由你定。当前访谈会给出推荐答案，但需要真实用户回答，不能让 Agent 自问自答充当需求确认。</p>
+
+<h3 id="spec">3. to-spec：把讨论固化成可检查的规格</h3>
+<p><code>to-spec</code> 从已有讨论形成问题说明、解决方案、用户故事、实现决策、测试决策和范围边界。原则上不再重新进行完整需求访谈，但当前正文要求核对测试所经过的公开接口，即测试切入点（seam）。随后将规格发布到已配置的任务系统。<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/to-spec/SKILL.md" target="_blank" rel="noopener noreferrer">to-spec</a></p>
+<p>这里的 Spec 也不能简单等同于“全部代码实现步骤”。它优先约定用户能得到什么、接口与状态如何表现、哪些情况不在本次范围。源码要求避免散布容易过期的具体文件路径和代码片段；原型中能精准表达决策的少量代码是例外。</p>
+
+<h3 id="tickets">4. to-tickets：把需求切成能交付的完整行为</h3>
+<p><strong>垂直切片（vertical slice）</strong>的意思是：一个任务足以穿过必要的数据、后端、前端与测试层，交付一小段完整能力。后端项目没有前端时，可以用 API 与验收测试完成这一条路径，无需为了形式新增界面。</p>
+<p>比如“用户取消一笔未支付订单并看见取消结果”比“先建全部表、再写全部 Service、最后补全部页面”更适合作为第一个实现任务。后者的每一层完成后仍难以验证真实使用效果。</p>
+<p>每个任务写明验收条件和 <code>Blocked by</code>，大小以一个新的上下文窗口能够完成为目标。拆分先供你审阅，再写入任务系统。当前本地模式一任务一文件；宽范围机械重构则允许采用 expand–contract：先兼容新旧形式，再分批迁移，最后删除旧形式。<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/to-tickets/SKILL.md" target="_blank" rel="noopener noreferrer">to-tickets</a></p>
+
+<h3 id="implement">5. implement：以一个行为为单位获取反馈</h3>
+<p><code>implement</code> 从规格或任务出发，在约定好的 seam 上尽可能使用 <code>tdd</code>；过程中常做类型检查和单文件测试，最后执行全量测试，完成后调用 <code>code-review</code>。当前技能还包含提交到当前分支的指令。教程应事先明确分支与提交约定。<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/implement/SKILL.md" target="_blank" rel="noopener noreferrer">implement</a></p>
+<p><code>tdd</code> 要求每个周期只处理一个切片：先证明测试能失败，再补足使它通过的代码。测试观察公开接口的行为，避免把内部类之间的调用次数、私有方法结构当成业务正确性的替代品。当前版本把重构安排到审查阶段。<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/tdd/SKILL.md" target="_blank" rel="noopener noreferrer">tdd</a></p>
+<p><strong>Java 适配建议：</strong>“类型检查”对应现有 Maven/Gradle 编译与静态检查；测试可以选业务接口测试、HTTP 集成测试或真实数据库集成测试，具体取决于验收行为。不要把 TypeScript 生态的命令机械换名后就当成完整 Java 教程。</p>
+
+<h3 id="review">6. code-review：把「做得对」与「做的是对的需求」分开</h3>
+<div class="table-wrap"><table><thead><tr><th>审查轴</th><th>主要对照</th><th>订单取消例子</th></tr></thead><tbody>
+<tr><td>Standards</td><td>仓库编码约定与代码异味启发式</td><td>命名不清、重复状态判断、为未要求的能力加入抽象。</td></tr>
+<tr><td>Spec</td><td>原始 Issue 或规格</td><td>遗漏幂等行为；允许取消已发货订单；额外实现未授权的退款。</td></tr>
+</tbody></table></div>
+<p>当前技能安排两个子代理分别审查，保留各轴报告；没有规格时，Spec 轴应明确跳过。这样可以减少“代码很整洁，因此需求肯定正确”的判断混淆，但不能保证两个模型完全独立或审查绝无遗漏。<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/code-review/SKILL.md" target="_blank" rel="noopener noreferrer">code-review</a></p>
+
+<h2 id="技能地图">整套技能地图：哪些每天用，哪些按场景用</h2>
+<p>按固定提交的插件清单统计，正式打包的是 <strong>25 个技能：18 个工程技能 + 7 个生产力技能</strong>。仓库另外有 <code>misc/</code> 与 <code>in-progress/</code>；它们不等于正式插件的默认能力。此处的“手动入口 / 可自动选用”描述作者的调用设计，实际还要看宿主支持。<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/.claude-plugin/plugin.json" target="_blank" rel="noopener noreferrer">正式插件清单</a></p>
+<div class="table-wrap"><table><thead><tr><th>工程技能</th><th>调用定位</th><th>解决的问题</th></tr></thead><tbody>
+<tr><td><code>ask-matt</code></td><td>手动入口</td><td>不知道该用哪个技能时，查看路线建议。</td></tr>
+<tr><td><code>setup-matt-pocock-skills</code></td><td>手动入口</td><td>建立项目共用配置。</td></tr>
+<tr><td><code>grill-with-docs</code></td><td>手动入口</td><td>访谈与领域文档同步推进。</td></tr>
+<tr><td><code>to-spec</code></td><td>手动入口</td><td>将已经讨论清楚的内容固化为规格。</td></tr>
+<tr><td><code>to-tickets</code></td><td>手动入口</td><td>拆分可验证任务，并记录依赖。</td></tr>
+<tr><td><code>implement</code></td><td>手动入口</td><td>驱动实现、测试、审查和提交。</td></tr>
+<tr><td><code>triage</code></td><td>手动入口</td><td>评估外部报告与请求，形成 Agent 可接手的说明。</td></tr>
+<tr><td><code>wayfinder</code></td><td>手动入口</td><td>将巨大且模糊的问题变成跨会话决策地图。</td></tr>
+<tr><td><code>improve-codebase-architecture</code></td><td>手动入口</td><td>寻找架构摩擦点，先产出 HTML 候选报告。</td></tr>
+<tr><td><code>prototype</code></td><td>可自动选用</td><td>用可运行原型回答一个状态、逻辑或界面问题。</td></tr>
+<tr><td><code>research</code></td><td>可自动选用</td><td>通过后台 Agent 查一手来源并留下可引用的研究产物。</td></tr>
+<tr><td><code>diagnosing-bugs</code></td><td>可自动选用</td><td>构建能抓住具体故障的复现反馈循环。</td></tr>
+<tr><td><code>tdd</code></td><td>可自动选用</td><td>行为测试、seam 与红绿循环的纪律。</td></tr>
+<tr><td><code>domain-modeling</code></td><td>可自动选用</td><td>维护业务语言，澄清概念和必要的决策。</td></tr>
+<tr><td><code>codebase-design</code></td><td>可自动选用</td><td>深模块、接口、seam 和适配器的共同设计语言。</td></tr>
+<tr><td><code>code-review</code></td><td>可自动选用</td><td>Standards + Spec 双轴审查。</td></tr>
+<tr><td><code>resolving-merge-conflicts</code></td><td>可自动选用</td><td>追溯双方改动意图后处理合并或变基冲突。</td></tr>
+<tr><td><code>wizard</code></td><td>可自动选用</td><td>把确需人操作的外部配置步骤制作成交互式向导。</td></tr>
+</tbody></table></div>
+<div class="table-wrap"><table><thead><tr><th>生产力技能</th><th>调用定位</th><th>解决的问题</th></tr></thead><tbody>
+<tr><td><code>grill-me</code></td><td>手动入口</td><td>对计划进行访谈；本身不维护项目术语表。</td></tr>
+<tr><td><code>handoff</code></td><td>手动入口</td><td>写入临时目录的交接文档，指向已有产物。</td></tr>
+<tr><td><code>teach</code></td><td>手动入口</td><td>用学习目标、学习记录和 HTML 课程延续多次教学。</td></tr>
+<tr><td><code>to-questionnaire</code></td><td>手动入口</td><td>信息在别人手上时，制作针对那个人的问题清单。</td></tr>
+<tr><td><code>wait-what</code></td><td>手动入口</td><td>没听懂上一段解释时，补上必要背景并重新表述。</td></tr>
+<tr><td><code>grilling</code></td><td>可自动选用</td><td>多个工作流复用的访谈机制。</td></tr>
+<tr><td><code>writing-for-agents</code></td><td>可自动选用</td><td>设计技能和其他 Agent 文档的结构、引用与完成条件。</td></tr>
+</tbody></table></div>
+<p><strong>阅读建议：</strong>第一轮先掌握主线和 <code>domain-modeling / codebase-design / tdd / code-review</code> 的职责；其余技能在遇到对应问题时查用。<code>setup-pre-commit</code>、<code>migrate-to-shoehorn</code> 等属于额外工具，其中部分明显依赖 TypeScript/Claude Code 生态。</p>
+
+<h2 id="工作原理">工作原理：文件为什么能改变 Agent 的开发方式</h2>
+<h3 id="skill-runtime">原理一：宿主加载技能，模型按规程选择工具</h3>
+<div class="diagram-lane" role="img" aria-label="请求触发技能发现，加载正文与引用，再由模型使用宿主工具，观察反馈并继续。"><strong>执行关系</strong><div class="agent-step">用户请求 + 已有项目规则</div><div class="agent-step">发现技能 → 读取 SKILL.md → 按需读取参考文件</div><div class="agent-step">模型决定下一步 → 宿主执行文件、终端、Issue 或子代理工具</div><div class="agent-step">工具返回真实结果 → 对照完成条件 → 继续或进入下一阶段</div></div>
+<p>OpenAI 文档说明，技能先通过名称和描述被发现，详细正文在需要时加载。它能够打包参考资料与脚本；如果需要网络数据与外部操作，则还需要宿主工具或 MCP 连接提供能力。<a href="https://developers.openai.com/plugins/concepts/skills" target="_blank" rel="noopener noreferrer">OpenAI：Skills 概念</a> <a href="https://learn.chatgpt.com/docs/build-skills" target="_blank" rel="noopener noreferrer">OpenAI：技能加载、安装与调用</a></p>
+<p><strong>Java 类比：</strong><code>SKILL.md</code> 像操作规程，Agent 像能阅读规程的执行者，终端与 MCP 像能力接口，测试像结果校验。类比的边界在于：自然语言规程不会被 JVM 编译成确定性控制流，无法仅凭“写了必须”就保证每次照做。</p>
+<h3 id="composition">原理二：把阶段入口与复用能力分开</h3>
+<p>人选择何时进行访谈、写规格或实现；这些入口复用底层能力。最直观的源码例子是 <code>grill-with-docs</code> 组合 <code>grilling</code> 与 <code>domain-modeling</code>。修正一处访谈规则，可以影响多个调用它的流程。<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/grill-with-docs/SKILL.md" target="_blank" rel="noopener noreferrer">grill-with-docs</a></p>
+<p>作者通过手动入口控制流程推进，又用可自动选用的技能复用工程纪律。这里不要把每个技能理解为一个长期驻留的独立 Agent：通常是当前 Agent 切换操作规程，只有明确调度子代理时才创建其他执行上下文。</p>
+<h3 id="persistent-context">原理三：用持久产物接住会话中的决定</h3>
+<div class="table-wrap"><table><thead><tr><th>产物</th><th>回答什么</th><th>避免放入什么</th></tr></thead><tbody>
+<tr><td><code>CONTEXT.md</code></td><td>业务术语各自是什么意思？</td><td>当前源码明确规定它是术语表；不塞任务清单、实现设计和聊天记录。</td></tr>
+<tr><td>ADR</td><td>为什么在重要取舍中选这个方案？</td><td>不为每个普通变量命名或容易反悔的小决定写 ADR。</td></tr>
+<tr><td>Spec</td><td>这次要交付什么，约束和范围是什么？</td><td>不当成长期领域词典。</td></tr>
+<tr><td>Ticket</td><td>这一小段要做什么、怎样验收、依赖谁？</td><td>不能只写“同上”或依赖上一会话的记忆。</td></tr>
+<tr><td>Handoff</td><td>下一会话从哪里继续，应该阅读哪些原始产物？</td><td>已有文档以链接引用，避免复制成另一份真相。</td></tr>
+</tbody></table></div>
+<p>这是外部化上下文：模型不会因生成文件自动获得永久记忆；新会话必须读取这些材料。术语表与 ADR 的职责来自 <a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/domain-modeling/SKILL.md" target="_blank" rel="noopener noreferrer">domain-modeling</a>，交接文档的引用原则来自 <a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/productivity/handoff/SKILL.md" target="_blank" rel="noopener noreferrer">handoff</a>。</p>
+<h3 id="feedback">原理四：让错误尽早变成可见信号</h3>
+<p>规格限制“做什么”，测试证明某一行为发生，编译和静态检查发现机械错误，审查检查测试不容易表达的需求偏差与设计问题。这些反馈覆盖的错误类型不同。</p>
+<p>例如把取消测试写成“断言内部 <code>repository.save</code> 调用过一次”，可能无法发现保存了错误状态。通过取消接口执行动作，再通过查询接口观察状态，能更直接地对照用户行为；涉及并发与事务时仍需相应环境下的专门验收。<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/tdd/SKILL.md" target="_blank" rel="noopener noreferrer">tdd</a> <a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/tdd/mocking.md" target="_blank" rel="noopener noreferrer">Mock 使用原则</a></p>
+<h3 id="deep-modules">原理五：统一语言与深模块降低理解成本</h3>
+<p><strong>统一语言：</strong>把“取消订单”和“退款”明确分开，规格、代码、测试就能沿用同一概念。它借鉴 DDD 的语言纪律，但使用这套技能不等于必须引入完整 DDD 架构。</p>
+<p><strong>深模块：</strong>调用者学习一个相对简单的接口，就能获得有意义的能力。比如取消订单模块在内部处理状态合法性、幂等与并发规则，调用方不需要自己按顺序编排一组脆弱的底层方法。这里的“深”是隐藏复杂性所带来的价值，不是多写代码、增加继承层级或建立巨大 Service。<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/codebase-design/SKILL.md" target="_blank" rel="noopener noreferrer">codebase-design</a></p>
+<p><strong>上下文设计：</strong><code>writing-for-agents</code> 强调把规则放在一个权威位置，并通过条件明确的指针按需读取；它也讨论完成条件和人的记忆负担。这是作者的提示词设计方法，不能据此声称有通用、定量的成功率保证。<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/productivity/writing-for-agents/SKILL.md" target="_blank" rel="noopener noreferrer">writing-for-agents</a></p>
+
+<h2 id="java案例">用 Java 场景串起来：给订单增加取消能力</h2>
+<p><strong>以下是建议的教学案例，不是上游自带的 Java 示例，也不是已经执行的实验。</strong>选择它是因为需求不大，却足以暴露术语、状态、幂等、并发、数据库与界面反馈的关系。</p>
+<div class="table-wrap"><table><thead><tr><th>阶段</th><th>你提供什么</th><th>Agent 形成什么</th><th>如何判断这一阶段完成</th></tr></thead><tbody>
+<tr><td>访谈</td><td>“用户需要取消未支付订单”及业务取舍</td><td>明确取消范围、角色、状态规则与重复请求结果</td><td>取消与退款等歧义消失，关键决策有人作答</td></tr>
+<tr><td>领域记录</td><td>确认业务词义</td><td>Order、Cancellation、Refund 的统一定义</td><td>规格与现有代码使用相同含义；矛盾已被记录或解决</td></tr>
+<tr><td>规格</td><td>确认 API/行为与测试切入点</td><td>成功、非法状态、越权、重复请求、并发冲突的验收约定</td><td>能说明哪些情况必须支持，哪些暂不支持</td></tr>
+<tr><td>任务拆分</td><td>确认粒度与依赖</td><td>每张任务有完整行为、验收条件和阻塞关系</td><td>任务可以在新会话中独立读懂</td></tr>
+<tr><td>实现</td><td>已确认任务、可运行的工程环境</td><td>逐行为测试与实现、真实执行结果</td><td>失败用例先出现，再通过；约定范围内验证完成</td></tr>
+<tr><td>审查</td><td>明确比较基线、任务原文与编码标准</td><td>Standards / Spec 两份发现</td><td>重要问题处理完并再次验证，结果可追溯</td></tr>
+</tbody></table></div>
+<p><strong>一种候选拆分：</strong>①本人取消未支付订单并看到结果；②重复取消获得约定的幂等结果，依赖①；③已支付/已发货和非本人请求被拒绝，依赖①；④支付与取消并发时保持约定的一致性，依赖①及支付接口。每张任务覆盖必要的接口、数据和测试。授权保护也可并入①，具体以项目安全边界与部署节奏决定。</p>
+<p><strong>案例的教学重点：</strong>②和③都可能在①完成后开始，但“没有任务依赖”不代表文件没有冲突。是否并行、如何隔离分支与集成，需要另行设计，稳定版的 <code>to-tickets</code> 不会自动解决这些问题。</p>
+
+<h2 id="其他路线">其他路线：什么情况下不用走完整主线</h2>
+<div class="table-wrap"><table><thead><tr><th>你当前的处境</th><th>适合的入口</th><th>关键区别</th></tr></thead><tbody>
+<tr><td>一个已经清楚的很小行为</td><td><code>implement</code> 或直接 <code>tdd</code></td><td>无需为了形式额外生成长规格和任务树。</td></tr>
+<tr><td>需要亲眼试一下界面或状态转移</td><td><code>prototype</code></td><td>用临时原型回答一个问题；经验证的结论进入正式方案。</td></tr>
+<tr><td>系统太大，很多决策尚无法定</td><td><code>wayfinder</code></td><td>先解决决策与调查问题，再汇总为可实施规格。</td></tr>
+<tr><td>外部 Bug 和需求报告不断到来</td><td><code>triage</code></td><td>补足证据与信息，判断是否可交给 Agent；已由 to-tickets 产生的任务通常不必重新分诊。</td></tr>
+<tr><td>难复现、间歇出现或性能退化的故障</td><td><code>diagnosing-bugs</code></td><td>先做出能检测具体症状的反馈命令，再缩小复现、验证假设和修复。</td></tr>
+<tr><td>改一个需求总要跳很多文件</td><td><code>improve-codebase-architecture</code></td><td>优先调查近期经常变化的区域；展示候选后再选择方向。</td></tr>
+</tbody></table></div>
+<p>依据：<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/prototype/SKILL.md" target="_blank" rel="noopener noreferrer">prototype</a>、<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/wayfinder/SKILL.md" target="_blank" rel="noopener noreferrer">wayfinder</a>、<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/triage/SKILL.md" target="_blank" rel="noopener noreferrer">triage</a>、<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/diagnosing-bugs/SKILL.md" target="_blank" rel="noopener noreferrer">diagnosing-bugs</a>、<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/improve-codebase-architecture/SKILL.md" target="_blank" rel="noopener noreferrer">improve-codebase-architecture</a>。</p>
+<p><strong>上下文切换：</strong>主线建议在访谈、规格和拆任务之间尽量保留同一会话，让原始决策信息贯穿；任务形成完整说明后，每个实现会话可以从任务重新开始。跨工具、目录或同事交接时使用 handoff。源码中的固定 token 数只是经验指引，不能当作任意模型的统一阈值。<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/ask-matt/PHASE-BOUNDARIES.md" target="_blank" rel="noopener noreferrer">阶段边界说明</a></p>
+
+<h2 id="codex使用">在 Codex 中怎样理解安装与调用</h2>
+<p>当前仓库为 Codex 等宿主给出的安装入口是：</p>
+<div class="code-block"><div class="code-toolbar"><span>示例 / 命令</span><button class="copy-code" type="button">复制</button></div><pre><code>npx skills@latest add mattpocock/skills</code></pre></div>
+<p>安装器用于选择技能和目标 Agent；随后还要在项目里显式使用 <code>setup-matt-pocock-skills</code> 配置约定。此命令来自当前 README，<code>@latest</code> 会获取未来的安装器版本，不能作为固定版本教程的可复现保证。<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/README.md" target="_blank" rel="noopener noreferrer">官方 README</a></p>
+<p>上游说明里经常使用 <code>/skill-name</code>。Codex 官方文档对 CLI/IDE 的明确调用方式是 <code>/skills</code> 或 <code>$</code> 选择技能，例如安装后使用 <code>$grill-with-docs</code>。桌面端应使用当前可见的技能选择入口；不能把各宿主的斜杠命令当成通用协议。<a href="https://learn.chatgpt.com/docs/build-skills" target="_blank" rel="noopener noreferrer">OpenAI：技能加载、安装与调用</a></p>
+<p>该仓库已经为技能提供 <code>agents/openai.yaml</code>。例如 <code>grill-with-docs</code> 的 <code>allow_implicit_invocation: false</code> 表示不让 Codex 仅凭语义匹配自动触发，仍可由用户显式调用。不要只复制 <code>SKILL.md</code> 而漏掉相应元数据与依赖参考文件。<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/grill-with-docs/agents/openai.yaml" target="_blank" rel="noopener noreferrer">Codex 调用策略配置</a></p>
+<p><strong>本项目的适配：</strong>这里的 <code>AGENTS.md</code> 规定学习材料以 HTML 为唯一内容源，且只保留指定的 Markdown 控制文件。上游默认生成的 <code>CONTEXT.md</code>、ADR、任务文件和教学记录不能直接照搬到本仓库。建议在独立 Java 练习仓库演示原版工作流，本仓库只收纳介绍和教程 HTML；如将来确实要在这里运行，则统一修改生成路径和读取指针，形成明确的 HTML 适配方案。</p>
+
+<h2 id="边界与检查点">学习这套工作流时需要认识的边界</h2>
+<ol>
+<li><strong>没有统一自动执行的强保证。</strong>规程可以约束模型行为，但权限、编译、测试和 CI 才能提供相应层面的机械检查。</li>
+<li><strong>“整套”不等于每次全用。</strong>按需选择可以减少不必要的文档与访谈；对一个已明确的小修复完整走一轮大需求流程可能没有收益。</li>
+<li><strong>测试切入点要贴合项目。</strong>上游偏向少量、高层、行为可观察的 seam。这不等于 Java 项目一律禁止纯函数单元测试，也不等于所有测试都必须启动完整 Spring 容器。</li>
+<li><strong>源码存在值得教程验证的衔接问题。</strong><code>implement</code> 写的是审查后提交，而 <code>code-review</code> 明确给出的比较命令是 <code>git diff &lt;fixed-point&gt;...HEAD</code>。按 Git 语义，它不会包括尚未提交的工作区改动。因此照抄默认流程可能漏审刚完成的代码；实操教程应明确审查已提交分支还是工作区/暂存区，并用实际 diff 核对覆盖范围。这是对两份源码的静态推断，尚未通过完整演示验证。<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/implement/SKILL.md" target="_blank" rel="noopener noreferrer">implement</a> <a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/code-review/SKILL.md" target="_blank" rel="noopener noreferrer">code-review</a></li>
+<li><strong>清理上下文有信息损失。</strong>没有独立完整的任务与决策记录就清空会话，可能丢掉“为什么这样做”；上下文越长也不必然越好。</li>
+<li><strong>没有在本次调研中得到可支持定量结论的对照实验。</strong>可以说明其设计意图与适用场景，不能声称它比其他工作流快多少、少多少 Bug 或必然省 token。</li>
+</ol>
+<p>可继续对照已有材料：<a href="2026-07-24-Superpowers详细介绍.html">Superpowers 详细介绍</a>、<a href="2026-08-31-OpenSpec与Codex原生大型项目开发流程.html">OpenSpec + Codex 原生大型项目开发流程</a>、<a href="2026-08-07-Harness-Loop-Graph与Codex-Superpowers开发模式.html">相关开发模式</a>。前述页面按各自整理日期阅读，本次未重新核验其中产品版本。</p>
+
+<h2 id="教程方案">配套教程与推荐阅读顺序</h2>
+<p><strong>建议先形成两条互相链接的主线：一本可以照着操作的使用教程，以及一篇能解释选择理由的原理说明。</strong>以同一个 Java 案例贯穿，避免每个技能换一个项目，让读者看不到产物怎样衔接。以下课程已生成；示例以 HTML 代码块为唯一来源，可提取到独立目录运行。</p>
+<div class="table-wrap"><table><thead><tr><th>材料</th><th>主要内容</th><th>验收标准</th></tr></thead><tbody>
+<tr><td>总览（本页）</td><td>定位、主线、技能地图、原理概要与边界</td><td>能根据任务大小说出应从哪个技能进入。</td></tr>
+<tr><td><a href="2026-09-16-Matt-Pocock-Skills安装与Java练习环境.html">使用教程 · 环境与最小闭环</a></td><td>固定技能版本、安装依赖、项目 setup、一个小功能</td><td>用最少阶段完成一次真实测试与审查。</td></tr>
+<tr><td><a href="2026-09-16-Matt-Pocock-Skills订单取消实战教程.html">使用教程 · 完整需求实战</a></td><td>订单取消需求访谈 → 规格 → 任务依赖 → 逐任务实现</td><td>留下完整产物链，能够从全新会话接续任务。</td></tr>
+<tr><td><a href="2026-09-16-Matt-Pocock-Skills工作流原理与设计取舍.html">工作流原理说明</a></td><td>发现与加载、组合、决策树、文档职责、垂直切片、seam、反馈与审查</td><td>能解释每个环节解决哪类失败，以及何时应该省略它。</td></tr>
+<tr><td>进阶案例（第二阶段再做）</td><td>故障诊断、架构改善、wayfinder、大项目上下文管理</td><td>能处理需求尚不清晰或工程反馈不足的情况。</td></tr>
+</tbody></table></div>
+<p><strong>每个实操步骤统一包含：</strong>前置状态 → 可直接使用的中文请求 → Agent 应做什么 → 应产生什么文件/任务 → 人要决定什么 → 如何验证 → 常见偏差及恢复方式。模拟对话与真实运行记录必须明确区分。</p>
+<p><strong>制作顺序建议：</strong>①固定源码与工具版本；②准备一个可运行的 Spring Boot/Maven 示例仓库；③实际跑通一个最小任务；④记录输入、产物、测试和审查证据；⑤扩展成完整需求；⑥再用这些证据写原理章节。框架版本和依赖在教程实施时重新核验。</p>
+<p><strong>当前更推荐的范围：</strong>以 Codex 为主，保留 Claude Code 的调用差异说明；Java 后端为核心，用一个轻量界面展示最终行为。先做小功能，再覆盖完整需求，不必第一章就引入微服务、复杂前端、向量数据库或多 Agent 自动编排。</p>
+<p><strong>已采用的案例起点：</strong>先提供一个最小可运行的 Spring Boot 订单系统，再用这套工作流加入取消能力。依次阅读安装环境、完整实战、原理说明；基础版、单个失败测试版和完成版可分别提取。</p>
+
+<h2 id="参考资料">参考资料</h2>
+<p>检索与源码核验于 <strong>2026-09-16</strong>。GitHub 链接固定到本次提交；宿主官方文档可能持续更新。本文以概括和独立教学例子呈现，未复制整套技能正文。</p>
+<ol>
+<li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/README.md" target="_blank" rel="noopener noreferrer">官方 README</a>；<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/.claude-plugin/plugin.json" target="_blank" rel="noopener noreferrer">正式插件清单</a>；<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/CHANGELOG.md" target="_blank" rel="noopener noreferrer">官方变更记录</a>：定位、正式打包范围与演进。</li>
+<li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/ask-matt/SKILL.md" target="_blank" rel="noopener noreferrer">ask-matt</a>；<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/ask-matt/PHASE-BOUNDARIES.md" target="_blank" rel="noopener noreferrer">阶段边界说明</a>：路线选择与上下文切换。</li>
+<li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/setup-matt-pocock-skills/SKILL.md" target="_blank" rel="noopener noreferrer">setup-matt-pocock-skills</a>；<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/grill-with-docs/SKILL.md" target="_blank" rel="noopener noreferrer">grill-with-docs</a>；<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/productivity/grilling/SKILL.md" target="_blank" rel="noopener noreferrer">grilling</a>；<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/domain-modeling/SKILL.md" target="_blank" rel="noopener noreferrer">domain-modeling</a>。</li>
+<li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/to-spec/SKILL.md" target="_blank" rel="noopener noreferrer">to-spec</a>；<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/to-tickets/SKILL.md" target="_blank" rel="noopener noreferrer">to-tickets</a>；<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/implement/SKILL.md" target="_blank" rel="noopener noreferrer">implement</a>。</li>
+<li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/tdd/SKILL.md" target="_blank" rel="noopener noreferrer">tdd</a>；<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/tdd/mocking.md" target="_blank" rel="noopener noreferrer">Mock 使用原则</a>；<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/code-review/SKILL.md" target="_blank" rel="noopener noreferrer">code-review</a>；<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/codebase-design/SKILL.md" target="_blank" rel="noopener noreferrer">codebase-design</a>。</li>
+<li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/wayfinder/SKILL.md" target="_blank" rel="noopener noreferrer">wayfinder</a>；<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/diagnosing-bugs/SKILL.md" target="_blank" rel="noopener noreferrer">diagnosing-bugs</a>；<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/triage/SKILL.md" target="_blank" rel="noopener noreferrer">triage</a>；<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/prototype/SKILL.md" target="_blank" rel="noopener noreferrer">prototype</a>；<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/improve-codebase-architecture/SKILL.md" target="_blank" rel="noopener noreferrer">improve-codebase-architecture</a>。</li>
+<li><a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/productivity/handoff/SKILL.md" target="_blank" rel="noopener noreferrer">handoff</a>；<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/productivity/writing-for-agents/SKILL.md" target="_blank" rel="noopener noreferrer">writing-for-agents</a>；<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/productivity/teach/SKILL.md" target="_blank" rel="noopener noreferrer">teach</a>；<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/in-progress/README.md" target="_blank" rel="noopener noreferrer">实验技能范围</a>。</li>
+<li><a href="https://www.aihero.dev/skills-post" target="_blank" rel="noopener noreferrer">Matt 早期官方工作流介绍</a>：用于识别旧版术语，不能替代当前源码。</li>
+<li><a href="https://developers.openai.com/plugins/concepts/skills" target="_blank" rel="noopener noreferrer">OpenAI：Skills 概念</a>；<a href="https://learn.chatgpt.com/docs/build-skills" target="_blank" rel="noopener noreferrer">OpenAI：技能加载、安装与调用</a>；<a href="https://github.com/mattpocock/skills/blob/959a8e9f1edc3adbe2f7e3054bb6fbefa6696260/skills/engineering/grill-with-docs/agents/openai.yaml" target="_blank" rel="noopener noreferrer">Codex 调用策略配置</a>。</li>
+</ol>
+
+    </article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/codex/2026-09-16-Matt-Pocock-Skills工作流详解.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="2026-09-16-Matt-Pocock-Skills订单取消实战教程.html"><small>上一篇</small><span>Matt Pocock Skills 订单取消实战教程</span></a>
+        <a class="pager-link next" href="2026-09-16-Matt-Pocock-Skills工作流原理与设计取舍.html"><small>下一篇</small><span>Matt Pocock Skills 工作流原理与设计取舍</span></a>
+      </nav>
+    </footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#核心结论">核心结论</a></li><li class="toc-level-2"><a href="#版本变化">先对齐版本：旧教程为什么看起来不一样</a></li><li class="toc-level-2"><a href="#主线流程">主线流程：从模糊想法到可验证的代码</a></li><li class="toc-level-3"><a href="#setup">1. setup：让所有技能遵守项目的实际约定</a></li><li class="toc-level-3"><a href="#grill">2. grill-with-docs：把「我大概想要」变成共同理解</a></li><li class="toc-level-3"><a href="#spec">3. to-spec：把讨论固化成可检查的规格</a></li><li class="toc-level-3"><a href="#tickets">4. to-tickets：把需求切成能交付的完整行为</a></li><li class="toc-level-3"><a href="#implement">5. implement：以一个行为为单位获取反馈</a></li><li class="toc-level-3"><a href="#review">6. code-review：把「做得对」与「做的是对的需求」分开</a></li><li class="toc-level-2"><a href="#技能地图">整套技能地图：哪些每天用，哪些按场景用</a></li><li class="toc-level-2"><a href="#工作原理">工作原理：文件为什么能改变 Agent 的开发方式</a></li><li class="toc-level-3"><a href="#skill-runtime">原理一：宿主加载技能，模型按规程选择工具</a></li><li class="toc-level-3"><a href="#composition">原理二：把阶段入口与复用能力分开</a></li><li class="toc-level-3"><a href="#persistent-context">原理三：用持久产物接住会话中的决定</a></li><li class="toc-level-3"><a href="#feedback">原理四：让错误尽早变成可见信号</a></li><li class="toc-level-3"><a href="#deep-modules">原理五：统一语言与深模块降低理解成本</a></li><li class="toc-level-2"><a href="#java案例">用 Java 场景串起来：给订单增加取消能力</a></li><li class="toc-level-2"><a href="#其他路线">其他路线：什么情况下不用走完整主线</a></li><li class="toc-level-2"><a href="#codex使用">在 Codex 中怎样理解安装与调用</a></li><li class="toc-level-2"><a href="#边界与检查点">学习这套工作流时需要认识的边界</a></li><li class="toc-level-2"><a href="#教程方案">配套教程与推荐阅读顺序</a></li><li class="toc-level-2"><a href="#参考资料">参考资料</a></li></ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+</body>
+</html>
