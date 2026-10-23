@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-09-16T00:00:00.000Z",
-  "documentCount": 46,
+  "generatedAt": "2026-10-23T00:00:00.000Z",
+  "documentCount": 48,
   "documents": [
     {
       "output": "notes/agent/2026-07-27-01-Agent基础概念与边界.html",
@@ -316,6 +316,20 @@
       "category": "编码 Agent",
       "date": "2026-08-10",
       "sections": 16
+    },
+    {
+      "output": "notes/coding-agent/2026-10-20-DSH开发使用与Codex协作指南.html",
+      "title": "DSH 开发使用与 Codex 协作指南",
+      "category": "编码 Agent",
+      "date": "2026-10-20",
+      "sections": 35
+    },
+    {
+      "output": "notes/coding-agent/2026-10-23-DSH模式全解与开发实践.html",
+      "title": "DSH 模式全解：Agent 预设、权限模式与 Plan 怎么用",
+      "category": "编码 Agent",
+      "date": "2026-10-23",
+      "sections": 46
     },
     {
       "output": "notes/git/2026-09-01-Git从入门到精通.html",

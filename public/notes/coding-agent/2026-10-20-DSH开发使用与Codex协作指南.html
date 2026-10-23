@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="基于 DSH 0.2.1-rc.2，拆解入口、Agent 预设、Plan/Goal 与权限四层模式，给出插件取舍、Codex 子代理、共享 AGENTS.md 与 skills、并行隔离和 Java 项目落地清单。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="编码 Agent">
+  <meta name="study-date" content="2026-10-20">
+  <title>DSH 开发使用与 Codex 协作指南｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
+  <div class="topbar-actions"><button class="icon-button mobile-nav-toggle" type="button">文档</button><button class="icon-button theme-toggle" type="button">主题</button></div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar"><div class="sidebar-header">
+      <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <div class="sidebar-category-summary">
+      <span class="eyebrow">当前分类</span>
+      <a class="sidebar-category-link" href="../../../index.html#category-编码-agent-5pooy1">
+        <strong>编码 Agent</strong>
+        <small>9 篇文档</small>
+      </a>
+      <a class="sidebar-featured-link" href="2026-08-10-Pi项目总览与学习路线.html">分类主目录<span>Pi 项目总览与学习路线</span></a>
+    </div><nav class="doc-nav" aria-label="当前分类文档">
+      <a class="doc-nav-item" href="2026-08-10-Pi安装配置与使用教程.html"><span>Pi 安装配置与使用教程</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-08-10-Pi扩展开发与系统集成.html"><span>Pi 扩展开发与系统集成</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-08-10-Pi设计理念与边界.html"><span>Pi 设计理念与边界</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-08-10-Pi项目总览与学习路线.html"><span>Pi 项目总览与学习路线</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-08-10-Pi选型建议与实践路线.html"><span>Pi 选型建议与实践路线</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-08-10-Pi与主流编码Agent对比.html"><span>Pi 与主流编码 Agent 对比</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-08-10-Pi源码架构与运行机制.html"><span>Pi 源码架构与运行机制</span><small>2026-08-10</small></a><a class="doc-nav-item is-active" href="2026-10-20-DSH开发使用与Codex协作指南.html" aria-current="page"><span>DSH 开发使用与 Codex 协作指南</span><small>2026-10-20</small></a><a class="doc-nav-item" href="2026-10-23-DSH模式全解与开发实践.html"><span>DSH 模式全解：Agent 预设、权限模式与 Plan 怎么用</span><small>2026-10-23</small></a>
+    </nav></aside>
+  <main class="article-column">
+    <div class="article-meta"><a href="../../../index.html">知识库首页</a><span>·</span><span>编码 Agent</span><span>·</span><time datetime="2026-10-20">2026-10-20</time></div>
+    <article class="markdown-body">
+      <h1>DSH 开发使用与 Codex 协作指南</h1>
+      <blockquote>
+        <p><strong>一句话：</strong>DSH 的正确用法不是“选一个最强模式”，而是把<strong>入口形态、Agent 预设、会话模式、权限模式</strong>四层分开组合。日常开发优先“标准模式 + 工作区可写 + 按次审批”；与 Codex 协作优先做<strong>共享上下文</strong>，再把 Codex 作为一次性子代理，最后才考虑双向嵌套调用。</p>
+        <p><strong>版本前提：</strong>本文以本机 Desktop <strong>0.2.1-rc.2</strong>（2026-10-17 发布）为主，参考官方 <code>master</code> 文档；本机另有一个 <strong>0.1.5-rc.2</strong> 的 CLI 源码 checkout。RC 版本细节可能随小版本变化，升级前先备份 <code>~/.dsh</code>。</p>
+      </blockquote>
+
+      <nav aria-label="本页快速目录"><strong>快速阅读：</strong> <a href="#conclusions">结论</a> · <a href="#modes">四层模式</a> · <a href="#playbook">场景组合</a> · <a href="#presets">预设</a> · <a href="#plugins">插件</a> · <a href="#codex">Codex 协作</a> · <a href="#java">Java 落地</a> · <a href="#pitfalls">常见坑</a> · <a href="#references">资料</a></nav>
+
+      <h2 id="conclusions">核心结论</h2>
+      <ol>
+        <li><strong>默认就用“标准模式 + 工作区可写 + 审批 ask”。</strong>这是功能、可见性、爆炸半径三者最平衡的组合；90% 的 Java 功能开发不需要切到完全访问。</li>
+        <li><strong>Plan 是设计门，Goal 是长跑器，PTC 是批处理模式。</strong>三者解决不同问题：Plan 先想清楚再动手，Goal 让一个目标跨多轮自动推进，PTC 用 <code>run_code</code> 减少往返。不要用 PTC 替代日常开发，也不要用 Goal 做开放式探索。</li>
+        <li><strong>插件按“共享上下文 → 按需能力 → 自动化”三层加，不要按“功能列表”加。</strong>AGENTS.md 和 skills 的收益最高、风险最低；MCP 和 hooks 是能力扩展；Codex/Claude Code 子代理是“第二意见”。</li>
+        <li><strong>与 Codex 协作，第一优先级不是互相调用，而是共用一份项目宪法。</strong>项目根 <code>AGENTS.md</code>、<code>.agents/skills/</code>、MCP 工具命名 <code>mcp__server__tool</code> 都是现成的共享层；先做这层，再谈子代理。</li>
+        <li><strong>Codex 子代理适合“一次性、自包含、结果可验收”的任务。</strong>它看不到当前对话、只回最终答案、会在同一工作区里真实执行；不要把它当多轮结对，也不要在你正在改文件时并发运行。</li>
+        <li><strong>同一工作区只让一个 Agent 写。</strong>并行研究可以开子代理；并行写代码请用 <code>git worktree</code> + 分支隔离。两个 Agent 同时改同一目录，冲突和“谁覆盖了谁”比模型犯错更难查。</li>
+      </ol>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>如果你只记 5 句话</th><th>对应动作</th></tr></thead>
+          <tbody>
+            <tr><td>日常开发</td><td>标准模式；工作区可写；审批 ask；多文件改动先 Plan</td></tr>
+            <tr><td>只读审查</td><td>只读模式；子代理并行；Codex 子代理做第二意见</td></tr>
+            <tr><td>批量机械改动</td><td>PTC 模式；干净 git 工作区；先小批量验证再放大</td></tr>
+            <tr><td>长任务</td><td>Goal + 明确验收标准 + 轮数上限；每轮看 diff</td></tr>
+            <tr><td>与 Codex 协作</td><td>共享 AGENTS.md 与 skills；一次一个写者；用 worktree 隔离</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 id="modes">先分清四层“模式”</h2>
+      <p>“DSH 用什么模式”这个问题，答案取决于你说的是哪一层。四层互相独立，可以组合；把它们混在一起，就会得到“我明明选了只读，为什么它还能写文件”这类误判。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>层</th><th>选项</th><th>决定什么</th><th>什么时候改</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>入口形态</strong></td>
+              <td>Desktop / <code>dsh web</code> / <code>headless</code> / <code>acp</code> / <code>sdk</code></td>
+              <td>有没有 GUI、能不能多轮、是否嵌入编辑器或 CI</td>
+              <td>日常用 Desktop 或 Web；脚本/CI 用 headless；编辑器集成用 acp；产品嵌入用 sdk</td>
+            </tr>
+            <tr>
+              <td><strong>Agent 预设</strong></td>
+              <td>标准 / PTC / 创造 / 极简</td>
+              <td>模型能看到的工具、提示词、技能目录</td>
+              <td>按任务类型选；只能在空会话切换</td>
+            </tr>
+            <tr>
+              <td><strong>会话模式</strong></td>
+              <td>普通 / Plan / Goal</td>
+              <td>当前是“先出方案”“自动长跑”还是“直接执行”</td>
+              <td>设计阶段开 Plan；长任务开 Goal；其余普通</td>
+            </tr>
+            <tr>
+              <td><strong>权限模式</strong></td>
+              <td>只读 / 工作区可写 / 完全访问</td>
+              <td>文件写入边界、是否弹审批</td>
+              <td>按仓库可信度与任务风险随时切；默认工作区可写</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="agent-call-flow" role="img" aria-label="DSH 使用决策流程：先判断任务是只读还是写入，再选择入口与预设，然后选择权限，最后决定是否用 Codex 子代理复核。">
+        <div class="agent-step"><strong>只读还是写入？</strong><span>审查/调研 → 只读；实现 → 工作区可写</span></div>
+        <div class="agent-step"><strong>要 GUI 吗？</strong><span>日常 → Desktop/Web；CI → headless</span></div>
+        <div class="agent-step"><strong>任务有多复杂？</strong><span>多文件/不确定 → Plan；长跑 → Goal</span></div>
+        <div class="agent-step"><strong>要不要第二意见？</strong><span>要 → Codex 子代理（一次性）</span></div>
+        <div class="agent-step"><strong>验收</strong><span>看 diff、跑测试、人工合并</span></div>
+      </div>
+      <p class="diagram-text">流程图只负责缩小组合；真正的安全边界仍由权限模式和工作区隔离决定。</p>
+
+      <h3 id="entry-modes">入口形态怎么选</h3>
+      <ul>
+        <li><strong>Desktop / Web：</strong>日常开发主入口。能多轮、能看 diff、能审批、能管理会话；Desktop 还负责工作区选择和应用级配置。</li>
+        <li><strong>Headless：</strong><code>dsh --profile headless "任务"</code>，跑完打印最终答案并退出，退出码 0/1。适合 CI、批处理、一次性报告；<strong>没有交互式追问</strong>，审批请求无人应答时会 fail closed。</li>
+        <li><strong>ACP：</strong><code>dsh --profile acp</code> 以 ACP stdio 服务编辑器等客户端；适合 Zed 一类支持 ACP 的编辑器，不是给 Codex CLI 用的。</li>
+        <li><strong>SDK：</strong><code>dsh --profile sdk</code> 通过 JSON-RPC 嵌入自有系统；适合平台化，不是个人开发首选。</li>
+      </ul>
+
+      <h2 id="playbook">场景 → 推荐组合</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>场景</th><th>入口</th><th>预设</th><th>权限</th><th>关键动作</th></tr></thead>
+          <tbody>
+            <tr><td>日常功能开发</td><td>Desktop/Web</td><td>标准</td><td>工作区可写 + ask</td><td>普通模式；改完跑测试；看 diff 再提交</td></tr>
+            <tr><td>跨模块重构、框架升级</td><td>Desktop/Web</td><td>标准</td><td>工作区可写 + ask</td><td>先 Plan 出决策完整的方案；用只读子代理做影响面调研；worktree 隔离</td></tr>
+            <tr><td>代码审查、根因分析</td><td>Desktop/Web</td><td>标准</td><td><strong>只读</strong></td><td>子代理并行；Codex 子代理做第二意见；只输出 file:line + 严重级别 + 修复建议</td></tr>
+            <tr><td>批量机械改动</td><td>Desktop/Web</td><td><strong>PTC</strong></td><td>工作区可写 + ask</td><td>干净 git；先 1 个模块验证；<code>run_code</code> 只打印筛选后的结果</td></tr>
+            <tr><td>造 Agent、写插件、改预设</td><td>Desktop/Web</td><td><strong>创造</strong></td><td>工作区可写；装插件时按需提权</td><td>单独分支/会话；<code>plugin_manager</code> 每次操作需要完全访问或审批</td></tr>
+            <tr><td>CI、脚本、批量报告</td><td>headless</td><td>标准</td><td>只读或工作区可写</td><td>任务必须自包含；不要依赖交互审批；用退出码判定</td></tr>
+            <tr><td>编辑器内结对</td><td>ACP</td><td>标准</td><td>工作区可写</td><td>确认客户端支持 ACP；不要和 Desktop 同时改同一文件</td></tr>
+            <tr><td>模型/提示评测</td><td>headless 或极简</td><td>极简</td><td>只读</td><td>固定任务集、固定命令、固定评分；不要混入个人快捷键</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 id="presets">Agent 预设怎么选</h2>
+      <p>预设不是“聪明程度”，而是<strong>工具面和提示词</strong>的组合。当前 0.2.1 的 Web/Desktop 提供四个预设；预设只能在空会话切换，权限则可以随时切。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>预设</th><th>能力面</th><th>适合</th><th>不适合</th><th>主要代价</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>标准模式</strong></td>
+              <td>文件读写、Shell、搜索、Skills、Plan、Goal、子代理、Workflow、Web、Present</td>
+              <td>日常开发、重构、审查、学习</td>
+              <td>需要单工具批处理或运行时自省的场景</td>
+              <td>工具多、每步往返多；长会话需要 compaction</td>
+            </tr>
+            <tr>
+              <td><strong>PTC 模式</strong></td>
+              <td>标准能力 + 以 <code>run_code</code> 为主的编排面；工具结果由程序筛选后输出</td>
+              <td>批量文件分析、确定性流水线、把多步工具调用压成一次程序</td>
+              <td>需要逐步审批每个工具调用的高风险改动</td>
+              <td>审计粒度粗；只看到你打印的内容；程序内异常要自己处理</td>
+            </tr>
+            <tr>
+              <td><strong>创造模式</strong></td>
+              <td>标准能力 + 运行时检查、插件实验、preset 创作指导；<code>plugin_manager</code> 默认开启</td>
+              <td>写自定义 preset、调试插件、检查运行时组合</td>
+              <td>普通业务开发</td>
+              <td>权限大、容易把运行时改坏；必须单独工作区/分支</td>
+            </tr>
+            <tr>
+              <td><strong>极简模式</strong></td>
+              <td>持久 Shell 单工具；固定训练/评测配置</td>
+              <td>评测、教学、最小化对照实验</td>
+              <td>真实项目开发</td>
+              <td>没有文件编辑、搜索、子代理等能力</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="ptc">PTC 的正确打开方式</h3>
+      <p>PTC 的价值不是“更聪明”，而是<strong>把 N 次工具往返压成 1 段 TypeScript 程序</strong>。适合做“读很多文件、按规则筛选、输出一张表”的工作；不适合做“每改一处都需要人确认”的工作。</p>
+      <pre><code>// 典型只读批处理：扫描所有模块的 pom.xml，输出 Java 版本与 Spring Boot 版本
+const files = await tools.glob({ pattern: "**/pom.xml", path: "." });
+const rows = [];
+for (const f of files.paths) {
+  const r = await tools.read({ file_path: f, limit: 120 });
+  const text = r.lines.map((l) =&gt; l.text).join("\n");
+  const java = text.match(/&lt;java.version&gt;([^&lt;]+)&lt;\/java.version&gt;/)?.[1] ?? "-";
+  const boot = text.match(/&lt;spring-boot.version&gt;([^&lt;]+)&lt;\/spring-boot.version&gt;/)?.[1] ?? "-";
+  rows.push({ module: f, java, boot });
+}
+console.log(JSON.stringify(rows, null, 2));</code></pre>
+      <p><strong>三条纪律：</strong>只打印筛选后的结果，不要把整份日志倒进上下文；写操作前先在 1 个模块试跑；程序里仍然受权限策略约束，不要假设 <code>run_code</code> 能绕过沙箱。</p>
+
+      <h2 id="plan-goal">Plan 模式与 Goal 模式</h2>
+      <h3 id="plan">Plan：先出决策完整的方案</h3>
+      <p>Plan 模式会禁止写入和改动，只允许读、搜、静态分析和检查；最终必须通过 <code>exit_plan_mode</code> 提交计划，由你批准后才进入实现。它不是“先随便聊聊”，而是“把设计决策一次性补齐”。</p>
+      <ul>
+        <li><strong>该用：</strong>改动跨 2 个以上文件、涉及公共 API/数据库 schema、需求有歧义、需要先做影响面分析、框架升级。</li>
+        <li><strong>不该用：</strong>改一个拼写、加一行日志、已经明确到可以直接执行的小修。</li>
+        <li><strong>判断标准：</strong>计划里应该写清目标与验收、按子系统分组的改动、公共 API/数据流变化、边界与失败模式、测试与假设；如果计划还需要实现者做设计决策，说明没写完。</li>
+        <li><strong>常见误解：</strong>你在对话里说“可以，开始吧”不等于批准；必须在 Plan 的审批通道里批准，或者手动切出 Plan。</li>
+      </ul>
+
+      <h3 id="goal">Goal：让一个目标跨多轮自动推进</h3>
+      <p>Goal 适合“一个明确目标 + 需要很多轮才能完成”的任务，例如“把订单模块所有失败测试修到通过”“把 Spring Boot 2.x 迁移到 3.x 并保持 API 兼容”。它会自动续轮，直到你标记完成、暂停或达到轮数上限。</p>
+      <ul>
+        <li><strong>先写验收：</strong>目标里带可执行验收命令（<code>./mvnw -pl order-api test</code>）和不可接受的结果（改测试断言、删功能、跳过失败用例）。</li>
+        <li><strong>设上限：</strong>给 <code>max_goal_rounds</code> 一个预算；每轮结束看 diff 和测试，不要让它无限“再试一次”。</li>
+        <li><strong>配 checkpoint：</strong>开始前提交或建 worktree；每轮通过测试就提交一次，失败可回滚。</li>
+        <li><strong>该停就停：</strong>连续两轮没有实质进展、开始改测试或扩大范围，立即暂停，回到 Plan 重新分解。</li>
+      </ul>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>任务形态</th><th>建议</th><th>原因</th></tr></thead>
+          <tbody>
+            <tr><td>需求清楚、改动小</td><td>普通模式直接做</td><td>Plan 的探索成本大于收益</td></tr>
+            <tr><td>需求模糊、跨模块</td><td>Plan → 批准 → 普通模式</td><td>先把设计决策补齐，避免边写边改</td></tr>
+            <tr><td>目标明确、轮次多</td><td>Plan 定验收 → Goal 执行</td><td>Goal 负责推进，Plan 负责定义“什么算完成”</td></tr>
+            <tr><td>开放式研究</td><td>普通模式 + 只读子代理</td><td>Goal 会把“探索”误当“收敛”，容易烧 token</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 id="permissions">权限与安全：三种模式，两个开关</h2>
+      <p>DSH 把“文件边界”和“审批策略”拆成两个独立开关，再用三个预设把它们打包。理解这一点，比记住三个名字更重要。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>权限预设</th><th>沙箱</th><th>审批</th><th>实际含义</th><th>适用</th></tr></thead>
+          <tbody>
+            <tr><td><strong>只读</strong></td><td><code>read-only</code></td><td><code>ask</code></td><td>能读、搜、分析；写入会被拒绝；需要越界的命令会请求审批</td><td>第三方仓库、代码审查、依赖升级影响面分析</td></tr>
+            <tr><td><strong>工作区可写</strong></td><td><code>workspace-write</code></td><td><code>ask</code></td><td>工作区内可写；越界/高风险操作请求审批</td><td>日常开发默认</td></tr>
+            <tr><td><strong>完全访问</strong></td><td><code>danger-full-access</code></td><td><code>never</code></td><td>无沙箱、无审批；命令能碰网络、凭据和系统文件</td><td>一次性容器/虚拟机；绝不用于公司主仓库</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="approval">ask 与 never 的真实差别</h3>
+      <ul>
+        <li><strong>ask：</strong>需要越界或高风险操作时弹审批；<strong>没有审批通道时 fail closed</strong>。这是 headless 最容易踩的坑：没人点“允许”，任务就卡住或失败。</li>
+        <li><strong>never：</strong>从不询问；能做的直接做，做不了的失败。它不会“自动批准”，只是把审批环节去掉。</li>
+        <li><strong>完全访问 + never</strong> 才是真正的“无边界”；<strong>工作区可写 + never</strong> 仍然是工作区沙箱，只是不弹窗。</li>
+      </ul>
+
+      <h3 id="sandbox-boundary">工作区可写不等于“只改代码”</h3>
+      <p>工作区内的 <code>.env</code>、测试数据、构建脚本、<code>.git</code> 配置都在可写范围内。Agent 可能为了“让测试通过”修改断言、跳过用例、改配置。把以下规则写进 AGENTS.md，并在 review 时检查：</p>
+      <ul>
+        <li>禁止修改测试断言来“制造通过”；测试失败先定位实现。</li>
+        <li>禁止提交密钥、token、生产连接串；示例配置用占位符。</li>
+        <li>禁止对生产数据库执行迁移；本地用 Testcontainers 或一次性库。</li>
+        <li>禁止 <code>git push --force</code>、改写历史、删除分支；这些操作必须人工执行。</li>
+      </ul>
+
+      <h3 id="threat-model">威胁模型：插件、MCP、hooks 都是代码</h3>
+      <ul>
+        <li><strong>插件在宿主进程内运行</strong>，不受工作区沙箱保护；安装插件等于授予它进程权限。只用可信来源，升级前看 diff。</li>
+        <li><strong>MCP server 是外部程序</strong>，可能读环境变量、访问网络；stdio server 还会在启动时跑一个探测进程。先接一个只读 server，确认行为再扩。</li>
+        <li><strong>hooks 是可执行命令</strong>，会在会话/工具前后运行；<code>hooks-codex</code> 只支持同步命令 hook，失败会记录但不会中止 Agent。</li>
+        <li><strong>仓库内容不可信：</strong>AGENTS.md、README、issue、网页都可能包含提示注入。第三方仓库先用只读模式，不要让 Agent 执行 <code>curl | bash</code> 或安装未知依赖。</li>
+      </ul>
+
+      <h2 id="plugins">插件取舍：默认、按需、别装</h2>
+      <p>0.2.1 的插件面比 0.1.x 更“产品化”：侧边栏有 <strong>Plugins</strong> 页，可以启用/停用 Bundle、选择已安装 Bundle、安装外部 Bundle；设置里的插件列表仍是只读清单。官方“按需插件”目录截至 2026-10-20 只有两个：<strong>Codex 子代理</strong>和 <strong>Claude Code 子代理</strong>。</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>能力 / 插件</th><th>默认</th><th>解决什么</th><th>代价与边界</th><th>建议</th></tr></thead>
+          <tbody>
+            <tr><td><code>agent-instructions</code></td><td>开</td><td>加载用户级 + 项目级 AGENTS.md/CLAUDE.md 链</td><td>常驻上下文；总预算 64KB；宽泛文件先被省略</td><td>保留；把“每次都要遵守”的规则放这里</td></tr>
+            <tr><td><code>skill-filesystem</code> + <code>tool-skill</code></td><td>开</td><td>按需加载本地 Skills，目录常驻、正文懒加载</td><td>只发现顶层 <code>SKILL.md</code> 或扁平 <code>name.md</code></td><td><strong>最高性价比</strong>；把流程放 skills，不要全塞 AGENTS.md</td></tr>
+            <tr><td><code>plan-mode</code></td><td>开</td><td>设计门；禁止写入，产出可审批计划</td><td>多一轮交互；小改动会变慢</td><td>多文件/高风险改动必用</td></tr>
+            <tr><td><code>compaction</code> + 结果裁剪</td><td>开</td><td>长会话压缩、工具结果裁剪</td><td>压缩会丢细节；关键结论要落盘</td><td>长任务保留；重要结论写文件</td></tr>
+            <tr><td><code>subagent</code> / <code>subagent_fork</code></td><td>开</td><td>上下文隔离、并行研究；fork 继承历史</td><td>子代理共享父预设；并行写会冲突</td><td>只读研究并行；写任务串行</td></tr>
+            <tr><td><code>jobs</code> / <code>todo</code> / <code>goal</code> / <code>schedule</code></td><td>开</td><td>后台命令、任务清单、长目标、提醒</td><td>Goal/Schedule 会持续消耗；需要上限</td><td>按需用，不要默认开一堆长目标</td></tr>
+            <tr><td><strong>Codex 子代理</strong>（Official）</td><td>关</td><td>调用真实 Codex 会话做一次性任务</td><td>一次性、无多轮；同一工作区；独立计费/认证</td><td>第二意见、独立审查、隔离任务</td></tr>
+            <tr><td><strong>Claude Code 子代理</strong>（Official）</td><td>关</td><td>调用 Claude Code 做一次性任务</td><td>同上；依赖本机 Claude 配置</td><td>已有 Claude Code 时再开</td></tr>
+            <tr><td><code>mcp-client</code></td><td>关（需配置）</td><td>接入外部 MCP server；工具名 <code>mcp__server__tool</code></td><td>每个 server 的工具 schema 进入请求；启动慢/崩溃会影响可用性</td><td>只接 1 个真正需要的只读 server</td></tr>
+            <tr><td><code>hooks-codex</code></td><td>关（实验）</td><td>复用 Codex <code>hooks.json</code> 的 5 个命令 hook 点</td><td>仅同步命令 hook；进程内执行；配置只读一次</td><td>已有 hooks 才用，否则用 AGENTS.md/skills</td></tr>
+            <tr><td><code>workflow</code> / <code>ralph</code></td><td>视版本</td><td>大规模 fan-out 编排 / 反复尝试到结构化结果</td><td>父轮等待全部子任务；失败不返回部分成功；token 消耗大</td><td>只在明确的大规模编排时用</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="official-plugins">怎么装 Codex 子代理</h3>
+      <ol>
+        <li>打开侧边栏 <strong>Plugins</strong>，找到 <strong>Official</strong> 区域的 <strong>Codex subagent</strong>。</li>
+        <li>启用。它会为当前 DSH 安装装入匹配的原生 Codex payload，并把 <code>subagent_codex</code> 注册为<strong>全局工具</strong>；启用本身不会启动 Codex 进程。</li>
+        <li>如果界面提示需要重启，重启 DSH；之后在新会话里就能看到 <code>subagent_codex</code>。</li>
+        <li>停用只会取消选择层，包仍留在本机；“移除”是另一个操作。</li>
+      </ol>
+      <p><strong>桌面端注意：</strong><code>desktop</code> 是 Electron 保留的 Profile 名，CLI 会拒绝针对它的 <code>dsh plugin</code> 管理。桌面端优先用 Plugins 页；要在 CLI 里装插件，请用 <code>web</code>、<code>headless</code> 等非保留 Profile。</p>
+
+      <h3 id="mcp">MCP：复用 Codex 的 server，但别照搬全部</h3>
+      <p>DSH 的 MCP 工具命名与 Codex/Claude Code 一致（<code>mcp__&lt;server&gt;__&lt;tool&gt;</code>），所以提示词和权限规则可以复用；但配置文件格式不同：Codex 是 <code>~/.codex/config.toml</code> 的 <code>[mcp_servers]</code>，DSH 是 YAML 行。手工映射一个最小 server 即可：</p>
+      <pre><code>- id: mcp-docs
+  name: '@deepseek-ai/dsh-mcp-client'
+  config:
+    serverName: docs
+    transport: streamable-http
+    url: https://developers.openai.com/mcp
+    toolCallTimeoutMs: 60000
+    failOnStartupError: false</code></pre>
+      <p><strong>不要照搬的例子：</strong>Codex 的 <code>node_repl</code> 是它自己的浏览器/计算机使用服务，依赖 <code>CODEX_HOME</code> 和一堆私有环境变量；搬到 DSH 既没有收益，也会把 Codex 的私有运行时带进来。先接“读文档/查 issue/查数据库只读视图”这类边界清晰的 server。</p>
+
+      <h3 id="hooks">Hooks：把 Codex 的护栏搬过来</h3>
+      <p><code>hooks-codex</code> 支持五个点：<code>SessionStart</code>、<code>UserPromptSubmit</code>、<code>PreToolUse</code>、<code>PostToolUse</code>、<code>Stop</code>。它只运行同步命令 hook；<code>async: true</code> 或非命令 hook 会被跳过并告警；配置读取失败时不会阻止 Agent 启动。它属于实验包，适合“已经有 Codex hooks，且只想复用命令门禁”的团队。</p>
+
+      <h3 id="skills">Skills 比插件更值得投入</h3>
+      <p>Skill 是“按需加载的操作手册”，不是插件：目录和 frontmatter 常驻，正文只在模型决定使用时加载。DSH 的扫描根按优先级是：</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>优先级</th><th>来源</th><th>路径</th><th>用途</th></tr></thead>
+          <tbody>
+            <tr><td>100</td><td>项目 DSH</td><td><code>&lt;projectRoot&gt;/.dsh/skills</code></td><td>项目私有、可提交</td></tr>
+            <tr><td>200</td><td>项目 Agents</td><td><code>&lt;projectRoot&gt;/.agents/skills</code></td><td><strong>与 Codex 共享</strong>的首选</td></tr>
+            <tr><td>300</td><td>自定义</td><td><code>customSkillDirs</code></td><td>团队/外部目录</td></tr>
+            <tr><td>400</td><td>用户 DSH</td><td><code>~/.dsh/skills</code></td><td>个人全局</td></tr>
+            <tr><td>500</td><td>用户 Agents</td><td><code>~/.agents/skills</code></td><td><strong>与 Codex 共享</strong>的个人全局</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>注意两个限制：只发现<strong>顶层</strong>的 <code>&lt;name&gt;/SKILL.md</code> 或 <code>&lt;name&gt;.md</code>，不会递归扫 <code>**/SKILL.md</code>；frontmatter 必须有 <code>name</code> 和 <code>description</code>。本会话已经加载了 <code>~/.agents/skills</code> 下的 Lark 系列技能，说明共享目录是生效的。</p>
+
+      <h2 id="codex">与 Codex 协作：四种由浅到深的方式</h2>
+      <p>先给结论：<strong>方式 A（共享上下文）应该先做，而且长期保留；方式 B（Codex 子代理）按需开；方式 C（双向嵌套）只适合少量稳定流程；方式 D（编辑器/协议）是团队工具链问题。</strong></p>
+
+      <h3 id="codex-shared">方式 A：共享“项目宪法”</h3>
+      <p>这是成本最低、收益最大的一层。两个工具都读项目根 <code>AGENTS.md</code>，都能用 <code>.agents/skills/</code>，MCP 工具命名也一致。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>共享物</th><th>Codex</th><th>DSH</th><th>怎么做</th></tr></thead>
+          <tbody>
+            <tr><td>项目指令</td><td>项目根 AGENTS.md</td><td>项目根 AGENTS.md（+ CLAUDE.md）</td><td>只维护一份；DSH 会从项目根一路加载到 cwd</td></tr>
+            <tr><td>用户级指令</td><td><code>~/.codex/AGENTS.md</code></td><td><code>~/.dsh/AGENTS.md</code></td><td>用软链或共享源文件；不要维护两份会漂移的规则</td></tr>
+            <tr><td>Skills</td><td><code>~/.agents/skills</code> / 项目 <code>.agents/skills</code></td><td>同左（另有 <code>.dsh/skills</code>）</td><td>优先放 <code>.agents/skills</code>，两边都能用</td></tr>
+            <tr><td>MCP</td><td><code>~/.codex/config.toml</code></td><td>YAML 行</td><td>手工映射；工具名一致，提示词可复用</td></tr>
+            <tr><td>Hooks</td><td><code>hooks.json</code></td><td><code>dsh-hooks-codex</code></td><td>已有 hooks 才复用；只支持同步命令 hook</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="agents-md">一份好的 AGENTS.md 写什么</h3>
+      <p>DSH 对 AGENTS.md 的总预算是 64KB，加载顺序是“用户级 → 项目根 → 更深目录”，宽泛文件先被省略，最具体的文件最后截断。所以：<strong>越靠近根，越写“稳定规则”；越靠近子目录，越写“局部约定”</strong>。</p>
+      <pre><code># 项目：order-platform
+
+## 环境
+- JDK 21（不要用 17 编译）；Maven Wrapper：./mvnw
+- 本地启动：./mvnw -pl order-api spring-boot:run -Dspring-boot.run.profiles=local
+- 测试：./mvnw -pl order-api test；集成测试用 Testcontainers，不要连生产库
+
+## 模块边界
+- order-api：REST + 应用服务；不直接依赖 order-infra 的 JPA 实体
+- order-domain：纯领域模型；禁止引入 Spring 注解
+- order-infra：持久化/消息；对外暴露端口实现
+
+## 约定
+- 公共 API 变更必须同步 OpenAPI 与契约测试
+- 数据库变更用 Flyway；一次迁移只做一件事
+- 不修改测试断言来制造通过；不提交密钥/生产连接串
+- 生成代码目录（target/generated-sources）只读
+
+## 完成标准
+- ./mvnw -pl order-api test 通过
+- 新增/修改的公共方法有单元测试
+- 输出变更摘要：改了什么、为什么、如何验证</code></pre>
+
+      <p><strong>不该写进 AGENTS.md 的：</strong>长流程、几十行命令清单、某个框架的完整教程。这些放 Skills；AGENTS.md 只留“每次都要遵守”的约束和入口命令。</p>
+
+      <h3 id="codex-subagent">方式 B：把 Codex 当一次性子代理</h3>
+      <p>启用后，DSH 会多一个全局工具 <code>subagent_codex</code>。它的行为很明确：</p>
+      <ul>
+        <li><strong>一次性：</strong>每次委派新建一个隔离的 Codex thread，只完成一个自包含任务，返回最终答案或失败诊断；<strong>不能多轮追问</strong>。</li>
+        <li><strong>同工作区：</strong>Codex 在父会话的工作区里真实执行，可能读写文件；不是“只读沙箱”。</li>
+        <li><strong>原生配置：</strong>Codex 的认证、模型、provider 配置仍以本机 Codex 为准；DSH 只负责发起和收取结果。</li>
+        <li><strong>权限模式：</strong>默认 <code>never</code>（Codex 不询问，沙箱按 Codex 原生配置）；可选 <code>approve-for-me</code>（Codex 自动审查 + workspace-write）；<code>dangerously-bypass-approvals-and-sandbox</code> 必须显式选择，不要在日常仓库用。</li>
+      </ul>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>适合交给 Codex 子代理</th><th>不适合</th></tr></thead>
+          <tbody>
+            <tr><td>只读代码审查、找根因、给第二意见</td><td>需要你来回追问的结对调试</td></tr>
+            <tr><td>独立、自包含的小任务（补一组测试、审查一个 diff）</td><td>依赖当前对话隐含上下文的任务</td></tr>
+            <tr><td>在独立 worktree 里做一次性重构/实验</td><td>和你同时改同一目录</td></tr>
+            <tr><td>用不同模型/不同产品交叉验证结论</td><td>需要看到中间工具调用与逐步推理的合规审查</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p><strong>提示词要“自包含”：</strong>它看不到 DSH 的对话历史，所以把目标、约束、文件、验收命令、输出格式一次给全。</p>
+      <pre><code>你是独立审查者，只读，不要修改任何文件。
+
+背景：这是 Java 21 + Spring Boot 的订单模块，改动在 git diff 中。
+目标：找出会导致线上故障或数据不一致的问题，而不是风格问题。
+
+请按以下格式输出：
+1. 结论：通过 / 有阻塞问题 / 信息不足
+2. 问题列表：文件:行号 | 严重级别（P0/P1/P2）| 问题 | 具体修复建议
+3. 你实际检查过的文件和命令
+4. 不确定项
+
+约束：
+- 不要修改文件、不要提交、不要运行会写数据的命令
+- 不要泛泛而谈；没有证据的猜测标为“待验证”
+- 如果 diff 不足以判断，明确说缺什么</code></pre>
+
+      <p><strong>本机注意：</strong>你的 Codex 走本地代理（<code>~/.codex/config.toml</code> 里的 <code>openai_base_url</code> 指向本地端口）。启用子代理前先确认代理在运行，并用一个最小任务验证：让 Codex 只回 <code>OK</code>；如果失败，先查 <code>codex login status</code> 和代理端口，再查 DSH 日志。子代理的模型/计费与 DSH 主模型是两套，别把成本算混。</p>
+
+      <h3 id="codex-worker">方式 C：让 DSH 给 Codex 打下手</h3>
+      <p>反过来也可以：Codex 通过 Shell 调 <code>dsh --profile headless "任务"</code>，拿 stdout 的最终答案和退出码。适合“离线批处理、生成报告、跑固定检查”，不适合紧密的多轮循环。</p>
+      <ul>
+        <li><strong>优点：</strong>DSH 的权限、沙箱、插件、技能都能用；headless 不开端口、跑完退出。</li>
+        <li><strong>缺点：</strong>没有交互追问；审批请求无人应答会 fail closed；每次都是新会话，上下文要自包含；嵌套 Agent 的耗时和费用会叠加。</li>
+        <li><strong>更稳的做法：</strong>不要让两个 Agent 互相“聊天”，让它们通过<strong>仓库产物</strong>交接：spec、计划、diff、测试报告、review 结论。</li>
+      </ul>
+
+      <h3 id="handoff">方式 D：接力协议（推荐给真实项目）</h3>
+      <p>把协作变成“有版本、可 review 的产物流”，而不是“把聊天记录贴来贴去”：</p>
+      <div class="agent-call-flow" role="img" aria-label="Codex 与 DSH 接力流程：Codex 写 spec，DSH Plan 出实现方案，DSH 在 worktree 实现并跑测试，Codex 只读审查，最后人工合并。">
+        <div class="agent-step"><strong>Spec</strong><span>Codex/OpenSpec 写清目标与验收</span></div>
+        <div class="agent-step"><strong>Plan</strong><span>DSH Plan 出决策完整方案</span></div>
+        <div class="agent-step"><strong>Implement</strong><span>DSH 在独立 worktree 实现</span></div>
+        <div class="agent-step"><strong>Verify</strong><span>跑测试、生成变更摘要</span></div>
+        <div class="agent-step"><strong>Review</strong><span>Codex 只读审查 → 人工合并</span></div>
+      </div>
+      <p class="diagram-text">关键不是“谁更强”，而是“每一步都有可验收的产物，且同一时刻只有一个写者”。</p>
+
+      <ul>
+        <li><strong>Spec：</strong>目标、非目标、验收命令、受影响模块、数据迁移策略；用 OpenSpec/Superpowers 的现成模板即可。</li>
+        <li><strong>Plan：</strong>DSH 的 Plan 输出按子系统分组、列公共 API/数据流变化、边界与测试；它本身就是给 Codex 审查的输入。</li>
+        <li><strong>Implement：</strong>一个 worktree 只给一个 Agent 写；提交信息写“为什么”，不要只写“改了什么”。</li>
+        <li><strong>Review：</strong>Codex 只读审查 diff，输出 file:line + 严重级别 + 修复建议；一轮足够，不要开无限 review 循环。</li>
+        <li><strong>Merge：</strong>人工决定；CI 必须绿；不让 Agent 直接合并主分支。</li>
+      </ul>
+
+      <h2 id="isolation">同一仓库并行：用 worktree，不要用“两个窗口”</h2>
+      <p>DSH 的 <code>subagent</code>/<code>subagent_fork</code> 默认在同一进程、同一工作区；Codex 子代理也在父会话工作区。它们适合并行<strong>读</strong>，不适合并行<strong>写</strong>。要并行写，先隔离目录：</p>
+      <pre><code># 为每个任务建独立 worktree（示例）
+git worktree add ../order-platform-review -b review/order-api
+git worktree add ../order-platform-refactor -b refactor/order-api
+
+# 每个 worktree 只开一个写入 Agent
+cd ../order-platform-review
+dsh web   # 或 Desktop 里把该目录添加为工作区
+
+# 合并前
+git -C ../order-platform-review status
+git -C ../order-platform-review diff --stat
+./mvnw -pl order-api test</code></pre>
+      <ul>
+        <li><strong>构建目录：</strong>Maven 的 <code>target/</code>、Gradle 的 <code>build/</code> 都在各自 worktree 内，避免互相覆盖。</li>
+        <li><strong>本地仓库：</strong><code>~/.m2</code> 是共享读缓存，通常没问题；如果同时跑会写本地仓库的工具，给每个任务单独的 <code>-Dmaven.repo.local</code>。</li>
+        <li><strong>端口/数据库：</strong>两个集成测试不要抢同一个端口或同一个本地库；用随机端口和 Testcontainers。</li>
+        <li><strong>子代理：</strong>只读调研可以并行开 2–3 个；写任务串行，或每个 worktree 一个。</li>
+      </ul>
+
+      <h2 id="java">Java 项目落地清单</h2>
+      <h3 id="java-agents">AGENTS.md 最小模板</h3>
+      <p>把“构建命令、模块边界、不可触碰目录、完成标准”写清楚；其余流程放 skills。下面这段可以直接改成你的项目：</p>
+      <pre><code># 项目：&lt;name&gt;
+
+## 构建与测试
+- JDK 21；使用 ./mvnw（不要依赖全局 mvn）
+- 编译：./mvnw -q -DskipTests package
+- 单模块测试：./mvnw -pl &lt;module&gt; test
+- 集成测试：./mvnw -pl &lt;module&gt; verify -Pit（Testcontainers）
+
+## 边界
+- domain 不依赖 Spring/Web；infra 实现 domain 端口
+- API 变更同步 OpenAPI 与契约测试
+- 数据库变更用 Flyway；一次迁移只做一件事
+
+## 禁止
+- 修改测试断言来制造通过；删除失败用例
+- 提交密钥、token、生产连接串
+- 对生产库执行迁移/清库
+- git push --force / 改写历史 / 删除分支
+
+## 完成标准
+- 目标模块测试通过
+- 新增公共方法有测试
+- 输出：改了什么、为什么、如何验证、剩余风险</code></pre>
+
+      <h3 id="java-skills">建议先写的 4 个 Skills</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Skill</th><th>触发场景</th><th>内容要点</th></tr></thead>
+          <tbody>
+            <tr><td><code>spring-endpoint</code></td><td>新增/修改 REST 接口</td><td>Controller → 应用服务 → 领域端口的分层；DTO/校验/错误码；OpenAPI；契约测试</td></tr>
+            <tr><td><code>flyway-migration</code></td><td>数据库 schema 变更</td><td>命名规范；向前兼容；大表加列/回填/切读的顺序；回滚策略；禁止生产直连</td></tr>
+            <tr><td><code>junit5-integration</code></td><td>写集成测试</td><td>Testcontainers；随机端口；测试数据隔离；断言业务结果而不是实现细节</td></tr>
+            <tr><td><code>maven-diagnose</code></td><td>构建/依赖失败</td><td>先 <code>-q</code> 复现；看 effective POM；区分编译/测试/打包；不要盲目清缓存</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="java-prompts">三个可直接用的提示词</h3>
+      <p><strong>功能开发：</strong></p>
+      <pre><code>在 order-api 模块实现“取消订单”接口，遵循 AGENTS.md 的分层与错误码约定。
+要求：
+1. 先读现有 OrderController/OrderService 的模式，复用已有 Result/ErrorCode
+2. 只改必要文件；公共 API 变更同步 OpenAPI
+3. 加单元测试 + 一个集成测试（Testcontainers）
+4. 运行 ./mvnw -pl order-api test
+5. 输出：变更摘要、测试结果、剩余风险</code></pre>
+      <p><strong>只读审查：</strong></p>
+      <pre><code>只读审查当前 git diff，不要修改文件。
+按 P0/P1/P2 输出问题，每条给 file:line、触发条件、影响、具体修复建议。
+重点看：事务边界、并发、空值、幂等、SQL 注入、日志泄露密钥。
+没有证据的猜测标为“待验证”；最后给“是否可以合并”的结论。</code></pre>
+      <p><strong>框架升级：</strong></p>
+      <pre><code>切换到 Plan 模式。目标：把 Spring Boot 2.7 升级到 3.x，保持公共 API 兼容。
+先做影响面分析：依赖、javax→jakarta、配置属性、测试、CI。
+输出决策完整的升级计划，按模块分组，列出风险、回滚点和验收命令。
+不要修改任何文件。</code></pre>
+
+      <h2 id="context-cost">上下文与成本：把 token 花在证据上</h2>
+      <ul>
+        <li><strong>本机模型窗口 200k，但不是免费。</strong>长会话靠 compaction 续命，压缩会丢细节；关键结论（计划、决策、测试结果）写进文件，不要只留在对话里。</li>
+        <li><strong>AGENTS.md 是常驻成本，Skills 是按需成本。</strong>把“每次都要遵守”的短规则放 AGENTS.md；把长流程、命令清单、框架教程放 Skills。</li>
+        <li><strong>MCP 的工具 schema 是常驻成本。</strong>每接一个 server，模型每次请求都要看它的工具定义；接 5 个 server 可能比接 1 个多花很多 token，还增加启动失败面。</li>
+        <li><strong>子代理是上下文隔离器。</strong>让子代理读 50 个文件、只回 20 行结论，比父会话自己读 50 个文件便宜得多；但子代理的 token 也要算总账。</li>
+        <li><strong>PTC 减少往返，不减少工作量。</strong>它适合确定性流水线；如果程序里把大段日志 <code>console.log</code> 出来，反而更贵。</li>
+        <li><strong>一个会话一个任务。</strong>任务结束就新开会话；不要在一个会话里混三个不相关的重构，compaction 会把它们搅在一起。</li>
+      </ul>
+
+      <h2 id="pitfalls">常见坑与处理</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>现象</th><th>根因</th><th>处理</th></tr></thead>
+          <tbody>
+            <tr><td>Codex 子代理工具不存在</td><td>Bundle 未启用，或启用后未重启</td><td>Plugins → Official → Codex subagent；按提示重启；确认新会话</td></tr>
+            <tr><td><code>subagent_codex</code> 失败</td><td>Codex 未登录、代理未启动、模型/provider 不匹配</td><td><code>codex login status</code>；确认本地代理端口；先用“只回 OK”验证</td></tr>
+            <tr><td>插件行加载失败</td><td>版本不匹配；Desktop 保留 Profile；依赖缺失</td><td>统一 Desktop 与 CLI 版本；桌面端用 Plugins 页；看 DSH 日志</td></tr>
+            <tr><td>AGENTS.md 没生效</td><td>不在项目根链上；超过 64KB；cwd 不对</td><td>确认 <code>.git</code> 根与当前工作区；精简规则；把长内容移到 Skills</td></tr>
+            <tr><td>Skill 找不到</td><td>放到了嵌套目录；缺 frontmatter；根不对</td><td>放到 <code>.agents/skills/&lt;name&gt;/SKILL.md</code> 顶层；补 <code>name</code>/<code>description</code></td></tr>
+            <tr><td>headless 卡住/失败</td><td>审批 ask 无人应答；任务越界</td><td>让任务留在工作区；必要时用 <code>never</code> 或只读；看退出码与 stderr</td></tr>
+            <tr><td>MCP 工具缺失</td><td>启动连接失败；命名空间不符；server 崩溃</td><td>看日志；<code>failOnStartupError</code> 按需；确认 <code>mcp__server__tool</code></td></tr>
+            <tr><td>两个 Agent 互相覆盖</td><td>同一 worktree 并发写</td><td>一个写者；其余只读；用 <code>git worktree</code> 隔离</td></tr>
+            <tr><td>Plan 模式不写代码</td><td>这是设计行为</td><td>批准 <code>exit_plan_mode</code>，或手动切出 Plan</td></tr>
+            <tr><td>升级后配置失效</td><td>RC 版本插件/配置演进</td><td>备份 <code>~/.dsh</code>；固定版本；升级前看 release notes</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="version-skew">当前最现实的版本风险</h3>
+      <p>这台机器上有两个版本：Desktop 是 <strong>0.2.1-rc.2</strong>，而 <code>~/.dsh/profiles/node_modules/@deepseek-ai/dsh</code> 软链到源码 checkout（<strong>0.1.5-rc.2</strong>）。如果你用旧 checkout 启动 CLI，却和 Desktop 共用同一个 <code>~/.dsh</code>，就可能遇到插件 API、会话格式、配置字段不一致的问题。<strong>建议：</strong>要么把 checkout 更新到与 Desktop 一致的版本，要么给 CLI 用独立的 <code>DSH_HOME</code>；不要把两个版本混在同一个 Profile 里。</p>
+
+      <h2 id="roadmap">建议的落地路线</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>阶段</th><th>做什么</th><th>验收</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>第 1 天</strong></td>
+              <td>标准模式 + 工作区可写 + ask；写项目 AGENTS.md；用一个真实小任务跑通；对一次多文件改动使用 Plan</td>
+              <td>能稳定完成 1 个真实任务；计划被批准后能按计划实现；diff 可读</td>
+            </tr>
+            <tr>
+              <td><strong>第 1 周</strong></td>
+              <td>写 3 个 Skills（接口、迁移、测试）；用只读子代理做一次跨模块调研；记录 token/时间/返工</td>
+              <td>同类任务第二次明显更快；子代理结论可复核；没有越权写入</td>
+            </tr>
+            <tr>
+              <td><strong>第 2 周</strong></td>
+              <td>启用 Codex 子代理；定义 spec→plan→implement→review 接力；用 worktree 做一次并行任务</td>
+              <td>Codex 审查能发现真实问题；两个 worktree 互不污染；合并前 CI 绿</td>
+            </tr>
+            <tr>
+              <td><strong>第 3–4 周</strong></td>
+              <td>按需接 1 个 MCP server；试一次 headless CI；做安全复盘（密钥、权限、插件来源）</td>
+              <td>MCP 有明确收益；headless 任务可重复；没有高危权限常开</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="acceptance">验收指标</h3>
+      <ul>
+        <li><strong>任务成功率：</strong>同类任务 10 次里有多少次一次通过测试，而不是“看起来改了”。</li>
+        <li><strong>返工率：</strong>多少 diff 需要人工重写；返工集中在需求理解、边界处理还是风格。</li>
+        <li><strong>安全性：</strong>有没有越界写入、密钥泄露、测试被篡改、生产命令被执行。</li>
+        <li><strong>可复现性：</strong>换一个会话/换一个 Agent，是否还能按 AGENTS.md 和 Skills 得到同样结果。</li>
+        <li><strong>成本：</strong>每个成功任务的 token、时间、审批次数；不要只看单次响应速度。</li>
+      </ul>
+
+      <h2 id="references">参考资料</h2>
+      <p><strong>检索与核对日期：2026-10-20。</strong>版本以本机 Desktop 0.2.1-rc.2 为主，官方 <code>master</code> 文档用于补充；RC 版本功能与配置可能变化。</p>
+      <ul>
+        <li><a href="https://github.com/deepseek-ai/deepseek-harness" target="_blank" rel="noopener noreferrer">DeepSeek Harness 官方仓库</a>：插件化运行时、Profile、文档入口。</li>
+        <li><a href="https://github.com/deepseek-ai/deepseek-harness/blob/master/apps/cli/README.md" target="_blank" rel="noopener noreferrer">CLI README</a>：入口模式、Profile、<code>dsh plugin</code>、headless/acp/sdk。</li>
+        <li><a href="https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/bundle/web-app/presets" target="_blank" rel="noopener noreferrer">Web/Desktop 预设定义</a>：standard、ptc、cordis、minimal 的工具面。</li>
+        <li><a href="https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/subagent/subagent-codex/README.md" target="_blank" rel="noopener noreferrer">Codex 子代理</a>：安装、权限模式、一次性语义与限制。</li>
+        <li><a href="https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/boot/plugin-manager/README.md" target="_blank" rel="noopener noreferrer">插件管理器</a>：Plugins 页、Bundle 启用/停用、<code>plugin_manager</code> 的权限要求。</li>
+        <li><a href="https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/boot/app-boot/src/official-bundle-packages.ts" target="_blank" rel="noopener noreferrer">Official 按需 Bundle 列表</a>：当前仅 Codex 与 Claude Code 子代理。</li>
+        <li><a href="https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/mcp/mcp-client/README.md" target="_blank" rel="noopener noreferrer">MCP Client</a>：stdio/Streamable HTTP、工具命名、启动与重连。</li>
+        <li><a href="https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/experimental/hooks-codex/README.md" target="_blank" rel="noopener noreferrer">Codex Hooks 桥</a>：五个 hook 点、同步限制、失败行为。</li>
+        <li><a href="https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/plan/plan-mode/README.md" target="_blank" rel="noopener noreferrer">Plan 模式</a>：只读探索、<code>exit_plan_mode</code>、审批语义。</li>
+        <li><a href="https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/context/agent-instructions/README.md" target="_blank" rel="noopener noreferrer">AGENTS.md 加载</a>：用户级/项目级链、64KB 预算、去重与刷新。</li>
+        <li><a href="https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/skill/skill-filesystem/README.md" target="_blank" rel="noopener noreferrer">Skills 文件系统</a>：扫描根、优先级、SKILL.md 格式。</li>
+        <li><a href="https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/interaction/permission-presets/README.md" target="_blank" rel="noopener noreferrer">权限预设</a> 与 <a href="https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/sandbox/sandbox-policy/README.md" target="_blank" rel="noopener noreferrer">沙箱策略</a>：只读/工作区可写/完全访问。</li>
+        <li><a href="https://github.com/deepseek-ai/deepseek-harness/blob/master/packages/bundle/headless/README.md" target="_blank" rel="noopener noreferrer">Headless</a>：一次性任务、stdout/退出码、无交互边界。</li>
+        <li><a href="https://github.com/openai/codex" target="_blank" rel="noopener noreferrer">Codex 官方仓库</a>：Codex CLI、app-server、配置与 hooks。</li>
+      </ul>
+
+      <p><strong>站内延伸：</strong><a href="../agent/2026-08-07-Harness从运行时Agent到Codex开发环境.html">Harness：从运行时 Agent 到 Codex 开发环境</a> · <a href="../codex/2026-07-24-Codex全栈开发最佳实践.html">Codex 全栈开发最佳实践</a> · <a href="../codex/2026-08-31-OpenSpec与Codex原生大型项目开发流程.html">OpenSpec 与 Codex 原生大型项目开发流程</a> · <a href="../codex/2026-09-16-Matt-Pocock-Skills工作流详解.html">Matt Pocock Skills 工作流详解</a> · <a href="2026-08-10-Pi与主流编码Agent对比.html">Pi 与主流编码 Agent 对比</a></p>
+    </article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/coding-agent/2026-10-20-DSH开发使用与Codex协作指南.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="2026-08-10-Pi源码架构与运行机制.html"><small>上一篇</small><span>Pi 源码架构与运行机制</span></a>
+        <a class="pager-link next" href="2026-10-23-DSH模式全解与开发实践.html"><small>下一篇</small><span>DSH 模式全解：Agent 预设、权限模式与 Plan 怎么用</span></a>
+      </nav>
+    </footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#conclusions">核心结论</a></li><li class="toc-level-2"><a href="#modes">先分清四层“模式”</a></li><li class="toc-level-3"><a href="#entry-modes">入口形态怎么选</a></li><li class="toc-level-2"><a href="#playbook">场景 → 推荐组合</a></li><li class="toc-level-2"><a href="#presets">Agent 预设怎么选</a></li><li class="toc-level-3"><a href="#ptc">PTC 的正确打开方式</a></li><li class="toc-level-2"><a href="#plan-goal">Plan 模式与 Goal 模式</a></li><li class="toc-level-3"><a href="#plan">Plan：先出决策完整的方案</a></li><li class="toc-level-3"><a href="#goal">Goal：让一个目标跨多轮自动推进</a></li><li class="toc-level-2"><a href="#permissions">权限与安全：三种模式，两个开关</a></li><li class="toc-level-3"><a href="#approval">ask 与 never 的真实差别</a></li><li class="toc-level-3"><a href="#sandbox-boundary">工作区可写不等于“只改代码”</a></li><li class="toc-level-3"><a href="#threat-model">威胁模型：插件、MCP、hooks 都是代码</a></li><li class="toc-level-2"><a href="#plugins">插件取舍：默认、按需、别装</a></li><li class="toc-level-3"><a href="#official-plugins">怎么装 Codex 子代理</a></li><li class="toc-level-3"><a href="#mcp">MCP：复用 Codex 的 server，但别照搬全部</a></li><li class="toc-level-3"><a href="#hooks">Hooks：把 Codex 的护栏搬过来</a></li><li class="toc-level-3"><a href="#skills">Skills 比插件更值得投入</a></li><li class="toc-level-2"><a href="#codex">与 Codex 协作：四种由浅到深的方式</a></li><li class="toc-level-3"><a href="#codex-shared">方式 A：共享“项目宪法”</a></li><li class="toc-level-3"><a href="#agents-md">一份好的 AGENTS.md 写什么</a></li><li class="toc-level-3"><a href="#codex-subagent">方式 B：把 Codex 当一次性子代理</a></li><li class="toc-level-3"><a href="#codex-worker">方式 C：让 DSH 给 Codex 打下手</a></li><li class="toc-level-3"><a href="#handoff">方式 D：接力协议（推荐给真实项目）</a></li><li class="toc-level-2"><a href="#isolation">同一仓库并行：用 worktree，不要用“两个窗口”</a></li><li class="toc-level-2"><a href="#java">Java 项目落地清单</a></li><li class="toc-level-3"><a href="#java-agents">AGENTS.md 最小模板</a></li><li class="toc-level-3"><a href="#java-skills">建议先写的 4 个 Skills</a></li><li class="toc-level-3"><a href="#java-prompts">三个可直接用的提示词</a></li><li class="toc-level-2"><a href="#context-cost">上下文与成本：把 token 花在证据上</a></li><li class="toc-level-2"><a href="#pitfalls">常见坑与处理</a></li><li class="toc-level-3"><a href="#version-skew">当前最现实的版本风险</a></li><li class="toc-level-2"><a href="#roadmap">建议的落地路线</a></li><li class="toc-level-3"><a href="#acceptance">验收指标</a></li><li class="toc-level-2"><a href="#references">参考资料</a></li></ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+</body>
+</html>

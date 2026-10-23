@@ -1,0 +1,674 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="基于 DSH 0.2.1-rc.2 源码与文档，拆解 Agent 预设、权限模式、Plan 三层模式及 native/PTC、ask/never 底层旋钮，并给出 Java 开发场景的组合与落地建议。">
+  <meta name="color-scheme" content="light dark">
+  <meta name="study-category" content="编码 Agent">
+  <meta name="study-date" content="2026-10-23">
+  <title>DSH 模式全解：Agent 预设、权限模式与 Plan 怎么用｜Java 全栈 AI 学习库</title>
+  <link rel="stylesheet" href="../../assets/style.css">
+  <script defer src="../../assets/app.js"></script>
+</head>
+<body class="document-page">
+<header class="topbar">
+  <a class="brand" href="../../../index.html"><span class="brand-mark">J</span><span>Java 全栈 AI 学习库</span></a>
+  <div class="topbar-actions">
+    <button class="icon-button mobile-nav-toggle" type="button" aria-label="打开文档列表">文档</button>
+    <button class="icon-button theme-toggle" type="button" aria-label="切换明暗主题">主题</button>
+  </div>
+</header>
+<div class="reader-layout">
+  <aside class="doc-sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-home-link" href="../../../index.html"><span aria-hidden="true">←</span>知识库首页</a>
+      <button class="sidebar-close" type="button" aria-label="关闭文档列表">×</button>
+    </div>
+    <div class="sidebar-category-summary">
+      <span class="eyebrow">当前分类</span>
+      <a class="sidebar-category-link" href="../../../index.html#category-编码-agent-5pooy1">
+        <strong>编码 Agent</strong>
+        <small>9 篇文档</small>
+      </a>
+      <a class="sidebar-featured-link" href="2026-08-10-Pi项目总览与学习路线.html">分类主目录<span>Pi 项目总览与学习路线</span></a>
+    </div>
+    <nav class="doc-nav" aria-label="当前分类文档">
+      <a class="doc-nav-item" href="2026-08-10-Pi安装配置与使用教程.html"><span>Pi 安装配置与使用教程</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-08-10-Pi扩展开发与系统集成.html"><span>Pi 扩展开发与系统集成</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-08-10-Pi设计理念与边界.html"><span>Pi 设计理念与边界</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-08-10-Pi项目总览与学习路线.html"><span>Pi 项目总览与学习路线</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-08-10-Pi选型建议与实践路线.html"><span>Pi 选型建议与实践路线</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-08-10-Pi与主流编码Agent对比.html"><span>Pi 与主流编码 Agent 对比</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-08-10-Pi源码架构与运行机制.html"><span>Pi 源码架构与运行机制</span><small>2026-08-10</small></a><a class="doc-nav-item" href="2026-10-20-DSH开发使用与Codex协作指南.html"><span>DSH 开发使用与 Codex 协作指南</span><small>2026-10-20</small></a><a class="doc-nav-item is-active" href="2026-10-23-DSH模式全解与开发实践.html" aria-current="page"><span>DSH 模式全解：Agent 预设、权限模式与 Plan 怎么用</span><small>2026-10-23</small></a>
+    </nav>
+  </aside>
+  <main class="article-column">
+    <div class="article-meta">
+      <a href="../../../index.html">知识库首页</a><span>·</span><span>编码 Agent</span><span>·</span>
+      <time datetime="2026-10-23">2026-10-23</time>
+    </div>
+    <article class="markdown-body">
+      <h1 id="dsh-modes"><a class="heading-anchor" href="#dsh-modes" aria-label="链接到本节">#</a>DSH 模式全解：Agent 预设、权限模式与 Plan 怎么用</h1>
+      <blockquote>
+        <p><strong>一句话：</strong>DSH 里的“模式”不是一条从弱到强的档位，而是三层可以自由组合的开关——<strong>Agent 预设</strong>决定模型看到哪些工具和提示词，<strong>权限模式</strong>决定文件写入边界和审批策略，<strong>Plan</strong> 决定先评审方案还是直接执行。把这三层混成一个“聪明程度”，就会出现“我明明选了只读，为什么它还能写文件”这类误判。</p>
+        <p><strong>版本前提：</strong>本文基于本地 <code>deepseek-harness</code> checkout 的 <strong>0.2.1-rc.2</strong>（2026-10-23 阅读），界面名称取自随包中文 locale。DSH 仍在快速迭代，升级后请以实际界面和源码为准。</p>
+        <p><strong>范围：</strong>只讨论会影响任务行为的模式；Desktop / Web / headless / ACP / SDK 属于“入口形态”，不是模式，文末单独说明。</p>
+      </blockquote>
+
+      <nav aria-label="本页快速目录">
+        <strong>快速阅读：</strong>
+        <a href="#conclusions">核心结论</a> ·
+        <a href="#three-layers">三层模式</a> ·
+        <a href="#agent-presets">Agent 预设</a> ·
+        <a href="#permission-modes">权限模式</a> ·
+        <a href="#plan-mode">Plan 模式</a> ·
+        <a href="#related">易混淆开关</a> ·
+        <a href="#playbooks">场景组合</a> ·
+        <a href="#java">Java 落地</a> ·
+        <a href="#extension">扩展与自定义</a> ·
+        <a href="#myths">常见误区</a> ·
+        <a href="#references">参考资料</a>
+      </nav>
+
+      <h2 id="conclusions"><a class="heading-anchor" href="#conclusions" aria-label="链接到本节">#</a>核心结论</h2>
+      <ol>
+        <li><strong>默认组合：标准模式 + 工作区内修改 + 普通执行。</strong>这是功能、可见性和爆炸半径最平衡的组合，适合 90% 的 Java 日常开发。</li>
+        <li><strong>多文件、跨模块、改 API/数据库的活，先 <code>/plan</code>。</strong>让 Agent 只读探索并交出一份可评审的计划，批准后再切到可写权限执行。</li>
+        <li><strong>只读审查就选“仅可查看”。</strong>它挡的是文件写入，不是网络和进程；对不可信仓库仍要用容器或独立环境。</li>
+        <li><strong>PTC 是“工具调用组织方式”，不是更强的模型。</strong>适合批量读取、筛选、去重、统计；不适合每一步都要人确认的高风险改动。</li>
+        <li><strong>Plan 是软约束，权限才是硬边界。</strong>Plan 激活时所有工具仍然可用；真正保证“不乱写”的是沙箱模式。</li>
+        <li><strong>极简模式是评测基线，不是安全模式。</strong>它没有文件编辑工具，但仍然可以通过持久 Shell 读写文件。</li>
+        <li><strong>完全权限只应出现在一次性容器/VM。</strong>Auto review 是实验性的概率审查，不能替代沙箱；它默认关闭，也不进入新会话默认设置。</li>
+      </ol>
+
+      <h2 id="three-layers"><a class="heading-anchor" href="#three-layers" aria-label="链接到本节">#</a>先分清三层模式，再看底层两个旋钮</h2>
+      <p>DSH 把“Agent 能做什么”“文件能写到哪里”“先想还是先做”拆成了三个独立维度。它们可以任意组合，而且修改时机不同。</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>层</th><th>选项</th><th>决定什么</th><th>什么时候改</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Agent 预设</strong><br>界面叫“模式”</td>
+              <td>标准模式 / PTC 模式 / 极简模式 / 创造模式（以及自定义预设）</td>
+              <td>模型看到的工具目录、系统提示词、技能与运行时上下文；直接决定它“能做什么”</td>
+              <td>新任务开始时选定，任务进行中固定；默认值可在设置里改</td>
+            </tr>
+            <tr>
+              <td><strong>权限模式</strong><br>界面叫“权限/访问模式”</td>
+              <td>仅可查看 / 工作区内修改 / 完全权限 / 自动审查（实验）</td>
+              <td>文件沙箱边界 + 审批策略；决定它“最多能碰到哪里”</td>
+              <td>当前会话随时切换；设置里的默认值只影响之后新建的会话</td>
+            </tr>
+            <tr>
+              <td><strong>会话模式</strong></td>
+              <td>普通 / Plan（计划模式）；Goal 属于会话级目标，不是模式</td>
+              <td>先探索并提交计划，还是直接执行</td>
+              <td>随时 <code>/plan</code> 进入、<code>/plan off</code> 离开；批准计划也会离开</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p>权限模式本身又是两个更底层的旋钮打包出来的：<strong>沙箱模式</strong>（<code>read-only</code> / <code>workspace-write</code> / <code>danger-full-access</code>）和<strong>审批策略</strong>（<code>ask</code> / <code>never</code>）。理解这两个旋钮，才能理解四个权限模式为什么长得不一样。</p>
+
+      <div class="agent-call-flow" role="img" aria-label="三层模式组合示意：Agent 预设决定工具面，权限模式决定文件边界，Plan 决定先规划还是直接执行；三者叠加成一次任务的实际行为。">
+        <div class="agent-step"><strong>Agent 预设</strong><br>标准 / PTC / 极简 / 创造<br>决定“工具面”</div>
+        <div class="agent-step"><strong>权限模式</strong><br>仅可查看 / 工作区内修改 / 完全权限 / 自动审查<br>决定“硬边界”</div>
+        <div class="agent-step"><strong>会话模式</strong><br>普通 / Plan<br>决定“先想还是先做”</div>
+        <div class="guardrail-band">组合示例：标准模式 + 仅可查看 + Plan = 只读探索并产出可评审方案；标准模式 + 工作区内修改 + 普通 = 直接改代码并跑测试。</div>
+      </div>
+
+      <h2 id="agent-presets"><a class="heading-anchor" href="#agent-presets" aria-label="链接到本节">#</a>Agent 预设：四个内置模式各自解决什么问题</h2>
+      <p>预设不是“模型智商档位”，而是<strong>工具面 + 提示词 + 技能目录</strong>的组合。它决定模型能不能直接改文件、能不能跑命令、能不能开子代理、能不能创建插件。当前 Web/Desktop 自带四个预设，按界面顺序如下。</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>预设</th><th>模型看到的工具面</th><th>最适合</th><th>不适合 / 主要代价</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>标准模式</strong><br><code>standard</code></td>
+              <td>最完整：文件读写与搜索、Bash/Pwsh、后台任务、计划、Goal、Skills、子代理（fresh/fork）、Workflow、Web、todo、ask_user、present、上下文压缩</td>
+              <td>日常功能开发、重构、代码审查、资料整理；绝大多数任务从这里开始</td>
+              <td>工具多、每一步往返多；长会话依赖压缩；需要你在提示词里把验收标准说清楚</td>
+            </tr>
+            <tr>
+              <td><strong>PTC 模式</strong><br><code>ptc</code></td>
+              <td>标准能力 + 以 <code>run_code</code> 为主的编排面：模型写 TypeScript 程序，通过生成的 SDK 调用工具；当前预设关闭了 Workflow</td>
+              <td>批量读取/校验/聚合：扫描所有 <code>pom.xml</code>、汇总 Surefire 报告、按规则筛日志、生成 CSV</td>
+              <td>不适合需要逐步人工确认的高风险改动；程序内异常要自己处理；只把筛选后的输出交给模型，审计粒度更粗</td>
+            </tr>
+            <tr>
+              <td><strong>极简模式</strong><br><code>minimal</code></td>
+              <td>一个持久 Shell + <code>read_image</code> + 上下文压缩；固定系统提示词，不注入标准运行时上下文；没有文件读写工具、搜索、Skills、Plan、Goal、子代理、Web、todo</td>
+              <td>模型/提示词对比实验、教学基线、最小能力验证</td>
+              <td>不是真实项目开发环境；仍然可以通过 Shell 读写文件，所以<strong>不是安全边界</strong>；读图需要支持图片输入的模型</td>
+            </tr>
+            <tr>
+              <td><strong>创造模式</strong><br><code>cordis</code></td>
+              <td>标准能力 + 只读运行时检查（<code>cordis_inspect_*</code>）+ 插件管理（<code>plugin_manager</code>、<code>plugin_market</code>）+ 编写 Cordis 插件与 Agent 预设的 Skills</td>
+              <td>扩展 DSH：写插件、加 UI、调试运行时组合、基于标准模式定制自己的“代码审查模式”等</td>
+              <td>权限大、容易把 profile 改坏；插件在宿主进程内运行，等于可信代码；安装可能要求完全权限或逐次批准，且可能需要重启</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="standard-preset"><a class="heading-anchor" href="#standard-preset" aria-label="链接到本节">#</a>标准模式：默认答案</h3>
+      <p>标准模式直接向模型暴露各个工具：读文件、写文件、搜代码、跑命令、开后台任务、开子代理、维护 todo、查网页。它适合“描述目标 + 指出相关文件 + 给出验收方式”的常规开发任务。对 Java 项目，典型提示词是：</p>
+      <blockquote>
+        <p>“先读 <code>OrderService</code> 和它的测试，定位重复提交导致结果消失的原因；做最小修复；运行 <code>mvn -q -pl order-service test</code>；最后说明根因、改动和测试结果。”</p>
+      </blockquote>
+      <p>标准模式的代价是工具多、上下文长。长任务要依赖压缩，复杂改动要配合 Plan，否则容易出现“边改边猜”的返工。</p>
+
+      <h3 id="ptc-preset"><a class="heading-anchor" href="#ptc-preset" aria-label="链接到本节">#</a>PTC 模式：把 N 次工具往返压成一段程序</h3>
+      <p>PTC 是 Programmatic Tool Calling。模型不是逐个调用工具，而是写一段 TypeScript 程序，通过 <code>tools.*</code> 调用工具，在程序里做循环、条件、错误处理、并发和聚合，最后只打印或返回需要给模型看的结果。例如批量检查配置：</p>
+      <pre><code class="language-typescript">const files = await tools.glob({ pattern: "**/pom.xml", path: "." })
+const rows = []
+for (const file of files.paths) {
+  const result = await tools.read({ file_path: file, limit: 120 })
+  const text = result.lines.map(line =&gt; line.text).join("\n")
+  rows.push({
+    module: file,
+    java: text.match(/&lt;java.version&gt;([^&lt;]+)&lt;\/java.version&gt;/)?.[1] ?? "-",
+    springBoot: text.match(/&lt;spring-boot.version&gt;([^&lt;]+)&lt;\/spring-boot.version&gt;/)?.[1] ?? "-",
+  })
+}
+console.log(JSON.stringify(rows, null, 2))</code></pre>
+      <p>三条纪律：</p>
+      <ul>
+        <li><strong>只输出筛选后的结果。</strong>不要把整份日志或整批文件倒进上下文，否则 PTC 的收益会被上下文成本吃掉。</li>
+        <li><strong>先在 1 个样本上试跑。</strong>批量写操作、批量重命名、批量迁移尤其要先小范围验证。</li>
+        <li><strong>PTC 不能绕过权限。</strong>程序里的嵌套工具调用仍会被记录、仍受工具权限和沙箱约束；<code>run_code</code> 本身也可以请求一次性升权，但需要批准。</li>
+      </ul>
+      <p>如果任务是“每改一处都要停下来问人”，不要用 PTC；它是批处理和确定性流水线的工具，不是高风险交互式改动的加速器。</p>
+
+      <h3 id="minimal-preset"><a class="heading-anchor" href="#minimal-preset" aria-label="链接到本节">#</a>极简模式：对照组，不是“新手模式”</h3>
+      <p>极简模式把工具面压到最小：一个持久 Shell、一个 <code>read_image</code>、上下文压缩，加上固定系统提示词。它的用途是做<strong>受控对比</strong>：固定模型、权限、输入和工作区起始状态，比较标准模式与极简模式在同一个 Bug 修复任务上的完成情况、工具调用次数和最终 diff。</p>
+      <p>注意两点：</p>
+      <ul>
+        <li>它<strong>没有文件编辑工具</strong>，但 Shell 仍然能 <code>sed</code>、<code>cat</code>、重定向写文件；所以“工具少”不等于“权限小”。</li>
+        <li>它<strong>不是</strong>更容易上手的模式。缺少 Plan、Skills、子代理和结构化文件工具，长任务反而更难管理。</li>
+      </ul>
+
+      <h3 id="creator-preset"><a class="heading-anchor" href="#creator-preset" aria-label="链接到本节">#</a>创造模式：把 DSH 本身当作可编程对象</h3>
+      <p>创造模式在标准能力之上增加了三样东西：</p>
+      <ul>
+        <li><strong>只读运行时检查</strong>：查看已注册的服务、工具、事件、Slot 树等，先搞清楚现状再写代码。</li>
+        <li><strong>插件管理</strong>：列出、启用/禁用、安装、移除当前 profile 的插件或 bundle；变更会影响该 profile 的所有会话。</li>
+        <li><strong>创作 Skills</strong>：Cordis 插件、Agent 预设、UI 扩展的编写规则。</li>
+      </ul>
+      <p>典型任务不是“帮我写业务代码”，而是“给侧栏加一个项目笔记入口并验证能打开”“基于标准模式创建一个代码审查模式”“把某个工具封装成插件”。插件可能热加载，也可能需要重启；安装插件可能要求 <code>danger-full-access</code> 或本次调用的批准，批准本身不会改变会话权限模式。第三方插件是宿主进程内的代码，必须当可信代码对待。</p>
+      <p>预设只能在<strong>新任务开始时</strong>选择；任务开始后头部会固定显示当前预设，运行中不能切换。想换预设，新开一个任务。</p>
+
+      <h2 id="permission-modes"><a class="heading-anchor" href="#permission-modes" aria-label="链接到本节">#</a>权限模式：四个选项，两个底层旋钮</h2>
+      <p>权限模式把“文件边界”和“审批策略”打包成一个选择器。先看底层：</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>旋钮</th><th>取值</th><th>含义</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>沙箱模式</strong><br><code>SandboxMode</code></td>
+              <td><code>read-only</code> / <code>workspace-write</code> / <code>danger-full-access</code></td>
+              <td>只管文件系统的“写效果”。<code>read-only</code> 拒绝写入；<code>workspace-write</code> 允许写会话工作区和后端承诺的临时区域；<code>danger-full-access</code> 完全绕过隔离。网络和进程可见性<strong>不</strong>在这个旋钮里。</td>
+            </tr>
+            <tr>
+              <td><strong>审批策略</strong><br><code>ApprovalPolicy</code></td>
+              <td><code>ask</code> / <code>never</code></td>
+              <td><code>ask</code>：有审批请求时交给审批链；没有可用通道就 fail closed。<code>never</code>：所有审批请求直接拒绝，不弹窗，也不自动放行。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>界面名称</th><th>沙箱</th><th>审批</th><th>实际效果</th><th>适用</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>仅可查看</strong><br><code>read-only</code></td>
+              <td><code>read-only</code></td>
+              <td><code>ask</code></td>
+              <td>能读、搜、分析；文件写入被沙箱拒绝。模型可以请求一次性的更宽模式，经你批准后只对当次调用生效。</td>
+              <td>第三方仓库、PR 审查、依赖升级影响面分析、只读调研</td>
+            </tr>
+            <tr>
+              <td><strong>工作区内修改</strong><br><code>workspace-write</code></td>
+              <td><code>workspace-write</code></td>
+              <td><code>ask</code></td>
+              <td>会话工作区内可写，平台临时区域可能可写；工作区外写入被拒。越界时可请求一次性 <code>danger-full-access</code> 升权，需要你批准。</td>
+              <td>日常开发默认；绝大多数功能开发、重构、跑测试</td>
+            </tr>
+            <tr>
+              <td><strong>完全权限</strong><br><code>danger-full-access</code></td>
+              <td><code>danger-full-access</code></td>
+              <td><code>never</code></td>
+              <td>无文件沙箱、无审批弹窗；运行时可见的路径都能改。切换时界面会要求明确确认风险。</td>
+              <td>一次性容器/VM、隔离的临时 checkout；绝不用于公司主仓库</td>
+            </tr>
+            <tr>
+              <td><strong>自动审查</strong><br><code>auto</code>（实验）</td>
+              <td><code>danger-full-access</code></td>
+              <td><code>ask</code></td>
+              <td>无文件沙箱；每个原生工具调用和 PTC 内层调用执行前，由当前 Agent 的同一模型审查。低风险放行，中风险要人确认，高风险拒绝；被拒绝的调用再按 <code>ask</code> 请求你批准。</td>
+              <td>本地、可信仓库、希望减少弹窗但保留第二道判断的场景；默认关闭</td>
+            </tr>
+            <tr>
+              <td><strong>自定义</strong><br><code>custom</code></td>
+              <td>任意组合</td>
+              <td>任意组合</td>
+              <td>当两个旋钮的组合不匹配任何预设时派生出来的显示状态；可以离开，但不能作为目标选择。</td>
+              <td>只用于解释当前状态，不是常规选项</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="ask-vs-never"><a class="heading-anchor" href="#ask-vs-never" aria-label="链接到本节">#</a>ask 与 never 的真实差别</h3>
+      <p>很多人把 <code>ask</code> 理解成“每个命令都弹窗”，把 <code>never</code> 理解成“自动批准”。都不准确。</p>
+      <ul>
+        <li><strong><code>ask</code> 只在有工具主动请求批准时才介入。</strong>普通的工作区写入由沙箱直接执行，不会弹窗。会主动请求批准的主要是：Bash/文件工具/PTC 显式请求 <code>sandbox_permissions</code> 升权；Auto review 拒绝某个调用；实验性 hooks 返回 <code>ask</code> 决策。</li>
+        <li><strong><code>never</code> 不是“自动允许”，而是“从不询问”。</strong>所有审批请求确定性地返回拒绝。它和完全权限组合时，因为已经没有需要申请的事，看起来像“畅通无阻”；但 <code>workspace-write + never</code> 仍然是工作区沙箱，只是不弹窗。</li>
+        <li><strong>没有审批通道时，<code>ask</code> 会 fail closed。</strong>headless、CI、无人值守场景最容易踩这个坑：不是“默认放行”，而是“没人回答就拒绝”。</li>
+      </ul>
+
+      <h3 id="escalation"><a class="heading-anchor" href="#escalation" aria-label="链接到本节">#</a>一次性升权：只读/工作区可写并不是死墙</h3>
+      <p>Bash、文件写入/编辑、PTC 的 <code>run_code</code> 都暴露了两个参数：<code>sandbox_permissions</code> 和 <code>justification</code>。模型可以在被沙箱拒绝后，请求一个<strong>严格更宽</strong>的模式，并说明理由；审批通过后<strong>只对当次调用</strong>生效，不会改变会话的权限模式。</p>
+      <p>这带来两个实际后果：</p>
+      <ul>
+        <li>“仅可查看”下仍然可能发生一次写入，只要模型申请、你批准。所以它是“默认拒绝 + 可审计的例外”，不是绝对只读。</li>
+        <li>“工作区内修改”下可以临时申请完全访问，用于确实需要写工作区外的操作；批准记录会进入会话日志。</li>
+      </ul>
+      <p>子代理是例外：委派出去的 child 会固定 <code>never</code> 审批策略，沙箱范围在委派时确定，<strong>不能从子会话内部升权</strong>。需要更大权限时，必须由父级在委派前设置好。</p>
+
+      <h3 id="sandbox-limits"><a class="heading-anchor" href="#sandbox-limits" aria-label="链接到本节">#</a>沙箱到底管什么、不管什么</h3>
+      <p>DSH 的文件沙箱只负责<strong>文件效果</strong>。这不等于完整安全隔离：</p>
+      <ul>
+        <li><strong>网络不受限。</strong>只读模式下的命令仍然可以访问网络；不要把“只读”当成防数据外泄的沙箱。</li>
+        <li><strong>进程可见性不受限（视平台后端）。</strong>沙箱限制的是文件写入，不是“看不到其他进程”。</li>
+        <li><strong>强制执行可能是 partial。</strong>Windows ACL 后端和较旧的 Landlock ABI 会报告部分强制执行；需要绝对边界时，用容器或远程执行器。</li>
+        <li><strong>插件、MCP、hooks 不受工作区沙箱保护。</strong>它们在宿主进程或外部进程中运行，安装/启用前要确认来源可信。</li>
+        <li><strong>工作区内的敏感文件仍然可写。</strong><code>.env</code>、测试数据、构建脚本、<code>.git/config</code> 都在可写范围；Agent 可能为了“让测试通过”改断言或配置。用 <code>AGENTS.md</code> 明确禁止，并在 review 时检查 diff。</li>
+      </ul>
+
+      <h3 id="auto-review"><a class="heading-anchor" href="#auto-review" aria-label="链接到本节">#</a>自动审查：概率性的第二道判断</h3>
+      <p>Auto review 是随包提供但默认关闭的实验层。启用后，它在每个受支持调用执行前，用当前 Agent 的同一模型评估“这个动作该不该放行”：</p>
+      <ul>
+        <li><strong>低风险</strong>（普通项目内操作、精确清理本会话创建的对象）直接放行；</li>
+        <li><strong>中风险</strong>（不可逆删除既有对象、生产操作、外部写入、安全控制变更）需要人（或直接父级）明确授权；</li>
+        <li><strong>高风险</strong>（跨信任边界泄露敏感信息）始终拒绝；效果不明确或授权冲突未解决时也拒绝。</li>
+        <li>被拒绝的调用会按 <code>ask</code> 策略请求你批准；你拒绝或取消，调用就不执行。reviewer 响应不合法或技术失败时，调用失败且不执行。</li>
+      </ul>
+      <p>代价和边界：</p>
+      <ul>
+        <li>每个受支持调用额外产生一次模型请求，<strong>消耗额外 token</strong>；不缓存、不重试、不压缩。</li>
+        <li>分类可能出错，<strong>可能误放行，也可能误拒绝</strong>。</li>
+        <li><strong>没有文件沙箱</strong>；外层 <code>run_code</code> 和 PTC 程序里的直接 Node 效果不经过内层工具审查。</li>
+        <li>只出现在当前会话选择器里，<strong>不进入通用设置和新会话默认值</strong>；需要先在插件页启用实验层。</li>
+      </ul>
+      <p>结论：Auto review 适合“本地、可信仓库、想减少弹窗”的场景；不适合不可信代码、生产环境和需要确定性边界的任务。</p>
+
+      <h3 id="switch-permission"><a class="heading-anchor" href="#switch-permission" aria-label="链接到本节">#</a>怎么切换，什么时候生效</h3>
+      <ul>
+        <li><strong>当前会话</strong>：点权限选择器，或输入 <code>/permission</code> 查看当前预设与所有可用项；<code>/permission workspace-write</code> 切过去。切换会写会话日志，沙箱模式在下一次受限调用时生效。</li>
+        <li><strong>未来会话</strong>：设置里的“权限”只写 <code>defaultPreset</code>，只影响之后新建的会话，不会改写当前会话。</li>
+        <li><strong>完全权限/自动审查</strong>：切换时会出现风险确认对话框，需要明确勾选“我已了解风险”。</li>
+      </ul>
+
+      <h2 id="plan-mode"><a class="heading-anchor" href="#plan-mode" aria-label="链接到本节">#</a>Plan 模式：先评审方案，再动手</h2>
+      <p>Plan 模式是一个<strong>逐 Agent、可持久化</strong>的协作状态。激活期间，每次模型请求都会额外带上一段部署定义的 <code>plan:policy</code> 指引，要求 Agent 先探索、设计，再通过 <code>exit_plan_mode</code> 提交完整计划。</p>
+
+      <h3 id="plan-what-it-is"><a class="heading-anchor" href="#plan-what-it-is" aria-label="链接到本节">#</a>它是什么，不是什么</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>它是</th><th>它不是</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>提示词层面的<strong>软约束</strong>：要求先只读探索、不要改文件、不要跑会重写文件的格式化/代码生成</td>
+              <td>权限边界：Plan 激活时<strong>所有工具仍然注册、仍然可调用</strong>；模型如果无视指引，仍可能尝试修改（然后被权限模式拦住）</td>
+            </tr>
+            <tr>
+              <td>一个<strong>评审门</strong>：Agent 调用 <code>exit_plan_mode</code> 提交 Markdown 计划，你选择批准或继续规划</td>
+              <td>逐动作审批：它不会为每个 Bash 命令弹窗；那仍然由权限模式和审批策略负责</td>
+            </tr>
+            <tr>
+              <td>可恢复状态：<code>plan/mode</code> 只写日志，恢复、fork、压缩后都能还原</td>
+              <td>“更聪明的模型”或“更保守的沙箱”：它只改变工作流，不改变模型能力和文件边界</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="plan-workflow"><a class="heading-anchor" href="#plan-workflow" aria-label="链接到本节">#</a>完整使用流程</h3>
+      <ol>
+        <li><strong>进入</strong>：输入 <code>/plan</code>，或 <code>/plan 帮我设计订单重复提交的修复方案</code>；可以附带图片和文件，按选择顺序随指令提交。</li>
+        <li><strong>探索</strong>：Agent 应使用只读读取、搜索、静态分析、检查来把计划落到真实代码上；不编辑、不写文件、不提交、不跑会改文件的生成器。</li>
+        <li><strong>提交</strong>：Agent 调用 <code>exit_plan_mode</code>，传一份以 <code>#</code> 标题开头的完整 Markdown 计划；该调用应是当前回复中唯一且最后的工具调用。</li>
+        <li><strong>评审</strong>：界面展示计划原文。选 <strong>Approve</strong> 离开 Plan 并继续执行；选 <strong>Keep planning</strong>（可附反馈）让 Agent 修订后再次提交；直接关闭评审去打字，则结束当前轮，Plan 保持激活。</li>
+        <li><strong>离开</strong>：<code>/plan off</code> 可以随时手动退出；批准评审也会在下一步骤自动退出。</li>
+      </ol>
+      <p>一个好的计划应该“决策完整”：目标与验收标准、按子系统分组的改动、公开 API/Schema/数据流变化、边界条件与失败模式、测试与验收方式、明确假设。计划要足够详细，让另一个工程师不需要再做设计决策就能实施。</p>
+
+      <h3 id="plan-recommendation"><a class="heading-anchor" href="#plan-recommendation" aria-label="链接到本节">#</a>推荐组合：只读 + Plan → 批准 → 可写执行</h3>
+      <p>Plan 本身不阻止写入，所以对“不熟悉的仓库”或“跨模块重构”，最稳的组合是：</p>
+      <pre><code class="language-text">新任务：标准模式 + 仅可查看 + /plan &lt;目标&gt;
+  → Agent 只读探索，提交计划
+  → 你 Approve
+  → /permission workspace-write（或点权限选择器）
+  → Agent 按计划执行、跑测试
+  → 你 review diff</code></pre>
+      <p>这个流程把“设计评审”和“执行授权”分成两个明确的人工决策点，比“一上来就让它改”更容易控制爆炸半径。</p>
+
+      <h3 id="plan-limits"><a class="heading-anchor" href="#plan-limits" aria-label="链接到本节">#</a>已知限制</h3>
+      <ul>
+        <li><strong>不是强制隔离。</strong>指引说“不要改”，但工具仍在；真正的保证来自权限模式。</li>
+        <li><strong>需要交互评审通道。</strong>没有用户交互通道时，<code>exit_plan_mode</code> 会失败；此时只能用 <code>/plan off</code> 手动退出。</li>
+        <li><strong>退出是“待生效”的。</strong>批准后会记录一个静默的待生效退出，由下一个被接受的轮内 pre-step 追加；当前这批工具调用剩余部分仍保留计划指引。</li>
+        <li><strong>别用 todo_write 代替计划。</strong>todo 跟踪的是批准后的实施，计划本身应放在 <code>exit_plan_mode</code> 里。</li>
+      </ul>
+
+      <h2 id="related"><a class="heading-anchor" href="#related" aria-label="链接到本节">#</a>容易和“模式”混淆的四个开关</h2>
+
+      <h3 id="goal"><a class="heading-anchor" href="#goal" aria-label="链接到本节">#</a>Goal：跨轮持久目标，不是模式</h3>
+      <p>Goal 是会话级的一个持久完成目标（每会话最多一个），跨轮、恢复、fork 和进程重启都存在；可选的续行驱动器会让进行中的目标连续跑多个 Round。你可以用 <code>/goal</code> 检查或控制它，模型也可以用 <code>create_goal</code>/<code>update_goal</code>。它适合“修完所有失败测试”“完成一次迁移”这种长跑目标，不适合开放式探索。它不改变工具面，也不改变文件边界，所以不是模式；但常和 Plan 组合：先 Plan 定方案，再把执行挂到一个 Goal 上。</p>
+
+      <h3 id="tool-presentation"><a class="heading-anchor" href="#tool-presentation" aria-label="链接到本节">#</a>native 与 PTC：底层工具呈现方式</h3>
+      <p>PTC 预设背后是“工具呈现方式”这个开关：<code>native</code> 把每个工具 schema 直接给模型；<code>ptc</code> 只给 <code>run_code</code> 和生成的 SDK。它按 Agent 预设声明，同一进程里可以同时存在 native agent 和 PTC agent。部署级默认由 <code>dsh-tools</code> 的 <code>mode</code> 决定，临时可以用 <code>DSH_TOOLS_MODE=native|ptc</code> 让整个进程切换。这是给扩展开发者看的旋钮，普通用户只需要选 PTC 预设。</p>
+
+      <h3 id="subagents"><a class="heading-anchor" href="#subagents" aria-label="链接到本节">#</a>子代理：fresh 与 fork 是上下文模式</h3>
+      <p>标准/创造/PTC 预设都提供两种委派：</p>
+      <ul>
+        <li><code>subagent</code>（fresh）：全新上下文，只看到你写的任务；提示词必须自包含，适合独立研究、并行审查、一次性实现。</li>
+        <li><code>subagent_fork</code>：继承当前会话已完成的轮次（不包含正在进行的这一轮），适合“基于刚才的讨论继续分析/评审”，不用重复交代背景。</li>
+      </ul>
+      <p>两者都共享同一文件系统，子代理的审批策略固定为 <code>never</code>，沙箱范围在委派时确定，不能从内部升权。所以：并行只读研究可以放心开；并行写代码必须用 <code>git worktree</code> + 分支隔离，并且一个文件范围只让一个 Agent 写。</p>
+      <p>更重的多 Agent 协作（Team Lead + 持久 teammate + 共享任务板）属于 Agent Teams 能力，不是本文所说的“模式”，但同样遵循“父级权限是天花板、子级不能升权”的规则。</p>
+
+      <h3 id="entry-forms"><a class="heading-anchor" href="#entry-forms" aria-label="链接到本节">#</a>入口形态：Desktop / Web / headless / ACP / SDK</h3>
+      <p>这些是“从哪里运行 DSH”，不是任务模式，但会影响模式可用性：</p>
+      <ul>
+        <li><strong>Desktop / Web</strong>：日常主入口，有权限选择器、Plan 评审、diff 和审批弹窗。</li>
+        <li><strong>headless</strong>：跑完打印结果并退出，适合 CI/批处理；<strong>没有交互式审批通道</strong>，<code>ask</code> 的升权请求会 fail closed。</li>
+        <li><strong>ACP</strong>：以 stdio 服务编辑器等客户端；<strong>SDK</strong>：通过 JSON-RPC 嵌入自有系统。两者都需要部署方自己补齐审批与权限策略。</li>
+      </ul>
+      <p>所以 CI 里要么用 <code>workspace-write</code> 做只改工作区的任务，要么在一次性容器里用完全权限；不要指望 headless 里有人点“允许”。</p>
+
+      <h2 id="playbooks"><a class="heading-anchor" href="#playbooks" aria-label="链接到本节">#</a>开发中怎么组合：九个可直接套用的场景</h2>
+      <p>下面这张表是“任务 → 预设 / 权限 / 会话模式”的速查。默认从标准模式 + 工作区内修改开始；只有明确需要时才升级或降级。</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>场景</th><th>Agent 预设</th><th>权限</th><th>会话模式</th><th>关键动作</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>日常功能开发 / Bug 修复</td>
+              <td>标准</td>
+              <td>工作区内修改</td>
+              <td>普通（多文件先 Plan）</td>
+              <td>给目标、相关文件、验收命令；要求跑相关测试；review diff</td>
+            </tr>
+            <tr>
+              <td>陌生仓库 / PR 审查</td>
+              <td>标准</td>
+              <td>仅可查看</td>
+              <td>Plan 可选</td>
+              <td>让 Agent 只读分析并输出带文件/行号的报告；不要在不可信仓库跑安装脚本</td>
+            </tr>
+            <tr>
+              <td>跨模块重构 / 改 API / 数据库迁移</td>
+              <td>标准</td>
+              <td>仅可查看 → 工作区内修改</td>
+              <td>Plan</td>
+              <td>先只读出计划；批准后再切权限执行；分小步、每步验证</td>
+            </tr>
+            <tr>
+              <td>批量配置检查 / 日志汇总</td>
+              <td>PTC</td>
+              <td>工作区内修改</td>
+              <td>普通</td>
+              <td>明确输入目录、规则、输出格式；先单样本试跑；只输出筛选结果</td>
+            </tr>
+            <tr>
+              <td>模型/提示词对比评测</td>
+              <td>极简</td>
+              <td>固定同一权限</td>
+              <td>普通</td>
+              <td>固定模型、输入、起始 commit；比较完成情况、工具调用、diff</td>
+            </tr>
+            <tr>
+              <td>扩展 DSH / 自定义模式</td>
+              <td>创造</td>
+              <td>工作区内修改（安装插件可能需完全权限或逐次批准）</td>
+              <td>普通</td>
+              <td>先 inspect 现状；写插件/预设；安装并验证；必要时重启</td>
+            </tr>
+            <tr>
+              <td>高风险、一次性环境</td>
+              <td>标准</td>
+              <td>完全权限</td>
+              <td>普通</td>
+              <td>只在一次性容器/VM/临时 checkout；结束后销毁；绝不用于主仓库</td>
+            </tr>
+            <tr>
+              <td>CI / 无人值守</td>
+              <td>标准或 headless 组合</td>
+              <td>工作区内修改（容器内可用完全权限）</td>
+              <td>普通</td>
+              <td>没有审批通道；预先准备依赖缓存；用退出码和日志验收</td>
+            </tr>
+            <tr>
+              <td>长跑目标（修完所有失败测试）</td>
+              <td>标准</td>
+              <td>工作区内修改</td>
+              <td>普通 + Goal</td>
+              <td>Goal 跨轮推进；每轮要可验证的进展；完成需证据</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="playbook-default"><a class="heading-anchor" href="#playbook-default" aria-label="链接到本节">#</a>1. 日常开发：默认组合</h3>
+      <p><strong>标准模式 + 工作区内修改 + 普通。</strong>把任务写成“目标 + 证据 + 约束”：</p>
+      <blockquote>
+        <p>“在 <code>order-service</code> 里修复重复提交导致结果消失的问题。先读 <code>OrderController</code>、<code>OrderService</code> 和对应测试；做最小修改；运行 <code>mvn -q -pl order-service test</code>；不要改测试断言来制造通过；最后给出根因、diff 摘要和测试输出。”</p>
+      </blockquote>
+      <p>如果改动涉及 3 个以上文件、公共 API、数据库 schema 或并发语义，先加 <code>/plan</code>，不要直接让它动手。</p>
+
+      <h3 id="playbook-review"><a class="heading-anchor" href="#playbook-review" aria-label="链接到本节">#</a>2. 只读审查：把“只读”用于审查，不用于安全隔离</h3>
+      <p><strong>标准模式 + 仅可查看。</strong>适合 PR 审查、依赖升级影响面分析、代码考古。要求 Agent 输出“结论 + 文件/行号 + 风险等级 + 建议”，不要只说“看起来没问题”。</p>
+      <p>提醒：只读模式仍然可以访问网络、读取环境变量、运行命令；对来源不明的仓库，应该用容器/独立用户，而不是只靠“仅可查看”。</p>
+
+      <h3 id="playbook-plan-first"><a class="heading-anchor" href="#playbook-plan-first" aria-label="链接到本节">#</a>3. 大改：只读 Plan → 批准 → 可写执行</h3>
+      <p>这是最值得养成的习惯。步骤：</p>
+      <ol>
+        <li>新任务选标准模式；权限先设“仅可查看”。</li>
+        <li><code>/plan 设计把订单状态机从枚举迁移到状态表的方案，包含数据迁移、兼容层、测试和回滚。</code></li>
+        <li>评审计划：重点看 API/Schema 变化、边界条件、测试覆盖、是否漏了调用方。</li>
+        <li>Approve 后，<code>/permission workspace-write</code>。</li>
+        <li>让 Agent 按计划分阶段执行；每阶段跑测试、看 diff；不要一次性“全都改完”。</li>
+      </ol>
+
+      <h3 id="playbook-ptc"><a class="heading-anchor" href="#playbook-ptc" aria-label="链接到本节">#</a>4. 批量处理：PTC 的边界</h3>
+      <p><strong>PTC 模式 + 工作区内修改。</strong>适合“读很多文件 → 按规则筛选/聚合 → 输出一张表/一份报告”。提示词里写清楚输入、规则、输出格式和失败处理：</p>
+      <blockquote>
+        <p>“检查 <code>configs/</code> 下所有 JSON，按 <code>schema.json</code> 找出缺失字段和非法值；每个问题写 CSV 一行；读取失败的文件也记入报告，继续检查其余文件；不要修改原文件。”</p>
+      </blockquote>
+      <p>不要用 PTC 做“每个文件都要人工确认”的高风险批量改写；那种任务用标准模式 + 小步执行更稳。</p>
+
+      <h3 id="playbook-minimal"><a class="heading-anchor" href="#playbook-minimal" aria-label="链接到本节">#</a>5. 对比评测：极简模式</h3>
+      <p>固定模型、权限、输入、起始 commit 和工作区状态，分别用标准模式和极简模式跑同一个任务，比较完成情况、工具调用次数、最终 diff 和耗时。极简模式的 Shell 仍能读写，所以“工具少”不会自动更安全，也不会自动更便宜。</p>
+
+      <h3 id="playbook-creator"><a class="heading-anchor" href="#playbook-creator" aria-label="链接到本节">#</a>6. 扩展 DSH：创造模式</h3>
+      <p>典型流程：</p>
+      <ol>
+        <li>先让 Agent 用 <code>cordis_inspect_*</code> 查看现有服务、工具、Slot；不要凭猜测写插件。</li>
+        <li>描述“能力 + 出现位置 + 验证方式”，例如“侧栏加项目笔记入口，能列出并预览 Markdown”。</li>
+        <li>要求“安装并验证”，不要只生成源码；插件可能热加载，也可能需要重启。</li>
+        <li>自定义预设基于标准模式复制，改提示词/工具白名单；新任务开始时才能选。</li>
+      </ol>
+
+      <h3 id="playbook-full-access"><a class="heading-anchor" href="#playbook-full-access" aria-label="链接到本节">#</a>7. 完全权限：只在一次性环境</h3>
+      <p>完全权限的价值是“没有边界摩擦”，代价是“没有边界”。适用：一次性容器、临时 VM、专门为某任务克隆的 checkout。不要在主仓库、生产凭据所在环境、共享开发机上用。切换时界面会要求确认风险，这个确认不是形式。</p>
+
+      <h3 id="playbook-ci"><a class="heading-anchor" href="#playbook-ci" aria-label="链接到本节">#</a>8. CI / 无人值守</h3>
+      <p>headless 没有审批应答者，<code>ask</code> 的升权请求会失败。可行策略：</p>
+      <ul>
+        <li>任务只需要改工作区：用 <code>workspace-write</code>，预先准备好依赖缓存（见 Java 落地一节）。</li>
+        <li>任务需要更大范围：在一次性容器里用完全权限，任务结束销毁容器。</li>
+        <li>不要指望“自动批准”；如果必须无人值守，显式选择 <code>never</code> 并接受“需要审批的操作会被拒绝”。</li>
+      </ul>
+
+      <h3 id="playbook-goal"><a class="heading-anchor" href="#playbook-goal" aria-label="链接到本节">#</a>9. 长跑：Goal 是目标，不是模式</h3>
+      <p>当任务需要跨多轮持续推进（修完所有失败测试、完成迁移、清理所有 lint 告警），用 Goal 记录完成目标，让续行驱动器跨轮推进。每轮要有可验证的进展，完成要有证据；同一阻塞条件持续存在时应该 blocked，而不是无限重试。Goal 不改变工具面和权限，所以仍要单独设置权限模式。</p>
+
+      <h2 id="java"><a class="heading-anchor" href="#java" aria-label="链接到本节">#</a>Java 项目落地：权限边界与构建缓存的冲突</h2>
+      <p>Java 开发者最容易踩的坑不是模型能力，而是“Maven/Gradle 要写工作区外的缓存目录”。</p>
+
+      <h3 id="java-cache"><a class="heading-anchor" href="#java-cache" aria-label="链接到本节">#</a>1. Maven / Gradle 缓存</h3>
+      <p><code>workspace-write</code> 只允许写会话工作区和平台临时区域。<code>~/.m2/repository</code>、<code>~/.gradle</code> 在工作区外，首次下载依赖时会被沙箱拒绝。三种处理方式：</p>
+      <ul>
+        <li><strong>预热缓存</strong>：在进入 DSH 前先跑一次完整构建，把依赖放进本地仓库；之后 DSH 只读缓存，通常能正常编译/测试。</li>
+        <li><strong>把缓存放进工作区</strong>：Maven 用 <code>-Dmaven.repo.local=$PWD/.m2repo</code>，Gradle 用 <code>GRADLE_USER_HOME=$PWD/.gradle</code>；记得把目录加入 <code>.gitignore</code>。</li>
+        <li><strong>一次性容器 + 完全权限</strong>：让容器内的 HOME 可写，任务结束销毁；适合 CI 或干净环境。</li>
+      </ul>
+
+      <h3 id="java-commands"><a class="heading-anchor" href="#java-commands" aria-label="链接到本节">#</a>2. 常用命令与验收</h3>
+      <pre><code class="language-bash"># 单模块测试，减少输出
+mvn -q -pl order-service -am test
+
+# 指定工作区内的本地仓库，避免写 ~/.m2
+mvn -q -Dmaven.repo.local="$PWD/.m2repo" -pl order-service test
+
+# Gradle 缓存放进工作区
+GRADLE_USER_HOME="$PWD/.gradle" ./gradlew :order-service:test</code></pre>
+      <p>让 Agent 把验收写成可执行命令，而不是“看起来对了”。测试报告、<code>target/</code>、<code>build/</code> 都在工作区内，通常可写；如果测试需要 Docker/Testcontainers，先验证当前环境是否可用，再让它批量跑。</p>
+
+      <h3 id="java-rules"><a class="heading-anchor" href="#java-rules" aria-label="链接到本节">#</a>3. 写进 AGENTS.md 的硬规则</h3>
+      <pre><code class="language-markdown">- 测试失败先定位实现，禁止修改断言、跳过用例或删除测试来“制造通过”。
+- 禁止提交密钥、token、生产连接串；示例配置用占位符。
+- 禁止对生产数据库执行迁移；本地用 Testcontainers 或一次性库。
+- 禁止 git push --force、改写历史、删除远程分支；这些操作由人执行。
+- 改动后至少运行相关模块测试；报告失败时附命令和关键输出。</code></pre>
+
+      <h3 id="java-parallel"><a class="heading-anchor" href="#java-parallel" aria-label="链接到本节">#</a>4. 并行与隔离</h3>
+      <p>同一工作区只让一个 Agent 写。需要并行时用 <code>git worktree</code> 给每个 Agent 一个独立 checkout 和分支；只读研究可以共享工作区并行开子代理。合并前由 Lead 统一 review diff、跑测试。不要用“两个窗口同时改同一目录”来提速。</p>
+
+      <h2 id="extension"><a class="heading-anchor" href="#extension" aria-label="链接到本节">#</a>扩展与自定义：什么时候该动哪一层</h2>
+      <p>如果你要“造一个自己的模式”，先判断需求属于哪一层，不要把所有东西都塞进提示词。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>你想改变</th><th>应该扩展</th><th>典型做法</th></tr></thead>
+          <tbody>
+            <tr><td>模型能用哪些工具、用什么人设/提示词</td><td>Agent 预设</td><td>新增 <code>@deepseek-ai/dsh-agent-preset</code> 行，组合 persona、工具、Skills；通过 bundle patch 安装</td></tr>
+            <tr><td>文件写入边界、审批行为</td><td>权限预设 / 沙箱策略</td><td>配置 <code>@deepseek-ai/dsh-permission-presets</code> 的 <code>presets</code> 表；或直接改 <code>sandbox-policy</code> 默认模式</td></tr>
+            <tr><td>先规划再执行的工作流</td><td>Plan 模式</td><td>配置 <code>section</code> 引导；用 <code>ctx.planMode</code> 驱动；保留 <code>exit_plan_mode</code></td></tr>
+            <tr><td>工具呈现方式（逐个 schema vs run_code）</td><td>工具呈现</td><td><code>@deepseek-ai/dsh-agent-tool-presentation</code> 的 <code>mode: native|ptc</code></td></tr>
+            <tr><td>新能力、新 UI、服务连接</td><td>Cordis 插件</td><td>创造模式编写/安装；插件在宿主进程内运行，按可信代码管理</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="custom-permission"><a class="heading-anchor" href="#custom-permission" aria-label="链接到本节">#</a>自定义权限预设</h3>
+      <pre><code class="language-yaml">- name: '@deepseek-ai/dsh-permission-presets'
+  config:
+    presets:
+      read-only:
+        sandbox: read-only
+        approval: ask
+      workspace-write:
+        sandbox: workspace-write
+        approval: ask
+      danger-full-access:
+        sandbox: danger-full-access
+        approval: never
+    defaultPreset: workspace-write</code></pre>
+      <p><code>custom</code> 和 <code>auto</code> 是保留名，不能出现在配置表里。挂载这个服务需要“会报告 sandboxMode 的 bash 执行器”和审批服务；只有配置预设会进入通用设置和未来会话默认值。</p>
+
+      <h3 id="custom-plan"><a class="heading-anchor" href="#custom-plan" aria-label="链接到本节">#</a>Plan 模式的配置与服务</h3>
+      <pre><code class="language-yaml">- name: '@deepseek-ai/dsh-plan-mode'
+  config:
+    section: |
+      You are in plan mode. Explore and design before presenting the complete
+      plan through exit_plan_mode.</code></pre>
+      <p>服务侧只有两个核心方法：<code>ctx.planMode.set(agent, active)</code> 返回 <code>committed</code>/<code>queued</code>/<code>cancelled</code>/<code>noop</code>；<code>ctx.planMode.get(agent)</code> 返回 <code>{ active, pending? }</code>。状态是只写日志的 <code>plan/mode</code> 事件，恢复和 fork 都能回放。</p>
+
+      <h3 id="custom-preset"><a class="heading-anchor" href="#custom-preset" aria-label="链接到本节">#</a>自定义 Agent 预设</h3>
+      <pre><code class="language-yaml">- insert:
+    - id: preset-java-review
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: java-review
+        order: 10
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: You are a Java code reviewer. Cite file paths and lines.
+          # 其余工具行建议从 standard 预设复制后按需裁剪</code></pre>
+      <p>实际可用的预设需要完整的工具/Skills 行，建议让创造模式在标准预设基础上生成并安装，而不是手写一份不完整的配置。自定义预设出现在“自定义”分组，新建任务时可选。</p>
+
+      <h3 id="env-defaults"><a class="heading-anchor" href="#env-defaults" aria-label="链接到本节">#</a>部署级默认值</h3>
+      <ul>
+        <li><code>DSH_PERMISSION_MODE=read-only|workspace-write|danger-full-access</code>：部署的默认权限模式（还会联动审批策略的默认值）。</li>
+        <li><code>DSH_TOOLS_MODE=native|ptc</code>：临时让整个进程切换工具呈现方式；这是过渡用的环境开关，不等同于用户级预设。</li>
+      </ul>
+
+      <h2 id="myths"><a class="heading-anchor" href="#myths" aria-label="链接到本节">#</a>常见误区</h2>
+      <ol>
+        <li><strong>“只读 = 安全隔离。”</strong>只挡文件写入；网络、进程、环境变量读取都不在文件沙箱里。不可信代码要用容器。</li>
+        <li><strong>“工作区可写 = 只改代码。”</strong><code>.env</code>、测试数据、构建脚本、<code>.git/config</code> 都在范围内；必须用 AGENTS.md 和 diff review 补规则。</li>
+        <li><strong>“完全权限 + never = 自动批准。”</strong><code>never</code> 是拒绝所有审批请求；完全权限是根本没有沙箱。两者叠加是“无边界”，不是“自动审批”。</li>
+        <li><strong>“Plan 会限制工具。”</strong>不会。工具目录保持不变；它只是提示词层的软约束，硬限制仍靠权限模式。</li>
+        <li><strong>“PTC 更聪明/更省 token。”</strong>它改变工具调用组织方式；是否省取决于任务和程序如何筛选结果，简单任务反而多一层开销。</li>
+        <li><strong>“极简模式更安全。”</strong>它只是工具少；持久 Shell 仍能读写文件，不是安全边界。</li>
+        <li><strong>“预设可以中途换。”</strong>Agent 预设固定在任务开始时；权限模式可以随时切换。</li>
+        <li><strong>“Auto review 可以替代沙箱。”</strong>它是概率性审查、没有文件沙箱、会误判、额外耗 token；只能作为本地可信场景的补充。</li>
+        <li><strong>“子代理可以自己升权。”</strong>子代理固定 <code>never</code>，沙箱范围在委派时确定；父级必须先设置好权限。</li>
+        <li><strong>“插件/MCP/hooks 受工作区沙箱保护。”</strong>它们通常在宿主或外部进程运行，不受工作区文件沙箱约束；安装即信任。</li>
+      </ol>
+
+      <h2 id="checklist"><a class="heading-anchor" href="#checklist" aria-label="链接到本节">#</a>开工前 30 秒检查清单</h2>
+      <ol>
+        <li><strong>任务要写文件吗？</strong>不写 → 仅可查看；写 → 工作区内修改。</li>
+        <li><strong>改动跨模块/改 API/改数据吗？</strong>是 → <code>/plan</code> 先出方案；否 → 普通执行。</li>
+        <li><strong>任务是否批量、可程序化？</strong>是 → PTC；否 → 标准。</li>
+        <li><strong>要扩展 DSH 本身吗？</strong>是 → 创造模式；否 → 标准。</li>
+        <li><strong>是否一次性环境？</strong>是 → 完全权限；否 → 不要用完全权限。</li>
+        <li><strong>是否需要跨多轮推进？</strong>是 → 加 Goal；否 → 普通。</li>
+        <li><strong>构建缓存是否在工作区内？</strong>Maven/Gradle 尤其要检查，否则先预热或改缓存目录。</li>
+      </ol>
+
+      <h2 id="references"><a class="heading-anchor" href="#references" aria-label="链接到本节">#</a>参考资料</h2>
+      <p>本文基于本地 DSH checkout（0.2.1-rc.2）的源码与文档整理，资料阅读于 2026-10-23。主要依据：</p>
+      <ul>
+        <li>沙箱与执行边界：<code>docs/subsystems/sandbox.zh.md</code>、<code>packages/sandbox/sandbox-policy/README.zh.md</code>、<code>packages/sandbox/sandbox-local/README.zh.md</code></li>
+        <li>审批策略：<code>docs/subsystems/approval.zh.md</code></li>
+        <li>权限预设：<code>docs/subsystems/permission-presets.zh.md</code>、<code>packages/interaction/permission-presets/README.zh.md</code></li>
+        <li>Plan 模式：<code>docs/subsystems/plan.zh.md</code>、<code>packages/plan/plan-mode/README.zh.md</code></li>
+        <li>PTC 运行时：<code>docs/subsystems/ptc-runtime.zh.md</code>、<code>packages/core/agent-tool-presentation/README.zh.md</code></li>
+        <li>内置预设组成：<code>packages/bundle/web-app/presets/standard.patch.yml</code>、<code>ptc.patch.yml</code>、<code>minimal.patch.yml</code>、<code>cordis.patch.yml</code>；默认权限表在 <code>packages/bundle/base/cordis.patch.yml</code></li>
+        <li>Auto review：<code>packages/experimental/auto-review/README.zh.md</code></li>
+        <li>子代理权限与上下文：<code>packages/subagent/subagent/src/child-agent.ts</code>、工具目录中的 <code>subagent</code>/<code>subagent_fork</code> 条目</li>
+        <li>界面文案：<code>packages/client/ui-agent-preset/src/client/locales.ts</code>、<code>packages/client/ui-permission-presets/src/client/locales.ts</code></li>
+      </ul>
+      <p>相关阅读：<a href="2026-10-20-DSH开发使用与Codex协作指南.html">DSH 开发使用与 Codex 协作指南</a>（更偏入口形态、插件取舍与 Codex 协作）；本文聚焦“模式”本身及其在 Java 开发中的组合。</p>
+    </article>
+    <footer class="article-footer">
+      <div class="source-path">HTML 页面：<code>notes/coding-agent/2026-10-23-DSH模式全解与开发实践.html</code></div>
+      <nav class="pager" aria-label="上一篇和下一篇">
+        <a class="pager-link previous" href="2026-10-20-DSH开发使用与Codex协作指南.html"><small>上一篇</small><span>DSH 开发使用与 Codex 协作指南</span></a>
+        <span class="pager-spacer"></span>
+      </nav>
+    </footer>
+  </main>
+  <aside class="toc-sidebar">
+    <div class="toc-title">本页目录</div>
+    <nav aria-label="本页目录">
+      <ol class="toc-list"><li class="toc-level-2"><a href="#conclusions">核心结论</a></li><li class="toc-level-2"><a href="#three-layers">先分清三层模式，再看底层两个旋钮</a></li><li class="toc-level-2"><a href="#agent-presets">Agent 预设：四个内置模式各自解决什么问题</a></li><li class="toc-level-3"><a href="#standard-preset">标准模式：默认答案</a></li><li class="toc-level-3"><a href="#ptc-preset">PTC 模式：把 N 次工具往返压成一段程序</a></li><li class="toc-level-3"><a href="#minimal-preset">极简模式：对照组，不是“新手模式”</a></li><li class="toc-level-3"><a href="#creator-preset">创造模式：把 DSH 本身当作可编程对象</a></li><li class="toc-level-2"><a href="#permission-modes">权限模式：四个选项，两个底层旋钮</a></li><li class="toc-level-3"><a href="#ask-vs-never">ask 与 never 的真实差别</a></li><li class="toc-level-3"><a href="#escalation">一次性升权：只读/工作区可写并不是死墙</a></li><li class="toc-level-3"><a href="#sandbox-limits">沙箱到底管什么、不管什么</a></li><li class="toc-level-3"><a href="#auto-review">自动审查：概率性的第二道判断</a></li><li class="toc-level-3"><a href="#switch-permission">怎么切换，什么时候生效</a></li><li class="toc-level-2"><a href="#plan-mode">Plan 模式：先评审方案，再动手</a></li><li class="toc-level-3"><a href="#plan-what-it-is">它是什么，不是什么</a></li><li class="toc-level-3"><a href="#plan-workflow">完整使用流程</a></li><li class="toc-level-3"><a href="#plan-recommendation">推荐组合：只读 + Plan → 批准 → 可写执行</a></li><li class="toc-level-3"><a href="#plan-limits">已知限制</a></li><li class="toc-level-2"><a href="#related">容易和“模式”混淆的四个开关</a></li><li class="toc-level-3"><a href="#goal">Goal：跨轮持久目标，不是模式</a></li><li class="toc-level-3"><a href="#tool-presentation">native 与 PTC：底层工具呈现方式</a></li><li class="toc-level-3"><a href="#subagents">子代理：fresh 与 fork 是上下文模式</a></li><li class="toc-level-3"><a href="#entry-forms">入口形态：Desktop / Web / headless / ACP / SDK</a></li><li class="toc-level-2"><a href="#playbooks">开发中怎么组合：九个可直接套用的场景</a></li><li class="toc-level-3"><a href="#playbook-default">1. 日常开发：默认组合</a></li><li class="toc-level-3"><a href="#playbook-review">2. 只读审查：把“只读”用于审查，不用于安全隔离</a></li><li class="toc-level-3"><a href="#playbook-plan-first">3. 大改：只读 Plan → 批准 → 可写执行</a></li><li class="toc-level-3"><a href="#playbook-ptc">4. 批量处理：PTC 的边界</a></li><li class="toc-level-3"><a href="#playbook-minimal">5. 对比评测：极简模式</a></li><li class="toc-level-3"><a href="#playbook-creator">6. 扩展 DSH：创造模式</a></li><li class="toc-level-3"><a href="#playbook-full-access">7. 完全权限：只在一次性环境</a></li><li class="toc-level-3"><a href="#playbook-ci">8. CI / 无人值守</a></li><li class="toc-level-3"><a href="#playbook-goal">9. 长跑：Goal 是目标，不是模式</a></li><li class="toc-level-2"><a href="#java">Java 项目落地：权限边界与构建缓存的冲突</a></li><li class="toc-level-3"><a href="#java-cache">1. Maven / Gradle 缓存</a></li><li class="toc-level-3"><a href="#java-commands">2. 常用命令与验收</a></li><li class="toc-level-3"><a href="#java-rules">3. 写进 AGENTS.md 的硬规则</a></li><li class="toc-level-3"><a href="#java-parallel">4. 并行与隔离</a></li><li class="toc-level-2"><a href="#extension">扩展与自定义：什么时候该动哪一层</a></li><li class="toc-level-3"><a href="#custom-permission">自定义权限预设</a></li><li class="toc-level-3"><a href="#custom-plan">Plan 模式的配置与服务</a></li><li class="toc-level-3"><a href="#custom-preset">自定义 Agent 预设</a></li><li class="toc-level-3"><a href="#env-defaults">部署级默认值</a></li><li class="toc-level-2"><a href="#myths">常见误区</a></li><li class="toc-level-2"><a href="#checklist">开工前 30 秒检查清单</a></li><li class="toc-level-2"><a href="#references">参考资料</a></li></ol>
+    </nav>
+    <a class="back-to-top" href="#">返回顶部 ↑</a>
+  </aside>
+</div>
+</body>
+</html>
